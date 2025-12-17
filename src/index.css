@@ -1,0 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+\/* src/styles/colors.css */
+:root {
+  /* KU Official Colors */
+  --ku-blue: #0033A0;
+  --ku-blue-dark: #002366;
+  --ku-blue-light: #4D6FB3;
+  --ku-gold: #FFD700;
+  --ku-gold-dark: #B39700;
+  --ku-accent: #00B5E2;
+  --ku-accent-dark: #008CB5;
+  
+  /* Status Colors */
+  --success: #10B981;
+  --success-dark: #059669;
+  --warning: #F59E0B;
+  --warning-dark: #D97706;
+  --danger: #EF4444;
+  --danger-dark: #DC2626;
+  
+  /* Neutral Colors */
+  --light: #F8FAFC;
+  --dark: #1F2937;
+  --gray: #6B7280;
+}
+
+
+  

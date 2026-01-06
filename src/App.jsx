@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './Pages/Loginpage';
 import SignUpPage from './Pages/Signupage';
-
+import DashboardPage from './Pages/Dashboardpage';
 const App = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -21,6 +21,8 @@ const App = () => {
         <Route path="/" element={<LandingPage darkMode={darkMode} setDarkMode={setDarkMode} scrolled={scrolled} />} />
         <Route path="/login" element={<LoginPage darkMode={darkMode} setDarkMode={setDarkMode} />} />
         <Route path="/signup" element={<SignUpPage darkMode={darkMode} setDarkMode={setDarkMode} />} />
+        <Route path="/dashboard" element={<DashboardPage darkMode={darkMode} setDarkMode={setDarkMode} scrolled={scrolled} />} />
+
       </Routes>
     </Router>
   );

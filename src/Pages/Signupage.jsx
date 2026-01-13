@@ -2,6 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, ArrowLeft, UserPlus, User, Mail, Lock, Check } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { signup } from '../api/authapi';
+import { Toaster, toast } from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
+
 
 const SignUpPage = ({ darkMode }) => {
   const [fullName, setFullName] = useState('');
@@ -14,6 +18,8 @@ const SignUpPage = ({ darkMode }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const navigate = useNavigate();
+  const { setUser } = useAuth();
+
 
   // Password strength indicators
   const [passwordStrength, setPasswordStrength] = useState({
@@ -35,6 +41,28 @@ const SignUpPage = ({ darkMode }) => {
     });
   }, [password]);
 
+  // Validate KU student email format
+  const validateKUEmail = (email) => {
+    // Pattern for KU student emails: admissionnumber.year@students.ku.ac.ke
+    // Example: 0983.2022@students.ku.ac.ke
+    const kuEmailPattern = /^[A-Za-z0-9]+\.20\d{2}@students\.ku\.ac\.ke$/;
+    return kuEmailPattern.test(email);
+  };
+
+  // Format the email automatically as user types
+  const handleEmailChange = (e) => {
+    let value = e.target.value.trim();
+    
+    // Auto-complete the domain if user hasn't typed it yet
+    if (!value.includes('@students.ku.ac.ke') && value.includes('@')) {
+      setEmail(value);
+    } else if (!value.includes('@')) {
+      setEmail(value);
+    } else {
+      setEmail(value);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -47,8 +75,9 @@ const SignUpPage = ({ darkMode }) => {
       return;
     }
 
-    if (!email.endsWith('@ku.ac.ke')) {
-      setError('Please use your official KU email (@ku.ac.ke).');
+    // Updated email validation
+    if (!validateKUEmail(email)) {
+      setError('Please use your official KU student email (e.g., 0983.2022@students.ku.ac.ke).');
       setIsLoading(false);
       return;
     }
@@ -71,21 +100,57 @@ const SignUpPage = ({ darkMode }) => {
       return;
     }
 
-    // Simulate API call
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log('Signing up:', { fullName, email });
-      
-      // In production: await authApi.signup({ fullName, email, password });
-      
-      // Show success and redirect
-      navigate('/login', { 
-        state: { 
-          message: 'Account created successfully! Please check your email to verify your account.' 
-        } 
+      // Make sure accepted_terms is sent as boolean true
+      const response = await signup({
+        full_name: fullName,
+        email,
+        password,
+        confirm_password: confirmPassword,
+        accepted_terms: true  // Always send true if checkbox is checked
       });
+      
+      console.log('Signup successful:', response);
+      
+      // Show success notification
+      toast.success('Account created successfully! Redirecting to dashboard...', {
+        duration: 4000,
+        position: 'top-center',
+        style: {
+          background: darkMode ? '#1f2937' : '#ffffff',
+          color: darkMode ? '#ffffff' : '#1f2937',
+          border: darkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+        }
+      });
+      
+      // Store user data/token (you'll need to update this based on your actual API response)
+if (response.access_token) {
+  // 1️⃣ Save token
+  localStorage.setItem('token', response.access_token);
+
+  // 2️⃣ Update AuthContext with user info
+  if (response.user) {
+    setUser(response.user); // <--- THIS IS THE KEY
+  }
+}
+
+// 3️⃣ Redirect after context is updated
+setTimeout(() => {
+  navigate('/dashboard');
+}, 2000);
+      
     } catch (err) {
-      setError('Signup failed. The email might already be registered.');
+      setError(err.message || 'Signup failed. The email might already be registered.');
+      // Show error notification
+      toast.error(err.message || 'Signup failed. Please try again.', {
+        duration: 4000,
+        position: 'top-center',
+        style: {
+          background: '#fee2e2',
+          color: '#dc2626',
+          border: '1px solid #fecaca',
+        }
+      });
     } finally {
       setIsLoading(false);
     }
@@ -115,6 +180,19 @@ const SignUpPage = ({ darkMode }) => {
         ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100'
         : 'bg-gradient-to-br from-sky-50 via-emerald-50 to-blue-50 text-gray-900'
     }`}>
+      
+      {/* Toast Container */}
+      <Toaster 
+        toastOptions={{
+          className: '',
+          style: {
+            borderRadius: '10px',
+            padding: '16px',
+            fontSize: '14px',
+            fontWeight: '500',
+          },
+        }}
+      />
       
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
@@ -206,13 +284,13 @@ const SignUpPage = ({ darkMode }) => {
             <div>
               <label className="flex items-center gap-2 mb-2 font-medium">
                 <Mail size={16} className={darkMode ? 'text-emerald-400' : 'text-emerald-500'} />
-                KU Email Address
+                KU Student Email
               </label>
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="yourname@ku.ac.ke"
+                onChange={handleEmailChange}
+                placeholder="e.g., 1234.1234@students.ku.ac.ke"
                 className={`w-full px-4 py-3.5 rounded-xl border focus:outline-none transition-all duration-200 ${
                   darkMode
                     ? 'bg-gray-800/50 border-gray-700 text-gray-100 placeholder-gray-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30'
@@ -220,11 +298,12 @@ const SignUpPage = ({ darkMode }) => {
                 }`}
                 required
               />
-              <p className={`mt-1 text-xs ${
-                darkMode ? 'text-emerald-400/80' : 'text-emerald-600'
-              }`}>
-                Only @ku.ac.ke emails are accepted
-              </p>
+              
+              {email && !validateKUEmail(email) && (
+                <p className={`mt-1 text-xs ${darkMode ? 'text-yellow-400/80' : 'text-yellow-600'}`}>
+                  Enter your admission number followed by year (e.g., 1234.1234)
+                </p>
+              )}
             </div>
 
             {/* Password Field */}
@@ -365,7 +444,7 @@ const SignUpPage = ({ darkMode }) => {
                   and{' '}
                   <button type="button" className="font-medium hover:underline">
                     Privacy Policy
-                  </button>. I understand that this platform is exclusively for KU students.
+                  </button>. I verify that I am a current KU student with a valid student email.
                 </span>
               </label>
             </div>
@@ -434,7 +513,7 @@ const SignUpPage = ({ darkMode }) => {
         }`}>
           By creating an account, you verify that you are a current student of Kenyatta University.
           <br />
-          Unauthorized access is prohibited.
+          Access is restricted to valid KU student emails only.
         </p>
       </div>
     </div>

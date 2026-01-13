@@ -2,8 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, ArrowLeft, LogIn, Shield, Mail } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTheme } from '../context/Themecontext';
+import { Toaster, toast } from 'react-hot-toast';
+import { login } from '../api/authapi'; // You'll need to create this function
 
-const LoginPage = ({ darkMode }) => {
+const LoginPage = () => { 
+  const { darkMode } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -21,14 +25,20 @@ const LoginPage = ({ darkMode }) => {
     }
   }, []);
 
+  // Validate KU student email format (same as signup)
+  const validateKUEmail = (email) => {
+    const kuEmailPattern = /^[A-Za-z0-9]+\.20\d{2}@students\.ku\.ac\.ke$/;
+    return kuEmailPattern.test(email);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // Basic validation
-    if (!email.endsWith('@ku.ac.ke')) {
-      setError('Please use your official KU email (@ku.ac.ke).');
+    // Validation - Updated for student email format
+    if (!validateKUEmail(email)) {
+      setError('Please use your official KU student email (e.g., 0983.2022@students.ku.ac.ke).');
       setIsLoading(false);
       return;
     }
@@ -52,18 +62,51 @@ const LoginPage = ({ darkMode }) => {
       localStorage.removeItem('kuEmail');
     }
 
-    // Simulate API call with loading state
+    // Call backend API
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulated delay
-      console.log('Logging in:', { email });
-      // In production, replace with actual API call:
-      // const response = await authApi.login({ email, password });
-      // handle response and navigate
+      const response = await login({
+        email,
+        password
+      });
       
-      // Navigate to home/dashboard on success
-      navigate('/dashboard');
+      console.log('Login successful:', response);
+      
+      // Store tokens
+      if (response.access) {
+        localStorage.setItem('access_token', response.access);
+        localStorage.setItem('refresh_token', response.refresh);
+      }
+      
+      // Show success notification
+      toast.success('Login successful! Redirecting to dashboard...', {
+        duration: 4000,
+        position: 'top-center',
+        style: {
+          background: darkMode ? '#1f2937' : '#ffffff',
+          color: darkMode ? '#ffffff' : '#1f2937',
+          border: darkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+        }
+      });
+      
+      // Redirect to dashboard after 1.5 seconds
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1500);
+      
     } catch (err) {
-      setError('Invalid credentials. Please try again.');
+      const errorMessage = err.message || 'Login failed. Please check your credentials.';
+      setError(errorMessage);
+      
+      // Show error notification
+      toast.error(errorMessage, {
+        duration: 4000,
+        position: 'top-center',
+        style: {
+          background: '#fee2e2',
+          color: '#dc2626',
+          border: '1px solid #fecaca',
+        }
+      });
     } finally {
       setIsLoading(false);
     }
@@ -84,6 +127,19 @@ const LoginPage = ({ darkMode }) => {
         ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100'
         : 'bg-gradient-to-br from-sky-50 via-emerald-50 to-blue-50 text-gray-900'
     }`}>
+      
+      {/* Toast Container */}
+      <Toaster 
+        toastOptions={{
+          className: '',
+          style: {
+            borderRadius: '10px',
+            padding: '16px',
+            fontSize: '14px',
+            fontWeight: '500',
+          },
+        }}
+      />
       
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
@@ -148,17 +204,16 @@ const LoginPage = ({ darkMode }) => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email Field */}
+            {/* Email Field - Updated for student email format */}
             <div>
               <label className="flex items-center gap-2 mb-2 font-medium">
                 <Mail size={16} className={darkMode ? 'text-emerald-400' : 'text-emerald-500'} />
-                KU Email Address
+                KU Student Email
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="yourname@ku.ac.ke"
                 className={`w-full px-4 py-3.5 rounded-xl border focus:outline-none transition-all duration-200 ${
                   darkMode
                     ? 'bg-gray-800/50 border-gray-700 text-gray-100 placeholder-gray-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30'
@@ -166,11 +221,7 @@ const LoginPage = ({ darkMode }) => {
                 }`}
                 required
               />
-              <p className={`mt-1 text-xs ${
-                darkMode ? 'text-gray-500' : 'text-gray-500'
-              }`}>
-                Use your official university email
-              </p>
+              
             </div>
 
             {/* Password Field */}

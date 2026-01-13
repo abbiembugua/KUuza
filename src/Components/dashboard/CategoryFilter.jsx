@@ -1,7 +1,10 @@
 import React from 'react';
 import { Book, Laptop, Shirt, Coffee, Sparkles, Wrench, Grid } from 'lucide-react';
+import { useTheme } from '../../context/Themecontext';
 
-const CategoryFilter = ({ darkMode, selectedCategory, setSelectedCategory }) => {
+const CategoryFilter = ({ selectedCategory, setSelectedCategory }) => {
+  const { darkMode } = useTheme(); // Get darkMode from context instead of props
+
   const categories = [
     { id: 'all', name: 'All Items', icon: <Grid className="w-5 h-5" /> },
     { id: 'books', name: 'Books', icon: <Book className="w-5 h-5" /> },

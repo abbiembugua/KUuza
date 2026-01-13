@@ -1,7 +1,7 @@
 // layouts/LandingLayout.jsx
 import React from 'react';
 import AnimatedBackground from '../UI/AnimatedBackground';
-import Navbar from '../Components/layout/navbar';
+import Navbar from '../Components/Layout/navbar';
 import Footer from '../Components/layout/footer';
 
 const LandingLayout = ({ children, darkMode, setDarkMode, scrolled }) => (

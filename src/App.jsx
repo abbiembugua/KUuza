@@ -3,11 +3,14 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './Pages/Loginpage';
 import SignUpPage from './Pages/Signupage';
-import DashboardPage from './Pages/Dashboardpage';
-//import SellPage from './Pages/SellPage';
+import DashboardPage from './Pages/DashboardPage';
+import SellPage from './Pages/SellPage';
+import ForgotPassword from './Pages/ForgotPassword';
+import MyListingsPage from './Pages/mylistingspage';
+
 import NeedsPage from './Pages/NeedsPage';
 import { ThemeProvider } from './context/Themecontext';
-import { AuthProvider } from './context/AuthContext';
+  import { AuthProvider } from './context/AuthContext';
 
 const App = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -28,6 +31,14 @@ const App = () => {
             <Route path="/signup" element={<SignUpPage />} />
             <Route path="/dashboard" element={<DashboardPage scrolled={scrolled} />} />
             <Route path="/needs" element={<NeedsPage />} />
+            <Route path="/ForgotPassword" element={<ForgotPassword />} />
+            <Route path="/sell" element={<SellPage />} />
+            <Route path="/my-listings" element={<MyListingsPage />} />
+
+
+
+            
+
           </Routes>
         </AuthProvider>
       </Router>

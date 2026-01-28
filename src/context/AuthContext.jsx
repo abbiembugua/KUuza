@@ -6,23 +6,28 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null); // ✅ Add token state
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate(); // ✅ added
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem("access");
-    if (!token) {
+    const accessToken = localStorage.getItem("access");
+    if (!accessToken) {
       setLoading(false);
       return;
     }
 
+    setToken(accessToken); // ✅ Set token in state
+
     getCurrentUser()
       .then(setUser)
-      .catch(() => setUser(null))
+      .catch(() => {
+        setUser(null);
+        setToken(null); // ✅ Clear token on error
+      })
       .finally(() => setLoading(false));
   }, []);
 
-  // ✅ added (does NOT remove anything)
   const logout = async () => {
     try {
       await logoutApi();
@@ -33,11 +38,13 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
     setUser(null);
-    navigate("/"); // landing / home page
+    setToken(null); // ✅ Clear token state
+    navigate("/");
   };
 
+  // ✅ Provide token in context
   return (
-    <AuthContext.Provider value={{ user, loading, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, logout }}>
       {children}
     </AuthContext.Provider>
   );

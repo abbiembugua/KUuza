@@ -1,93 +1,82 @@
+// api.js
+const BASE_URL = "http://127.0.0.1:8000/api";
 
-// Add request interceptor to handle token refresh
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+const getToken = (token) => {
+  // ✅ Look for 'access' token (JWT) instead of 'token'
+  return token || localStorage.getItem('access') || '';
+};
+
+const handleResponse = async (response) => {
+  if (!response.ok) {
+    let errorMessage = 'An error occurred';
     
-    // If 401 error and we haven't tried refreshing yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      
+    if (response.status === 401) {
+      errorMessage = 'Authentication failed. Please login again.';
+      localStorage.removeItem('access');
+      localStorage.removeItem('refresh');
+      window.location.href = '/login'; // Redirect to login
+    } else {
       try {
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (!refreshToken) throw new Error('No refresh token');
-        
-        const response = await api.post('/token/refresh/', {
-          refresh: refreshToken
-        });
-        
-        const newAccessToken = response.data.access;
-        localStorage.setItem('access_token', newAccessToken);
-        api.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
-        
-        // Retry original request
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-        return api(originalRequest);
-        
-      } catch (refreshError) {
-        // Refresh failed - logout
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
-        delete api.defaults.headers.common['Authorization'];
-        
-        // Redirect to login if not already there
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
-        }
-        
-        return Promise.reject(refreshError);
+        const errorData = await response.json();
+        errorMessage = errorData.detail || errorData.error || `Error ${response.status}`;
+      } catch {
+        errorMessage = `Error ${response.status}: ${response.statusText}`;
       }
     }
     
-    return Promise.reject(error);
+    throw new Error(errorMessage);
   }
-);
-
-// API helper functions
-const listingsAPI = {
-  getAll: (params = {}) => api.get('/listings/', { params }),
-  getOne: (id) => api.get(`/listings/${id}/`),
-  create: (data) => api.post('/listings/', data),
-  update: (id, data) => api.put(`/listings/${id}/`, data),
-  delete: (id) => api.delete(`/listings/${id}/`),
-  getMyListings: () => api.get('/listings/my-listings/'),
-  getDrafts: () => api.get('/listings/drafts/'),
-  publish: (id) => api.post(`/listings/${id}/publish/`),
-  markSold: (id) => api.post(`/listings/${id}/mark-sold/`),
+  
+  return await response.json();
 };
 
-const pickupLocationsAPI = {
-  getAll: () => api.get('/pickup-locations/'),
-};
-
-const aiAPI = {
-  getSuggestions: (data) => api.post('/ai/suggestions/', data),
-};
-
-const uploadAPI = {
-  uploadImage: (formData) => api.post('/upload/', formData, {
+export const createListing = async (listingData, token) => {
+  const authToken = getToken(token);
+  
+  console.log('Creating listing with token:', authToken ? 'Token exists' : 'No token');
+  
+  const response = await fetch(`${BASE_URL}/listings/`, {
+    method: 'POST',
     headers: {
-      'Content-Type': 'multipart/form-data',
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authToken}`, // ✅ Bearer for JWT
     },
-  }),
+    body: JSON.stringify(listingData),
+  });
+  
+  return handleResponse(response);
 };
 
-const authAPI = {
-  login: (email, password) => api.post('/auth/login/', { email, password }),
-  register: (data) => api.post('/auth/register/', data),
-  logout: (data) => api.post('/auth/logout/', data),
-  getUser: () => api.get('/auth/user/'),
+export const uploadListingImages = async (listingId, files, token) => {
+  const authToken = getToken(token);
+  const formData = new FormData();
+  
+  files.forEach(file => formData.append('images', file));
+
+  const response = await fetch(`${BASE_URL}/listings/${listingId}/upload_images/`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${authToken}`, // ✅ Bearer for JWT
+    },
+    body: formData,
+  });
+  
+  return handleResponse(response);
 };
 
-export {
-  api,
-  listingsAPI,
-  pickupLocationsAPI,
-  aiAPI,
-  uploadAPI,
-  authAPI
+export const refineListingWithAI = async (title, category, description, token) => {
+  const authToken = getToken(token);
+  
+  console.log('Refining with token:', authToken ? 'Token exists' : 'No token');
+  
+  const response = await fetch(`${BASE_URL}/listings/refine_item/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authToken}`, // ✅ Bearer for JWT
+    },
+    body: JSON.stringify({ title, category, description }),
+  });
+  
+  return handleResponse(response);
 };
-
-export default api;

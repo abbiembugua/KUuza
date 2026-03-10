@@ -4,6 +4,9 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './Pages/Loginpage';
 import SignUpPage from './Pages/Signupage';
 import DashboardPage from './Pages/DashboardPage';
+import IntegratedDashboard from './Pages/IntegratedDashboard';
+import IntegratedBrowsePage from './Pages/IntegratedBrowsePage';
+import IntegratedCartPage from './Pages/IntegratedCartPage';
 import SellPage from './Pages/SellPage';
 import ForgotPassword from './Pages/ForgotPassword';
 import MyListingsPage from './Pages/mylistingspage';
@@ -29,7 +32,10 @@ const App = () => {
             <Route path="/" element={<LandingPage scrolled={scrolled} />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignUpPage />} />
-            <Route path="/dashboard" element={<DashboardPage scrolled={scrolled} />} />
+            <Route path="/dashboard" element={<IntegratedDashboard />} />
+            <Route path="/dashboard-old" element={<DashboardPage scrolled={scrolled} />} />
+            <Route path="/browse" element={<IntegratedBrowsePage />} />
+            <Route path="/cart" element={<IntegratedCartPage />} />
             <Route path="/needs" element={<NeedsPage />} />
             <Route path="/ForgotPassword" element={<ForgotPassword />} />
             <Route path="/sell" element={<SellPage />} />

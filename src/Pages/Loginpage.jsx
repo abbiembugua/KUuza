@@ -38,7 +38,7 @@ const LoginPage = () => {
 
     // Validation - Updated for student email format
     if (!validateKUEmail(email)) {
-      setError('Please use your official KU student email (e.g., 0983.2022@students.ku.ac.ke).');
+      setError('Please use your official KU student email (e.g., 1234.1234@students.ku.ac.ke).');
       setIsLoading(false);
       return;
     }

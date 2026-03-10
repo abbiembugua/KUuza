@@ -72,7 +72,7 @@ const ListingCard = ({ listing, onEdit, onDelete, onTogglePublish, darkMode }) =
         <div className="flex gap-2">
           <button
             onClick={onEdit}
-            className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-sm transition-colors"
           >
             <Edit2 size={16} />
             Edit

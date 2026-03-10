@@ -154,5 +154,21 @@ const toastService = {
     }
   },
 };
+// Named export for backward compatibility
+export const showToast = (message, type = 'info', options = {}) => {
+  switch (type) {
+    case 'success':
+      return toastService.success(message, options);
+    case 'error':
+      return toastService.error(message, options);
+    case 'warning':
+      return toastService.warning(message, options);
+    case 'info':
+      return toastService.info(message, options);
+    default:
+      return toastService.info(message, options);
+  }
+};
 
 export default toastService;
+

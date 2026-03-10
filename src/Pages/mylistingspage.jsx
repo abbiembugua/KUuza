@@ -261,7 +261,7 @@ const MyListingsPage = () => {
 
               <button
                 onClick={handleCreateNew}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl"
               >
                 <Plus size={20} />
                 Create New Listing
@@ -281,8 +281,8 @@ const MyListingsPage = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className={`w-full p-3 rounded-xl border-2 transition-all ${
                   darkMode
-                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500'
-                    : 'bg-white border-gray-300 focus:border-blue-500'
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-emerald-500'
+                    : 'bg-white border-gray-300 focus:border-emerald-500'
                 } focus:outline-none`}
               />
             </div>
@@ -300,8 +300,8 @@ const MyListingsPage = () => {
                   onChange={(e) => setFilter(e.target.value)}
                   className={`w-full p-2 rounded-lg border-2 transition-all ${
                     darkMode
-                      ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-500'
-                      : 'bg-white border-gray-300 focus:border-blue-500'
+                      ? 'bg-gray-700 border-gray-600 text-white focus:border-emerald-500'
+                      : 'bg-white border-gray-300 focus:border-emerald-500'
                   } focus:outline-none`}
                 >
                   <option value="all">All Listings</option>
@@ -320,8 +320,8 @@ const MyListingsPage = () => {
                   onChange={(e) => setSortBy(e.target.value)}
                   className={`w-full p-2 rounded-lg border-2 transition-all ${
                     darkMode
-                      ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-500'
-                      : 'bg-white border-gray-300 focus:border-blue-500'
+                      ? 'bg-gray-700 border-gray-600 text-white focus:border-emerald-500'
+                      : 'bg-white border-gray-300 focus:border-emerald-500'
                   } focus:outline-none`}
                 >
                   <option value="newest">Newest First</option>
@@ -341,7 +341,7 @@ const MyListingsPage = () => {
                     onClick={() => setViewMode('grid')}
                     className={`flex-1 p-2 rounded-lg font-semibold transition-all ${
                       viewMode === 'grid'
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-emerald-600 text-white'
                         : darkMode
                         ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -353,7 +353,7 @@ const MyListingsPage = () => {
                     onClick={() => setViewMode('list')}
                     className={`flex-1 p-2 rounded-lg font-semibold transition-all ${
                       viewMode === 'list'
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-emerald-600 text-white'
                         : darkMode
                         ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -381,7 +381,7 @@ const MyListingsPage = () => {
           {/* Loading State */}
           {loading && (
             <div className="flex items-center justify-center py-16">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
             </div>
           )}
 
@@ -397,7 +397,7 @@ const MyListingsPage = () => {
               </p>
               <button
                 onClick={handleCreateNew}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-all"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold transition-all"
               >
                 <Plus size={20} />
                 Create First Listing
@@ -477,7 +477,7 @@ const MyListingsPage = () => {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEdit(listing)}
-                      className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                      className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
                       title="Edit"
                     >
                       <Edit2 size={18} />

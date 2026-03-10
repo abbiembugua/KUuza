@@ -8,8 +8,10 @@ import FilterSidebar from '../Components/dashboard/FilterSidebar';
 import QuickActions from '../Components/dashboard/QuickActions';
 import { useTheme } from '../context/Themecontext';
 
+
 const DashboardPage = () => {
   const { darkMode, setDarkMode } = useTheme();
+
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [priceRange, setPriceRange] = useState([0, 100000]);

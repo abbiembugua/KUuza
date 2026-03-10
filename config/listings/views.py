@@ -17,6 +17,7 @@ except ImportError:
     GEMINI_AVAILABLE = False
     print("Warning: google-generativeai not installed. Run: pip install google-generativeai")
 
+
 class ListingViewSet(viewsets.ModelViewSet):
     queryset = Listing.objects.all().order_by('-created_at')
     serializer_class = ListingSerializer
@@ -25,15 +26,15 @@ class ListingViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         # Override to filter by current user for my-listings endpoint
         user = self.request.user
-        
+
         # Check if this is a request for user's own listings
         if self.action == 'my_listings':
             return Listing.objects.filter(seller=user).order_by('-created_at')
-        
+
         # For regular listing operations, return all listings
         # (or filter based on other criteria)
         return Listing.objects.all().order_by('-created_at')
-    
+
     @action(detail=False, methods=['get'])
     def my_listings(self, request):
         """
@@ -42,11 +43,11 @@ class ListingViewSet(viewsets.ModelViewSet):
         # This will use the get_queryset method which filters by current user
         queryset = self.get_queryset()
         page = self.paginate_queryset(queryset)
-        
+
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
-        
+
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -68,7 +69,7 @@ class ListingViewSet(viewsets.ModelViewSet):
         """
         print("=== Refine Item Request ===")
         print(f"Request data: {request.data}")
-    
+
         if not GEMINI_AVAILABLE:
             return Response({
                 "error": "Gemini AI not available"
@@ -99,30 +100,30 @@ class ListingViewSet(viewsets.ModelViewSet):
         1. Suggest a concise, attractive, buyer-friendly title (max 60 characters).
         2. Suggest a fair price range in KES (Kenyan Shillings), considering the item category and description.
         3. Suggest a refined, buyer-friendly description (max 150 words).
-        
+
         Format your response as JSON only:
         {{
           "refinedTitle": "<refined title here>",
           "suggestedPrice": "<price in KES>",
           "refinedDescription": "<buyer-friendly description here>"
         }}
-        
+
         Return only the JSON, no additional text.
         """
 
         try:
             # Initialize Gemini model (using gemini-1.5-pro)
             model = genai.GenerativeModel('gemini-2.5-flash')
-            
+
             # Generate response
             response = model.generate_content(prompt)
-            
+
             # Extract text from response
             content = response.text.strip()
-            
+
             # Clean the response - remove markdown code blocks if present
             content = content.replace('```json', '').replace('```', '').strip()
-            
+
             # Convert JSON string to dict
             data = json.loads(content)
             print(f"Gemini response: {content}")
@@ -140,7 +141,7 @@ class ListingViewSet(viewsets.ModelViewSet):
             print(f"ERROR in refine_item: {str(e)}")
             import traceback
             traceback.print_exc()
-            
+
             return Response({
                 "error": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

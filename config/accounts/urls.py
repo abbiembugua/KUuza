@@ -8,6 +8,7 @@ urlpatterns = [
     path('login/', TokenObtainPairView.as_view(), name='login'),  # This is the JWT login endpoint
     path('me/', MeView.as_view()),
     path("logout/", LogoutView.as_view(), name="logout"),
+    
 
 
 ]

@@ -46,9 +46,12 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     
+    
     # Local apps
     'accounts',
     'listings',
+    'reviews',
+    'transactions'
 ]
 
 # Custom User Model

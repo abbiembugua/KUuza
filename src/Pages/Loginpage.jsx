@@ -23,6 +23,9 @@ const LoginPage = () => {
       setEmail(savedEmail);
       setRememberMe(true);
     }
+      const token = localStorage.getItem('access');
+      if (token) navigate('/dashboard');
+
   }, []);
 
   // Validate KU student email format (same as signup)
@@ -71,11 +74,7 @@ const LoginPage = () => {
       
       console.log('Login successful:', response);
       
-      // Store tokens
-      if (response.access) {
-        localStorage.setItem('access_token', response.access);
-        localStorage.setItem('refresh_token', response.refresh);
-      }
+      
       
       // Show success notification
       toast.success('Login successful! Redirecting to dashboard...', {
@@ -182,7 +181,7 @@ const LoginPage = () => {
           <p className={`text-sm ${
             darkMode ? 'text-gray-400' : 'text-gray-600'
           }`}>
-            Sign in to your KU CampusTrade account
+            Sign in to your KUuza account
           </p>
         </div>
 
@@ -303,7 +302,7 @@ const LoginPage = () => {
               ) : (
                 <>
                   <LogIn size={20} />
-                  <span>Login to CampusTrade</span>
+                  <span>Login to KUuza</span>
                 </>
               )}
             </button>
@@ -317,7 +316,7 @@ const LoginPage = () => {
             <span className={`px-4 text-sm ${
               darkMode ? 'text-gray-500' : 'text-gray-500'
             }`}>
-              New to CampusTrade?
+              New to KUuza?
             </span>
             <div className={`flex-1 h-px ${
               darkMode ? 'bg-gray-700' : 'bg-gray-300'

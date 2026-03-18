@@ -193,7 +193,7 @@ const IntegratedBrowsePage = () => {
     } catch (error) {
       console.error('Error recording view:', error);
     }
-    navigate(`/listing/${listingId}`);
+    navigate(`/listings/${listingId}`);
   };
 
   const isOwner = (sellerId) => user?.id === sellerId;

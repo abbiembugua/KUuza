@@ -67,7 +67,7 @@ const IntegratedDashboard = () => {
         setRecentListings(recent.slice(0, 10));
 
         const all = Array.isArray(allData) ? allData : allData?.results || [];
-        const mine = all.filter(item => item.seller?.id === user?.id);
+        const mine = all.filter(item => Number(item.seller?.id) === Number(user?.id));
         setMyListings(mine);
 
       } catch (error) {
@@ -94,7 +94,7 @@ const IntegratedDashboard = () => {
 
   const handleViewListing = async (listingId) => {
     try { await viewListing(listingId); } catch {}
-    navigate(`/listing/${listingId}`);
+    navigate(`/listings/${listingId}`);
   };
 
   const stats = [

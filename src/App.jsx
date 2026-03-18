@@ -10,7 +10,10 @@ import IntegratedCartPage from './Pages/IntegratedCartPage';
 import SellPage from './Pages/SellPage';
 import ForgotPassword from './Pages/ForgotPassword';
 import MyListingsPage from './Pages/mylistingspage';
-
+import ListingDetailPage from './Pages/Listingdetailpage';
+import CheckoutPage from './Pages/CheckoutPage';
+import ReviewPage from './Pages/Reviewpage';
+import PurchasesPage from './Pages/ReviewsPage';
 import NeedsPage from './Pages/NeedsPage';
 import { ThemeProvider } from './context/Themecontext';
   import { AuthProvider } from './context/AuthContext';
@@ -40,6 +43,13 @@ const App = () => {
             <Route path="/ForgotPassword" element={<ForgotPassword />} />
             <Route path="/sell" element={<SellPage />} />
             <Route path="/my-listings" element={<MyListingsPage />} />
+            <Route path="/listings/:id" element={<ListingDetailPage />} />
+            <Route path="/checkout/:id" element={<CheckoutPage />} />
+            <Route path="/review/:transactionId" element={<ReviewPage />} />
+            <Route path="/purchases" element={<PurchasesPage />} />
+
+
+
 
 
 

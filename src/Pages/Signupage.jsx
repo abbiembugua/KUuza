@@ -5,9 +5,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { signup } from '../api/authapi';
 import { Toaster, toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/Themecontext';
 
 
-const SignUpPage = ({ darkMode }) => {
+const SignUpPage = () => {
+  const { darkMode } = useTheme();
+  
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,6 +22,7 @@ const SignUpPage = ({ darkMode }) => {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const navigate = useNavigate();
   const { setUser } = useAuth();
+  const [emailSent, setEmailSent] = useState(false);
 
 
   // Password strength indicators
@@ -113,7 +117,7 @@ const SignUpPage = ({ darkMode }) => {
       console.log('Signup successful:', response);
       
       // Show success notification
-      toast.success('Account created successfully! Redirecting to dashboard...', {
+      toast.success('Account created successfully! Redirecting to verification...', {
         duration: 4000,
         position: 'top-center',
         style: {
@@ -125,8 +129,6 @@ const SignUpPage = ({ darkMode }) => {
       
       // Store user data/token (you'll need to update this based on your actual API response)
 if (response.access_token) {
-  // 1️⃣ Save token
-  localStorage.setItem('token', response.access_token);
 
   // 2️⃣ Update AuthContext with user info
   if (response.user) {
@@ -136,7 +138,7 @@ if (response.access_token) {
 
 // 3️⃣ Redirect after context is updated
 setTimeout(() => {
-  navigate('/dashboard');
+  setEmailSent(true);
 }, 2000);
       
     } catch (err) {
@@ -173,6 +175,29 @@ setTimeout(() => {
     if (score <= 80) return 'bg-emerald-400';
     return 'bg-emerald-500';
   };
+  if (emailSent) {
+  return (
+    <div className={`min-h-screen flex items-center justify-center ${
+      darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'
+    }`}>
+      <div className={`p-10 rounded-3xl shadow-xl text-center max-w-md w-full ${
+        darkMode ? 'bg-gray-800' : 'bg-white'
+      }`}>
+        <div className="text-6xl mb-4">📬</div>
+        <h2 className="text-2xl font-bold mb-2">Check your KU email</h2>
+        <p className={`mb-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+          We sent a verification link to <strong>{email}</strong>
+        </p>
+        <button
+          onClick={() => resendVerification(email)}
+          className="text-emerald-500 underline text-sm hover:text-emerald-600"
+        >
+          Didn't receive it? Resend email
+        </button>
+      </div>
+    </div>
+  );
+}
 
   return (
     <div className={`min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 relative overflow-hidden ${
@@ -233,7 +258,7 @@ setTimeout(() => {
           <h1 className={`text-3xl font-bold mb-2 ${
             darkMode ? 'text-white' : 'text-gray-900'
           }`}>
-            Join KU CampusTrade
+            Join KUuza
           </h1>
           <p className={`text-sm ${
             darkMode ? 'text-gray-400' : 'text-gray-600'
@@ -471,7 +496,7 @@ setTimeout(() => {
               ) : (
                 <>
                   <UserPlus size={20} />
-                  <span>Create CampusTrade Account</span>
+                  <span>Create KUuza Account</span>
                 </>
               )}
             </button>

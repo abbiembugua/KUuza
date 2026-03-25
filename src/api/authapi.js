@@ -130,3 +130,20 @@ export const logout = async () => {
   localStorage.removeItem("access");
   localStorage.removeItem("refresh");
 };
+export const verifyEmail = async (token) => {
+  const response = await fetch(`${API_URL}/verify-email/?token=${token}`);
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error);
+  return result;
+};
+
+export const resendVerification = async (email) => {
+  const response = await fetch(`${API_URL}/resend-verification/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error);
+  return result;
+};

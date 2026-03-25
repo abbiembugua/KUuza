@@ -1,323 +1,303 @@
 // src/api/dashboardapi.js
-// Dashboard-specific API calls - Fixed to work with existing backend
+// Fixed version — correct token key, differentiated trending/recent, working filters
 
-const BASE_URL = "http://127.0.0.1:8000/api";
+const BASE_URL = 'http://127.0.0.1:8000/api';
 
+// ── IMPORTANT: match exactly what your AuthContext stores ─────────────────────
 const getToken = () => localStorage.getItem('access') || '';
+
+const authHeaders = () => ({
+  'Content-Type': 'application/json',
+  Authorization:  `Bearer ${getToken()}`,
+});
 
 const handleResponse = async (response) => {
   if (!response.ok) {
-    let errorMessage = 'An error occurred';
-    
     if (response.status === 401) {
-      errorMessage = 'Authentication failed. Please login again.';
       localStorage.removeItem('access');
       localStorage.removeItem('refresh');
       window.location.href = '/login';
-    } else {
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.detail || errorData.error || errorData.message || `Error ${response.status}`;
-      } catch {
-        errorMessage = `Error ${response.status}: ${response.statusText}`;
-      }
+      throw new Error('Session expired. Please log in again.');
     }
-    
-    throw new Error(errorMessage);
+    let msg = `Error ${response.status}`;
+    try {
+      const err = await response.json();
+      msg = err.detail || err.error || err.message || msg;
+    } catch {}
+    throw new Error(msg);
   }
-  
-  return await response.json();
+  return response.json();
 };
 
-// ==================== DASHBOARD DATA OPERATIONS ====================
+// ── Listings ──────────────────────────────────────────────────────────────────
 
-/**
- * Get all public listings (for browsing) - Fixed to use existing backend endpoint
- * @param {Object} filters - Filter parameters
- * @returns {Promise<Array>} Array of listing objects
- */
 export const getAllListings = async (filters = {}) => {
-  const token = getToken();
-  const queryParams = new URLSearchParams();
-  
-  // Add filter parameters (backend may not support all filtering yet)
-  if (filters.search) queryParams.append('search', filters.search);
-  if (filters.category) queryParams.append('category', filters.category);
-  if (filters.condition) queryParams.append('condition', filters.condition);
-  if (filters.min_price) queryParams.append('min_price', filters.min_price);
-  if (filters.max_price) queryParams.append('max_price', filters.max_price);
-  if (filters.location) queryParams.append('location', filters.location);
-  if (filters.ordering) queryParams.append('ordering', filters.ordering);
-  if (filters.page) queryParams.append('page', filters.page);
-  if (filters.page_size) queryParams.append('page_size', filters.page_size);
-  
-  // Use the existing listings endpoint (returns all listings)
-  const url = `${BASE_URL}/listings/${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-  
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+  const params = new URLSearchParams();
+  if (filters.search)    params.append('search',    filters.search);
+  if (filters.category)  params.append('category',  filters.category);
+  if (filters.listing_type) params.append('listing_type', filters.listing_type);
+  if (filters.condition) params.append('condition', filters.condition);
+  if (filters.status)    params.append('status',    filters.status || 'active');
+  if (filters.ordering)  params.append('ordering',  filters.ordering);
+  if (filters.page)      params.append('page',      filters.page);
+  if (filters.page_size) params.append('page_size', filters.page_size);
+
+  const url = `${BASE_URL}/listings/${params.toString() ? `?${params}` : ''}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${getToken()}` },
   });
-  
-  return handleResponse(response);
+  return handleResponse(res);
 };
 
-/**
- * Get trending listings - Fallback to recent listings for now
- * @returns {Promise<Array>} Array of trending listing objects
- */
+// Trending = most viewed listings
 export const getTrendingListings = async () => {
-  // Since trending endpoint doesn't exist, get all listings and return the most recent ones
   try {
-    const allListings = await getAllListings({ ordering: '-created_at', page_size: 6 });
-    return Array.isArray(allListings) ? allListings : allListings.results || [];
-  } catch (error) {
-    console.warn('Trending listings not available, returning empty array:', error);
+    const data = await getAllListings({
+      ordering:  '-views_count',
+      page_size: 10,
+      status:    'active',
+    });
+    const arr = Array.isArray(data) ? data : data?.results || [];
+    const withViews = arr.filter(l => l.views_count > 0);
+    return withViews.length > 0 ? withViews : arr.slice(0, 6);
+  } catch {
     return [];
   }
 };
 
-/**
- * Get recent listings - Fallback to regular listings
- * @returns {Promise<Array>} Array of recent listing objects
- */
+// Recent = newest listings by creation date
 export const getRecentListings = async () => {
-  // Since recent endpoint doesn't exist, get all listings ordered by creation date
   try {
-    const allListings = await getAllListings({ ordering: '-created_at', page_size: 8 });
-    return Array.isArray(allListings) ? allListings : allListings.results || [];
-  } catch (error) {
-    console.warn('Recent listings not available, returning empty array:', error);
+    const data = await getAllListings({
+      ordering:  '-created_at',
+      page_size: 10,
+      status:    'active',
+    });
+    const arr = Array.isArray(data) ? data : data?.results || [];
+    return arr;
+  } catch {
     return [];
   }
 };
 
-/**
- * Get saved/bookmarked items for current user - Placeholder until implemented
- * @returns {Promise<Array>} Array of saved listing objects
- */
-export const getSavedItems = async () => {
-  // Saved items feature not implemented in backend yet
-  console.warn('Saved items feature not implemented in backend yet');
-  return [];
-};
-
-/**
- * Save/bookmark an item - Placeholder until implemented
- * @param {string} listingId - Listing ID to save
- * @returns {Promise<Object>} Save response
- */
-export const saveItem = async (listingId) => {
-  // Saved items feature not implemented in backend yet
-  console.warn('Save item feature not implemented in backend yet');
-  return { success: false, message: 'Save feature not yet available' };
-};
-
-/**
- * Unsave/unbookmark an item - Placeholder until implemented
- * @param {string} listingId - Listing ID to unsave
- * @returns {Promise<Object>} Unsave response
- */
-export const unsaveItem = async (listingId) => {
-  // Saved items feature not implemented in backend yet
-  console.warn('Unsave item feature not implemented in backend yet');
-  return { success: false, message: 'Unsave feature not yet available' };
-};
-
-/**
- * Get shopping cart items - Placeholder until implemented
- * @returns {Promise<Array>} Array of cart item objects
- */
-export const getCartItems = async () => {
-  // Cart feature not implemented in backend yet
-  console.warn('Cart feature not implemented in backend yet');
-  return [];
-};
-
-/**
- * Add item to cart - Placeholder until implemented
- * @param {string} listingId - Listing ID to add to cart
- * @param {number} quantity - Quantity to add
- * @returns {Promise<Object>} Add to cart response
- */
-export const addToCart = async (listingId, quantity = 1) => {
-  // Cart feature not implemented in backend yet
-  console.warn('Add to cart feature not implemented in backend yet');
-  return { success: false, message: 'Cart feature not yet available' };
-};
-
-/**
- * Update cart item quantity - Placeholder until implemented
- * @param {string} cartItemId - Cart item ID
- * @param {number} quantity - New quantity
- * @returns {Promise<Object>} Update response
- */
-export const updateCartItem = async (cartItemId, quantity) => {
-  console.warn('Update cart feature not implemented in backend yet');
-  return { success: false, message: 'Cart update feature not yet available' };
-};
-
-/**
- * Remove item from cart - Placeholder until implemented
- * @param {string} cartItemId - Cart item ID to remove
- * @returns {Promise<Object>} Remove response
- */
-export const removeFromCart = async (cartItemId) => {
-  console.warn('Remove from cart feature not implemented in backend yet');
-  return { success: false, message: 'Cart removal feature not yet available' };
-};
-
-/**
- * Get categories - Fallback with default categories
- * @returns {Promise<Array>} Array of category objects
- */
-export const getCategories = async () => {
-  // Categories endpoint doesn't exist yet, return default categories
-  console.warn('Categories endpoint not available, using fallback categories');
-  return [
-    { id: 'books', name: 'Books & Textbooks', count: 0 },
-    { id: 'electronics', name: 'Electronics', count: 0 },
-    { id: 'clothing', name: 'Clothing & Fashion', count: 0 },
-    { id: 'furniture', name: 'Furniture', count: 0 },
-    { id: 'services', name: 'Services', count: 0 },
-    { id: 'sports', name: 'Sports & Recreation', count: 0 },
-    { id: 'food', name: 'Food & Dining', count: 0 },
-    { id: 'other', name: 'Other', count: 0 }
-  ];
-};
-
-/**
- * Get listing stats for seller dashboard - Placeholder
- * @returns {Promise<Object>} Stats object with views, inquiries, etc.
- */
-export const getListingStats = async () => {
-  console.warn('Listing stats feature not implemented in backend yet');
-  return {
-    total_listings: 0,
-    total_views: 0,
-    total_inquiries: 0,
-    total_sales: 0
-  };
-};
-
-/**
- * Get buyer inquiries for seller - Placeholder
- * @returns {Promise<Array>} Array of inquiry objects
- */
-export const getBuyerInquiries = async () => {
-  console.warn('Buyer inquiries feature not implemented in backend yet');
-  return [];
-};
-
-/**
- * Reply to buyer inquiry - Placeholder
- * @param {string} inquiryId - Inquiry ID
- * @param {string} message - Reply message
- * @returns {Promise<Object>} Reply response
- */
-export const replyToInquiry = async (inquiryId, message) => {
-  console.warn('Reply to inquiry feature not implemented in backend yet');
-  return { success: false, message: 'Inquiry reply feature not yet available' };
-};
-
-/**
- * Contact seller about listing - Placeholder
- * @param {string} listingId - Listing ID
- * @param {string} message - Message to seller
- * @returns {Promise<Object>} Contact response
- */
-export const contactSeller = async (listingId, message) => {
-  console.warn('Contact seller feature not implemented in backend yet');
-  return { success: false, message: 'Contact seller feature not yet available' };
-};
-
-/**
- * Get campus locations/areas - Fallback with default locations
- * @returns {Promise<Array>} Array of location objects
- */
-export const getCampusLocations = async () => {
-  // Locations endpoint doesn't exist yet, return default KU locations
-  console.warn('Locations endpoint not available, using fallback locations');
-  return [
-    { id: 'main_campus', name: 'Main Campus' },
-    { id: 'lower_kabete', name: 'Lower Kabete' },
-    { id: 'upper_kabete', name: 'Upper Kabete' },
-    { id: 'hostels', name: 'Student Hostels' },
-    { id: 'library', name: 'Library Area' },
-    { id: 'sports_complex', name: 'Sports Complex' },
-    { id: 'agriculture', name: 'Agriculture Faculty' },
-    { id: 'engineering', name: 'Engineering Faculty' }
-  ];
-};
-
-/**
- * Search listings with advanced filters - Use regular listings endpoint
- * @param {Object} searchParams - Search and filter parameters
- * @returns {Promise<Object>} Search results with pagination
- */
-export const searchListings = async (searchParams) => {
-  // Use the regular getAllListings function for search since search endpoint doesn't exist
+export const viewListing = async (listingId) => {
   try {
-    const results = await getAllListings(searchParams);
+    await fetch(`${BASE_URL}/listings/${listingId}/increment_views/`, {
+      method:  'POST',
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+  } catch {}
+};
+
+// ── Cart ──────────────────────────────────────────────────────────────────────
+
+export async function getCartItems() {
+  const res = await fetch(`${BASE_URL}/cart/`, { headers: authHeaders() });
+  if (!res.ok) throw new Error('Could not load cart');
+  const data = await res.json();
+  return data.items || [];
+}
+
+export async function getCart() {
+  const res = await fetch(`${BASE_URL}/cart/`, { headers: authHeaders() });
+  if (!res.ok) throw new Error('Could not load cart');
+  return res.json();
+}
+
+export async function addToCart(listingId, quantity = 1) {
+  const res = await fetch(`${BASE_URL}/cart/add/`, {
+    method:  'POST',
+    headers: authHeaders(),
+    body:    JSON.stringify({ listing_id: listingId, quantity }),
+  });
+  if (!res.ok) {
+    let msg = 'Could not add to cart';
+    try {
+      const err = await res.json();
+      msg = err.error || err.non_field_errors?.[0] || err.listing?.[0] || msg;
+    } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+export async function updateCartItem(cartItemId, quantity) {
+  const res = await fetch(`${BASE_URL}/cart/items/${cartItemId}/`, {
+    method:  'PATCH',
+    headers: authHeaders(),
+    body:    JSON.stringify({ quantity }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Could not update cart item');
+  }
+  return res.json();
+}
+
+export async function removeFromCart(cartItemId) {
+  const res = await fetch(`${BASE_URL}/cart/items/${cartItemId}/`, {
+    method:  'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Could not remove item');
+  return true;
+}
+
+export async function clearCart() {
+  const res = await fetch(`${BASE_URL}/cart/`, {
+    method:  'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Could not clear cart');
+  return true;
+}
+
+export async function checkCartAvailability() {
+  const res = await fetch(`${BASE_URL}/cart/check_availability/`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Could not check availability');
+  return res.json();
+}
+
+// ── Categories (static — matches your database values exactly) ───────────────
+
+export const getCategories = async () => [
+  { id: 'books',          name: 'Books & Textbooks' },
+  { id: 'electronics',    name: 'Electronics' },
+  { id: 'fashion',        name: 'Fashion' },
+  { id: 'furniture',      name: 'Furniture' },
+  { id: 'food_beverages', name: 'Food & Beverages' },
+  { id: 'services',       name: 'Services' },
+  { id: 'other',          name: 'Other' },
+];
+
+// ── Campus locations (static) ─────────────────────────────────────────────────
+
+export const getCampusLocations = async () => [
+  { id: 'main_gate',      name: 'KU Main Gate' },
+  { id: 'student_centre', name: 'Student Centre' },
+  { id: 'ksit',           name: 'KSIT Building' },
+  { id: 'bssc',           name: 'BSSC' },
+  { id: 'library',        name: 'Main Library' },
+  { id: 'hostels',        name: 'Hostels Area' },
+  { id: 'cafeteria',      name: 'Main Cafeteria' },
+];
+
+// ── Transactions (Purchases & Sold Items) ──────────────────────────────────────
+
+export const getMyTransactions = async (params = {}) => {
+  /**
+   * Get all transactions for the current user
+   * @param {Object} params - Query parameters (role, status, etc.)
+   * @returns {Promise<Array>} List of transactions
+   */
+  try {
+    const query = new URLSearchParams(params).toString();
+    const url = `${BASE_URL}/transactions/${query ? `?${query}` : ''}`;
+    const res = await fetch(url, { headers: authHeaders() });
     
-    // If results is an array, wrap it in pagination format
-    if (Array.isArray(results)) {
-      return {
-        results: results,
-        count: results.length,
-        next: null,
-        previous: null
-      };
+    if (!res.ok) {
+      if (res.status === 404) {
+        console.log('Transactions endpoint not found - no transactions yet');
+        return [];
+      }
+      throw new Error('Could not load transactions');
     }
-    
-    // If it's already in pagination format, return as is
-    return results;
+    const data = await res.json();
+    return data.results || data;
   } catch (error) {
-    console.warn('Search listings failed, returning empty results:', error);
-    return {
-      results: [],
-      count: 0,
-      next: null,
-      previous: null
-    };
+    console.error('Error fetching transactions:', error);
+    return [];
   }
 };
 
-/**
- * Get listing view count and increment - Placeholder
- * @param {string} listingId - Listing ID
- * @returns {Promise<Object>} View response
- */
-export const viewListing = async (listingId) => {
-  console.warn('View listing tracking not implemented in backend yet');
-  return { success: false, message: 'View tracking not yet available' };
+export const getPurchases = async () => {
+  return getMyTransactions({ role: 'buyer' });
 };
 
-/**
- * Mark listing as sold - Placeholder
- * @param {string} listingId - Listing ID
- * @returns {Promise<Object>} Update response
- */
-export const markAsSold = async (listingId) => {
-  console.warn('Mark as sold feature not implemented in backend yet');
-  return { success: false, message: 'Mark as sold feature not yet available' };
+export const getSoldItems = async () => {
+  return getMyTransactions({ role: 'seller', status: 'completed' });
 };
 
-/**
- * Get dashboard summary data - Placeholder
- * @returns {Promise<Object>} Dashboard summary with various metrics
- */
-export const getDashboardSummary = async () => {
-  console.warn('Dashboard summary feature not implemented in backend yet');
-  return {
-    total_listings: 0,
-    active_listings: 0,
-    total_views: 0,
-    total_inquiries: 0,
-    this_month_sales: 0,
-    pending_orders: 0
-  };
+export const getSales = async () => {
+  return getMyTransactions({ role: 'seller' });
+};
+
+export const getCompletedSales = async () => {
+  return getMyTransactions({ role: 'seller', status: 'completed' });
+};
+
+export const getPendingTransactions = async () => {
+  return getMyTransactions({ status: 'pending' });
+};
+
+// ── Pending Reviews ──────────────────────────────────────────────────────
+
+export const getPendingReviews = async () => {
+  /**
+   * Get transactions that need reviews
+   */
+  try {
+    const res = await fetch(`${BASE_URL}/transactions/pending_reviews/`, {
+      headers: authHeaders()
+    });
+    if (!res.ok) throw new Error('Could not load pending reviews');
+    const data = await res.json();
+    return data.results || data;
+  } catch (error) {
+    console.error('Error fetching pending reviews:', error);
+    return [];
+  }
+};
+
+// ── Placeholders (features not yet built) ─────────────────────────────────────
+
+export const getSavedItems    = async () => [];
+export const saveItem         = async () => ({ success: false });
+export const unsaveItem       = async () => ({ success: false });
+export const getListingStats  = async () => ({
+  total_listings: 0, total_views: 0, total_sales: 0
+});
+export const getBuyerInquiries = async () => [];
+export const replyToInquiry    = async () => ({ success: false });
+export const contactSeller     = async () => ({ success: false });
+export const getDashboardSummary = async () => ({
+  total_listings: 0, active_listings: 0, total_views: 0, pending_orders: 0
+});
+
+export const markAsSold = async () => ({ success: false });
+
+export const searchListings = async (params) => {
+  try {
+    const data = await getAllListings(params);
+    if (Array.isArray(data)) return { results: data, count: data.length, next: null };
+    return data;
+  } catch {
+    return { results: [], count: 0, next: null };
+  }
+};
+
+// Add this to your dashboardapi.js file (at the end, before the placeholders)
+
+export const getMyAllListings = async (params = {}) => {
+  /**
+   * Get ALL listings for the current user (including drafts, sold, deactivated)
+   * @param {Object} params - Query parameters (status, is_draft, etc.)
+   * @returns {Promise<Array>} List of all user's listings
+   */
+  try {
+    const query = new URLSearchParams(params).toString();
+    const url = `${BASE_URL}/listings/my_listings/${query ? `?${query}` : ''}`;
+    const res = await fetch(url, { 
+      headers: authHeaders() 
+    });
+    
+    if (!res.ok) throw new Error('Could not load your listings');
+    const data = await res.json();
+    return data.results || data;
+  } catch (error) {
+    console.error('Error fetching my listings:', error);
+    return [];
+  }
 };

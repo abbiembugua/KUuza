@@ -4,7 +4,7 @@ import {
   ArrowLeft, MapPin, Calendar, Clock, CreditCard,
   Smartphone, Banknote, CheckCircle, AlertCircle,
   Loader2, Package, Wrench, Shield, Phone, Mail,
-  ChevronRight, MessageSquare
+  ChevronRight, MessageSquare, RefreshCw, XCircle
 } from 'lucide-react';
 import DashboardNavbar from '../Components/Layout/DashboardNavbar';
 import { useTheme } from '../context/Themecontext';
@@ -44,6 +44,14 @@ async function fetchContactDetails(listingId, token) {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error('Could not retrieve contact details');
+  return res.json();
+}
+
+async function checkTransactionStatus(transactionId, token) {
+  const res = await fetch(`${API_BASE}/transactions/${transactionId}/`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('Could not check transaction status');
   return res.json();
 }
 
@@ -180,6 +188,152 @@ function ContactRevealBox({ contact, darkMode }) {
   );
 }
 
+// ── M-Pesa Payment Status Component ────────────────────────────────────────────
+
+function MpesaPaymentStatus({ transactionId, token, darkMode, onRetry, onComplete }) {
+  const [status, setStatus] = useState('checking'); // checking, processing, completed, failed
+  const [errorMessage, setErrorMessage] = useState('');
+  const [checkCount, setCheckCount] = useState(0);
+  const [transaction, setTransaction] = useState(null);
+
+  useEffect(() => {
+    let interval;
+    let timeout;
+
+    const checkStatus = async () => {
+      try {
+        const txn = await checkTransactionStatus(transactionId, token);
+        setTransaction(txn);
+        
+        if (txn.status === 'completed') {
+          setStatus('completed');
+          if (interval) clearInterval(interval);
+          if (timeout) clearTimeout(timeout);
+          onComplete(txn);
+          toast.success('Payment successful! Your transaction is now complete.');
+        } else if (txn.status === 'cancelled' || txn.status === 'failed') {
+          setStatus('failed');
+          setErrorMessage(txn.payment_status_message || 'Payment was cancelled or failed');
+          if (interval) clearInterval(interval);
+          if (timeout) clearTimeout(timeout);
+        } else if (checkCount >= 30) { // Check for 30 attempts (about 60 seconds)
+          setStatus('failed');
+          setErrorMessage('Payment confirmation timeout. Please check your M-Pesa app or contact support.');
+          if (interval) clearInterval(interval);
+          if (timeout) clearTimeout(timeout);
+        } else {
+          setCheckCount(prev => prev + 1);
+        }
+      } catch (err) {
+        console.error('Status check error:', err);
+      }
+    };
+
+    // Start checking status every 2 seconds
+    setStatus('processing');
+    interval = setInterval(checkStatus, 2000);
+    
+    // Stop checking after 60 seconds
+    timeout = setTimeout(() => {
+      if (interval) clearInterval(interval);
+      if (status === 'processing') {
+        setStatus('failed');
+        setErrorMessage('Payment is taking longer than expected. Please check your transaction in the Purchases page.');
+      }
+    }, 60000);
+
+    return () => {
+      if (interval) clearInterval(interval);
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [transactionId, token, checkCount]);
+
+  return (
+    <div className={`rounded-2xl p-6 shadow-sm ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+      {status === 'processing' && (
+        <>
+          <div className="flex items-center gap-3 mb-4">
+            <Loader2 size={24} className="animate-spin text-emerald-500" />
+            <div>
+              <h3 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Processing Payment
+              </h3>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Please check your phone and enter your M-Pesa PIN
+              </p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-full bg-emerald-500 rounded-full animate-pulse" style={{ width: '100%' }} />
+            </div>
+            <p className={`text-xs text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+              Waiting for payment confirmation... {Math.floor(checkCount * 2)}s
+            </p>
+          </div>
+        </>
+      )}
+
+      {status === 'completed' && (
+        <>
+          <div className="flex items-center gap-3 mb-4">
+            <CheckCircle size={24} className="text-green-500" />
+            <div>
+              <h3 className={`font-bold text-green-500 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Payment Successful!
+              </h3>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Your payment has been received and confirmed
+              </p>
+            </div>
+          </div>
+          {transaction?.mpesa_receipt && (
+            <div className={`p-3 rounded-lg text-sm ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+              <p className={`font-semibold mb-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                M-Pesa Receipt
+              </p>
+              <p className={`font-mono text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                {transaction.mpesa_receipt}
+              </p>
+            </div>
+          )}
+        </>
+      )}
+
+      {status === 'failed' && (
+        <>
+          <div className="flex items-center gap-3 mb-4">
+            <XCircle size={24} className="text-red-500" />
+            <div>
+              <h3 className={`font-bold text-red-500 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Payment Failed
+              </h3>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {errorMessage || 'The payment was not completed successfully'}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={onRetry}
+              className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+            >
+              <RefreshCw size={16} />
+              Retry Payment
+            </button>
+            <button
+              onClick={() => navigate('/purchases')}
+              className="flex-1 py-2 border-2 border-gray-300 hover:border-emerald-500 rounded-lg font-semibold transition-colors"
+            >
+              View Purchases
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 const CheckoutPage = () => {
@@ -194,6 +348,8 @@ const CheckoutPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [transaction, setTransaction] = useState(null);
   const [contact, setContact]       = useState(null);
+  const [mpesaPaymentStatus, setMpesaPaymentStatus] = useState(null);
+  const [mpesaError, setMpesaError] = useState(null);
 
   // Form state
   const [scheduledDate, setScheduledDate]   = useState('');
@@ -242,17 +398,76 @@ const CheckoutPage = () => {
     if (!scheduledDate) e.scheduledDate = 'Please select a date';
     if (isGood && !scheduledTime) e.scheduledTime = 'Please select a time';
     if (!paymentMethod) e.paymentMethod = 'Please select a payment method';
-    if (paymentMethod === 'mpesa' && !mpesaPhone.trim()) {
-      e.mpesaPhone = 'Enter your M-Pesa phone number';
+    if (paymentMethod === 'mpesa') {
+      if (!mpesaPhone.trim()) {
+        e.mpesaPhone = 'Enter your M-Pesa phone number';
+      } else {
+        // Validate Kenyan phone number format
+        const phoneRegex = /^(254|0)[7-9][0-9]{8}$/;
+        const cleanedPhone = mpesaPhone.replace(/\D/g, '');
+        if (!phoneRegex.test(cleanedPhone)) {
+          e.mpesaPhone = 'Enter a valid Kenyan phone number (e.g., 254712345678 or 0712345678)';
+        }
+      }
     }
     setErrors(e);
     return Object.keys(e).length === 0;
+  };
+
+  // ── Handle M-Pesa payment completion ───────────────────────────────────────
+  const handleMpesaComplete = (completedTransaction) => {
+    setTransaction(completedTransaction);
+    setMpesaPaymentStatus('completed');
+    
+    // Fetch contact details after successful payment
+    const fetchContact = async () => {
+      try {
+        const contactData = await fetchContactDetails(listing.id, token);
+        setContact({ ...contactData, listing_type: listing.listing_type });
+      } catch (err) {
+        console.error('Failed to fetch contact details:', err);
+      }
+    };
+    fetchContact();
+  };
+
+  // ── Handle M-Pesa retry ────────────────────────────────────────────────────
+  const handleRetryMpesa = async () => {
+    setMpesaError(null);
+    setMpesaPaymentStatus('processing');
+    
+    try {
+      const response = await fetch(
+        `${API_BASE}/transactions/${transaction.id}/initiate_mpesa/`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ phone_number: mpesaPhone }),
+        }
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to initiate payment');
+      }
+      
+      toast.success('M-Pesa prompt sent! Please check your phone.');
+    } catch (err) {
+      setMpesaPaymentStatus('failed');
+      setMpesaError(err.message);
+      toast.error(err.message || 'Could not send M-Pesa prompt');
+    }
   };
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleConfirm = async () => {
     if (!validateStep2()) return;
     setSubmitting(true);
+    setMpesaError(null);
+    
     try {
       // Build transaction payload
       const payload = {
@@ -268,17 +483,58 @@ const CheckoutPage = () => {
       const txn = await createTransaction(payload, token);
       setTransaction(txn);
 
-      // Now fetch contact details — revealed after transaction created
-      const contactData = await fetchContactDetails(listing.id, token);
-      setContact({ ...contactData, listing_type: listing.listing_type });
+      // Handle M-Pesa payment
+      if (paymentMethod === 'mpesa') {
+        try {
+          const mpesaRes = await fetch(
+            `${API_BASE}/transactions/${txn.id}/initiate_mpesa/`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ phone_number: mpesaPhone }),
+            }
+          );
+          
+          if (!mpesaRes.ok) {
+            const errData = await mpesaRes.json();
+            throw new Error(errData.error || 'Could not send M-Pesa prompt');
+          }
+          
+          // Payment initiated successfully - proceed to step 3 with payment status
+          setStep(3);
+          setMpesaPaymentStatus('processing');
+          toast.success('M-Pesa prompt sent! Please check your phone to complete payment.');
+          
+          // Do NOT fetch contact details yet - only after payment completes
+          // The MpesaPaymentStatus component will handle payment verification
+          
+        } catch (err) {
+          // Payment initiation failed - show error and stay on step 2
+          setMpesaError(err.message);
+          toast.error(err.message || 'Could not send M-Pesa prompt. Please check your phone number and try again.');
+          setSubmitting(false);
+          return; // Don't proceed to step 3
+        }
+      } else {
+        // For non-M-Pesa payments, proceed to step 3 and fetch contact details
+        setStep(3);
+        const contactData = await fetchContactDetails(listing.id, token);
+        setContact({ ...contactData, listing_type: listing.listing_type });
+        toast.success('Booking confirmed!');
+      }
 
-      setStep(3);
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
     } catch (err) {
       toast.error(err.message || 'Something went wrong. Please try again.');
-    } finally {
       setSubmitting(false);
+    } finally {
+      if (paymentMethod !== 'mpesa') {
+        setSubmitting(false);
+      }
     }
   };
 
@@ -576,7 +832,7 @@ const CheckoutPage = () => {
                         setMpesaPhone(e.target.value);
                         setErrors(prev => ({ ...prev, mpesaPhone: '' }));
                       }}
-                      placeholder="+254 7XX XXX XXX"
+                      placeholder="0712345678 or 254712345678"
                       className={`w-full p-3 rounded-xl border-2 text-sm transition-all focus:outline-none ${
                         errors.mpesaPhone
                           ? 'border-red-500'
@@ -594,6 +850,25 @@ const CheckoutPage = () => {
                   </div>
                 )}
               </div>
+
+              {/* M-Pesa Error Display */}
+              {mpesaError && (
+                <div className={`rounded-2xl p-4 shadow-sm border-l-4 border-red-500 ${
+                  darkMode ? 'bg-red-900/20 border-red-500' : 'bg-red-50'
+                }`}>
+                  <div className="flex items-start gap-2">
+                    <AlertCircle size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className={`text-sm font-semibold ${darkMode ? 'text-red-400' : 'text-red-700'}`}>
+                        Payment Error
+                      </p>
+                      <p className={`text-xs mt-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {mpesaError}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Order summary mini */}
               <div className={`rounded-2xl p-5 shadow-sm ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
@@ -651,7 +926,7 @@ const CheckoutPage = () => {
                 {submitting ? (
                   <span className="flex items-center justify-center gap-2">
                     <Loader2 size={18} className="animate-spin" />
-                    {paymentMethod === 'mpesa' ? 'Processing payment...' : 'Confirming...'}
+                    {paymentMethod === 'mpesa' ? 'Initiating payment...' : 'Confirming...'}
                   </span>
                 ) : (
                   paymentMethod === 'mpesa'
@@ -679,64 +954,89 @@ const CheckoutPage = () => {
                   {isService ? 'Booking Confirmed!' : 'Order Confirmed!'}
                 </h2>
                 <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Your transaction has been created successfully.
+                  {paymentMethod === 'mpesa' 
+                    ? 'Complete the M-Pesa payment to finalize your order'
+                    : 'Your transaction has been created successfully'}
                 </p>
               </div>
 
-              {/* Transaction receipt */}
-              <div className={`rounded-2xl p-5 shadow-sm ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                <h3 className={`font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Transaction Details
-                </h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Item</span>
-                    <span className={`font-medium text-right max-w-[200px] ${
-                      darkMode ? 'text-white' : 'text-gray-900'
-                    }`}>{listing.title}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Amount</span>
-                    <span className={`font-bold ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                      {listing.price
-                        ? `KSh ${parseFloat(listing.price).toLocaleString('en-KE')}`
-                        : 'Negotiable'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Payment</span>
-                    <span className={`font-medium capitalize ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {paymentMethod === 'mpesa'
-                        ? 'M-Pesa'
-                        : paymentMethod === 'pay_after_service'
-                          ? 'Pay After Service'
-                          : 'Cash on Pickup'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
-                      {isService ? 'Service date' : 'Pickup date'}
-                    </span>
-                    <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {scheduledDate && new Date(scheduledDate).toLocaleDateString('en-KE', {
-                        weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
-                      })}
-                      {scheduledTime && ` · ${scheduledTime}`}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Status</span>
-                    <span className={`font-semibold ${
-                      paymentMethod === 'mpesa' ? 'text-green-500' : 'text-amber-500'
-                    }`}>
-                      {paymentMethod === 'mpesa' ? 'Payment Processing' : 'Pending'}
-                    </span>
+              {/* M-Pesa Payment Status - Only show if payment method is M-Pesa */}
+              {paymentMethod === 'mpesa' && (
+                <MpesaPaymentStatus
+                  transactionId={transaction?.id}
+                  token={token}
+                  darkMode={darkMode}
+                  onRetry={handleRetryMpesa}
+                  onComplete={handleMpesaComplete}
+                />
+              )}
+
+              {/* Transaction receipt - Only show if payment is completed or non-M-Pesa */}
+              {(paymentMethod !== 'mpesa' || mpesaPaymentStatus === 'completed') && (
+                <div className={`rounded-2xl p-5 shadow-sm ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                  <h3 className={`font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Transaction Details
+                  </h3>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Item</span>
+                      <span className={`font-medium text-right max-w-[200px] ${
+                        darkMode ? 'text-white' : 'text-gray-900'
+                      }`}>{listing.title}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Amount</span>
+                      <span className={`font-bold ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                        {listing.price
+                          ? `KSh ${parseFloat(listing.price).toLocaleString('en-KE')}`
+                          : 'Negotiable'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Payment</span>
+                      <span className={`font-medium capitalize ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {paymentMethod === 'mpesa'
+                          ? 'M-Pesa'
+                          : paymentMethod === 'pay_after_service'
+                            ? 'Pay After Service'
+                            : 'Cash on Pickup'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
+                        {isService ? 'Service date' : 'Pickup date'}
+                      </span>
+                      <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {scheduledDate && new Date(scheduledDate).toLocaleDateString('en-KE', {
+                          weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+                        })}
+                        {scheduledTime && ` · ${scheduledTime}`}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Status</span>
+                      <span className={`font-semibold ${
+                        mpesaPaymentStatus === 'completed' 
+                          ? 'text-green-500' 
+                          : paymentMethod === 'mpesa' 
+                            ? 'text-amber-500' 
+                            : 'text-amber-500'
+                      }`}>
+                        {mpesaPaymentStatus === 'completed' 
+                          ? 'Paid' 
+                          : paymentMethod === 'mpesa' 
+                            ? 'Awaiting Payment' 
+                            : 'Pending'}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Contact reveal */}
-              {contact && <ContactRevealBox contact={contact} darkMode={darkMode} />}
+              {/* Contact reveal - Only show if payment is completed or non-M-Pesa */}
+              {(paymentMethod !== 'mpesa' || mpesaPaymentStatus === 'completed') && contact && (
+                <ContactRevealBox contact={contact} darkMode={darkMode} />
+              )}
 
               {/* Note about seller marking complete */}
               <div className={`p-4 rounded-xl text-sm flex items-start gap-3 ${

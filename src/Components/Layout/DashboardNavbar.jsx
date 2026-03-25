@@ -259,7 +259,6 @@ const { darkMode, toggleTheme } = useTheme();
                         }`}
                       >
                         <Settings size={16} />
-                        Settings
                       </Link>
 
                       <hr className={`my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />

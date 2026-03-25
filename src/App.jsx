@@ -13,7 +13,7 @@ import MyListingsPage from './Pages/mylistingspage';
 import ListingDetailPage from './Pages/Listingdetailpage';
 import CheckoutPage from './Pages/CheckoutPage';
 import ReviewPage from './Pages/Reviewpage';
-import PurchasesPage from './Pages/ReviewsPage';
+import PurchasesPage from './Pages/PurchasesPage';
 import NeedsPage from './Pages/NeedsPage';
 import { ThemeProvider } from './context/Themecontext';
   import { AuthProvider } from './context/AuthContext';

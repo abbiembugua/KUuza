@@ -18,6 +18,10 @@ import {
   getCampusLocations,
   addToCart,
   viewListing,
+  getPurchases,
+  getSoldItems, 
+  getMyTransactions,
+  getMyAllListings,
 } from '../api/dashboardapi';
 import { showToast } from '../Services/toastService';
 
@@ -31,14 +35,16 @@ const IntegratedDashboard = () => {
   const [recentListings, setRecentListings] = useState([]);
   const [myListings, setMyListings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [purchases, setPurchases] = useState([]);
+  const [soldItems, setSoldItems] = useState([]);   
 
   const categoryData = [
     { id: 'books', name: 'Books', icon: '📚', lucide: BookOpen, color: 'from-amber-400 to-orange-500' },
     { id: 'electronics', name: 'Electronics', icon: '💻', lucide: Laptop, color: 'from-blue-400 to-blue-600' },
-    { id: 'clothing', name: 'Clothing', icon: '👕', lucide: Shirt, color: 'from-pink-400 to-rose-500' },
+    { id: 'fashion', name: 'Fashion', icon: '👕', lucide: Shirt, color: 'from-pink-400 to-rose-500' },
     { id: 'furniture', name: 'Furniture', icon: '🪑', lucide: Armchair, color: 'from-emerald-400 to-emerald-600' },
     { id: 'sports', name: 'Sports', icon: '⚽', lucide: Dumbbell, color: 'from-violet-400 to-purple-600' },
-    { id: 'food', name: 'Food', icon: '🍕', lucide: Pizza, color: 'from-red-400 to-red-600' },
+    { id: 'food_beverages', name: 'Food', icon: '🍕', lucide: Pizza, color: 'from-red-400 to-red-600' },
     { id: 'services', name: 'Services', icon: '🔧', lucide: Wrench, color: 'from-teal-400 to-teal-600' },
     { id: 'other', name: 'Other', icon: '📦', lucide: Box, color: 'from-gray-400 to-gray-600' },
   ];
@@ -47,28 +53,50 @@ const IntegratedDashboard = () => {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        const [cartData, trendingData, recentData, allData] = await Promise.all([
+        // Fetch all data in parallel
+        const [cartData, trendingData, recentData, transactionsData, myAllListingsData] = await Promise.all([
           getCartItems(),
           getTrendingListings().catch(() => []),
           getRecentListings().catch(() => []),
-          getAllListings({ page_size: 50 }).catch(() => []),
+          getMyTransactions().catch(() => []),
+          getMyAllListings().catch(() => []),
         ]);
 
         setCartItems(cartData || []);
 
+        // Process transactions to get purchases and sales
+        const transactions = Array.isArray(transactionsData) 
+          ? transactionsData 
+          : transactionsData?.results || [];
+        
+        // Filter purchases (where user is buyer)
+        const purchasesArray = transactions.filter(t => t.buyer === user?.id);
+        setPurchases(purchasesArray);
+        
+        // Filter sales (where user is seller AND transaction is completed)
+        const soldArray = transactions.filter(t => 
+          t.seller === user?.id && 
+          ['completed', 'auto_completed'].includes(t.status)
+        );
+        setSoldItems(soldArray);
+
+        // Set trending listings
         const trending = Array.isArray(trendingData)
           ? trendingData
           : trendingData?.results || [];
         setTrendingListings(trending.slice(0, 10));
 
+        // Set recent listings
         const recent = Array.isArray(recentData)
           ? recentData
           : recentData?.results || [];
         setRecentListings(recent.slice(0, 10));
 
-        const all = Array.isArray(allData) ? allData : allData?.results || [];
-        const mine = all.filter(item => Number(item.seller?.id) === Number(user?.id));
-        setMyListings(mine);
+        // Set my listings from getMyAllListings
+        const myAllListings = Array.isArray(myAllListingsData) 
+          ? myAllListingsData 
+          : myAllListingsData?.results || [];
+        setMyListings(myAllListings);
 
       } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -77,7 +105,9 @@ const IntegratedDashboard = () => {
       }
     };
 
-    loadData();
+    if (user?.id) {
+      loadData();
+    }
   }, [user?.id]);
 
   const handleAddToCart = async (e, listing) => {
@@ -118,59 +148,25 @@ const IntegratedDashboard = () => {
     },
     {
       label: 'Items Sold',
-      value: myListings.filter(l => l.is_sold).length,
+      value: soldItems.length,
       icon: TrendingUp,
       gradient: 'from-violet-500 to-violet-600',
       bg: darkMode ? 'bg-violet-900/30' : 'bg-violet-50',
       text: 'text-violet-600',
-      link: '/my-listings'
+      link: '/purchases?tab=seller'
     },
     {
       label: 'Purchases',
-      value: 0,
+      value: purchases.length,
       icon: ShoppingBag,
       gradient: 'from-orange-500 to-orange-600',
       bg: darkMode ? 'bg-orange-900/30' : 'bg-orange-50',
       text: 'text-orange-600',
-      link: '/purchases'
+      link: '/purchases?tab=buyer'
     },
   ];
 
-  const quickActions = [
-    {
-      label: 'Sell Something',
-      description: 'List an item for sale',
-      icon: Plus,
-      gradient: 'from-emerald-500 to-emerald-700',
-      link: '/sell'
-    },
-    {
-      label: 'My Listings',
-      description: 'Manage your active listings',
-      icon: Package,
-      gradient: 'from-blue-500 to-blue-700',
-      link: '/my-listings'
-    },
-    {
-      label: 'My Purchases',
-      description: 'View your order history',
-      icon: ShoppingBag,
-      gradient: 'from-violet-500 to-violet-700',
-      link: '/purchases'
-    },
-  ];
-
-  if (isLoading) {
-    return (
-      <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-        <div className="text-center">
-          <Loader className="w-12 h-12 animate-spin mx-auto mb-4 text-emerald-500" />
-          <p className={`text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>Loading your dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
+  // No loading screen - just render with skeleton or empty states
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'} transition-colors duration-300`}>
       <DashboardNavbar
@@ -213,7 +209,6 @@ const IntegratedDashboard = () => {
                 <ShoppingCart className="w-4 h-4" />
                 <span className="text-sm">Cart ({cartItems.length})</span>
               </div>
-              
             </div>
           </div>
         </div>
@@ -239,40 +234,12 @@ const IntegratedDashboard = () => {
                   <ChevronRight className={`w-4 h-4 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`} />
                 </div>
                 <p className={`text-3xl font-bold mb-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {stat.value}
+                  {isLoading ? '...' : stat.value}
                 </p>
                 <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{stat.label}</p>
               </div>
             );
           })}
-        </div>
-
-        {/* Quick Actions */}
-        <div>
-          <h2 className={`text-lg font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            Quick Actions
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {quickActions.map((action) => {
-              const Icon = action.icon;
-              return (
-                <button
-                  key={action.label}
-                  onClick={() => navigate(action.link)}
-                  className={`flex items-center gap-4 p-5 rounded-2xl text-left transition-all duration-200 transform hover:-translate-y-0.5 hover:shadow-xl bg-gradient-to-r ${action.gradient} text-white shadow-lg`}
-                >
-                  <div className="p-3 bg-white/20 rounded-xl">
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-base">{action.label}</p>
-                    <p className="text-sm opacity-75">{action.description}</p>
-                  </div>
-                  <ArrowRight className="w-5 h-5 ml-auto opacity-70" />
-                </button>
-              );
-            })}
-          </div>
         </div>
 
         {/* Browse by Category */}
@@ -316,6 +283,7 @@ const IntegratedDashboard = () => {
         <HorizontalScrollSection
           title="🔥 Trending on Campus"
           listings={trendingListings}
+          isLoading={isLoading}
           darkMode={darkMode}
           onView={handleViewListing}
           onAddToCart={handleAddToCart}
@@ -327,6 +295,7 @@ const IntegratedDashboard = () => {
         <HorizontalScrollSection
           title="🆕 Just Listed"
           listings={recentListings}
+          isLoading={isLoading}
           darkMode={darkMode}
           onView={handleViewListing}
           onAddToCart={handleAddToCart}
@@ -335,7 +304,7 @@ const IntegratedDashboard = () => {
         />
 
         {/* My Active Listings */}
-        {myListings.length > 0 && (
+        {!isLoading && myListings.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -391,7 +360,7 @@ const IntegratedDashboard = () => {
 };
 
 /* Horizontal Scroll Section Component */
-const HorizontalScrollSection = ({ title, listings, darkMode, onView, onAddToCart, onViewAll, emptyMessage }) => (
+const HorizontalScrollSection = ({ title, listings, isLoading, darkMode, onView, onAddToCart, onViewAll, emptyMessage }) => (
   <div>
     <div className="flex items-center justify-between mb-4">
       <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{title}</h2>
@@ -403,7 +372,22 @@ const HorizontalScrollSection = ({ title, listings, darkMode, onView, onAddToCar
       </button>
     </div>
 
-    {listings.length === 0 ? (
+    {isLoading ? (
+      <div className="flex gap-4 overflow-x-auto pb-3">
+        {[1, 2, 3, 4, 5].map(i => (
+          <div key={i} className="flex-shrink-0 w-44">
+            <div className={`rounded-2xl overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'} border ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
+              <div className="h-36 bg-gray-300 dark:bg-gray-700 animate-pulse" />
+              <div className="p-3 space-y-2">
+                <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded animate-pulse" />
+                <div className="h-4 w-2/3 bg-gray-300 dark:bg-gray-700 rounded animate-pulse" />
+                <div className="h-8 bg-gray-300 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : listings.length === 0 ? (
       <div className={`text-center py-8 rounded-2xl border-2 border-dashed ${
         darkMode ? 'border-gray-700 text-gray-500' : 'border-gray-200 text-gray-400'
       }`}>

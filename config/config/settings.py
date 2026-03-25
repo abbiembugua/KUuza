@@ -15,6 +15,9 @@ from decouple import config
 from datetime import timedelta
 import os
 
+
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -51,7 +54,8 @@ INSTALLED_APPS = [
     'accounts',
     'listings',
     'reviews',
-    'transactions'
+    'transactions',
+    'Cart'
 ]
 
 # Custom User Model
@@ -126,6 +130,14 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+MPESA_CONSUMER_KEY = config("MPESA_CONSUMER_KEY", default="")
+MPESA_CONSUMER_SECRET = config("MPESA_CONSUMER_SECRET", default="")
+MPESA_SHORTCODE = config("MPESA_SHORTCODE", default="")
+MPESA_PASSKEY = config("MPESA_PASSKEY", default="")
+MPESA_CALLBACK_URL = config("MPESA_CALLBACK_URL", default="")
+MPESA_ENV = config("MPESA_ENV", default="sandbox")
+
 
 ROOT_URLCONF = 'config.urls'
 

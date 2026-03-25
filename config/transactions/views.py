@@ -6,6 +6,8 @@ from django.db.models import Q
 from django.utils import timezone
 from .models import Transaction
 from .serializers import TransactionSerializer
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 
 class TransactionViewSet(viewsets.ModelViewSet):
@@ -114,3 +116,97 @@ class TransactionViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(pending, many=True)
         return Response(serializer.data)
+# Add these two actions inside TransactionViewSet:
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def initiate_mpesa(self, request, pk=None):
+        from .mpesa_service import stk_push
+        from django.conf import settings  # ← ADD THIS
+
+        transaction = self.get_object()
+
+        if transaction.buyer != request.user:
+            return Response({'error': 'Only the buyer can initiate payment.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if transaction.payment_method != 'mpesa':
+            return Response({'error': 'This transaction is not set to M-Pesa payment.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if transaction.mpesa_receipt:
+            return Response({'error': 'Payment already completed for this transaction.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        phone  = transaction.mpesa_phone or request.data.get('phone_number', '')
+        amount = transaction.agreed_price or 1
+
+        if not phone:
+            return Response({'error': 'No M-Pesa phone number on this transaction.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            print("📱 Phone:", phone)
+            print("💰 Amount:", amount)
+            print("🔑 MPESA_ENV:", settings.MPESA_ENV)
+
+            result = stk_push(phone, amount, transaction.id)  # ← only once
+            print("✅ STK RESULT:", result)
+
+            transaction.mpesa_receipt = result.get('CheckoutRequestID', '')
+            transaction.save(update_fields=['mpesa_receipt'])
+
+            return Response({
+                'message': 'STK push sent. Check your phone to complete payment.',
+                'checkout_request_id': result.get('CheckoutRequestID'),
+            })
+
+        except Exception as e:
+            return Response({'error': f'M-Pesa error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+
+
+    @action(
+        detail=False, methods=['post'],
+        permission_classes=[],          # Public — Safaricom calls this
+        authentication_classes=[],
+        url_path='mpesa_callback'
+    )
+    def mpesa_callback(self, request):
+        """
+        POST /api/transactions/mpesa_callback/
+        Safaricom calls this automatically after the buyer accepts or rejects payment.
+        """
+        try:
+            stk_callback = request.data.get('Body', {}).get('stkCallback', {})
+            checkout_request_id = stk_callback.get('CheckoutRequestID', '')
+            result_code         = stk_callback.get('ResultCode')
+
+            # Find the transaction by the CheckoutRequestID we stored in mpesa_receipt
+            transaction = Transaction.objects.filter(
+                mpesa_receipt=checkout_request_id
+            ).first()
+
+            if not transaction:
+                return Response({"ResultCode": 0, "ResultDesc": "Accepted"})
+
+            if result_code == 0:
+                # Payment successful — extract the real receipt number
+                items = stk_callback.get('CallbackMetadata', {}).get('Item', [])
+                receipt = next(
+                    (i['Value'] for i in items if i.get('Name') == 'MpesaReceiptNumber'),
+                    ''
+                )
+                transaction.mpesa_receipt  = receipt          # replace with real receipt
+                transaction.status         = 'completed'
+                transaction.completed_at   = timezone.now()
+                transaction.save(update_fields=['mpesa_receipt', 'status', 'completed_at', 'updated_at'])
+
+                # Mark listing as sold if it is a good
+                if transaction.listing and transaction.interaction_type == 'purchase':
+                    transaction.listing.mark_sold()
+            else:
+                # Payment cancelled or failed — reset so buyer can retry
+                transaction.mpesa_receipt = ''
+                transaction.save(update_fields=['mpesa_receipt'])
+
+        except Exception as e:
+            print(f"M-Pesa callback error: {e}")
+
+        # Always return this — Safaricom will keep retrying if you do not
+        return Response({"ResultCode": 0, "ResultDesc": "Accepted"})

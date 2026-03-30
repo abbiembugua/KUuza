@@ -67,6 +67,11 @@ const SignUpPage = () => {
     }
   };
 
+  const resendVerification = async (email) => {
+  await axios.post('/api/accounts/resend-verification/', { email });
+  toast.success('Verification email resent!');
+};
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');

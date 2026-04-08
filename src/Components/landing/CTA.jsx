@@ -2,9 +2,15 @@
 import React from 'react';
 import { CheckCircle } from 'lucide-react';
 import { useTheme } from '../../context/Themecontext';
+import { useNavigate } from 'react-router-dom';
 
 const CTA = () => {
   const { darkMode } = useTheme();
+  const navigate=useNavigate();
+
+  const handleSignup =()=>{
+    navigate('/signup');
+  };
   
   return (
     <section className={`py-20 px-6 transition-colors duration-200 ${
@@ -19,7 +25,7 @@ const CTA = () => {
           <h2 className={`text-4xl font-bold mb-6 transition-colors duration-200 ${
             darkMode ? 'text-white' : 'text-gray-900'
           }`}>
-            Ready to Join Kenya's Premier<br />
+            Ready to Join the World class University's<br />
             <span className="text-emerald-500">Student Marketplace</span>?
           </h2>
           <p className={`text-xl mb-10 max-w-2xl mx-auto transition-colors duration-200 ${
@@ -28,7 +34,9 @@ const CTA = () => {
             Connect with thousands of verified KU students. Buy, sell, and trade securely within our trusted campus community.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className={`px-10 py-4 rounded-xl font-bold text-lg transition-all duration-300 hover:scale-105 ${
+            <button 
+            onClick={handleSignup}
+            className={`px-10 py-4 rounded-xl font-bold text-lg transition-all duration-300 hover:scale-105 ${
               darkMode
                 ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-2xl shadow-emerald-500/30'
                 : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-2xl shadow-emerald-500/30'

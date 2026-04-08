@@ -6,6 +6,7 @@ import {
   Shield, Tag, AlertCircle, CheckCircle, Loader2
 } from 'lucide-react';
 import DashboardNavbar from '../Components/Layout/DashboardNavbar';
+import BackButton from '../Components/shared/BackButton';
 import { useTheme } from '../context/Themecontext';
 import { useAuth } from '../context/AuthContext';
 import { toast, Toaster } from 'react-hot-toast';
@@ -209,9 +210,7 @@ const ListingDetailPage = () => {
 
           {/* Back */}
           <div className="pt-6 mb-6 flex items-center gap-2">
-            <button onClick={() => navigate(-1)} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-gray-800 hover:bg-gray-700 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}>
-              <ArrowLeft size={20} /> Back
-            </button>
+            <BackButton darkMode={darkMode} onClick={() => navigate(-1)} />
             <span className={darkMode ? 'text-gray-600' : 'text-gray-300'}>/</span>
             <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{CATEGORY_LABELS[listing.category] || listing.category}</span>
             <span className={darkMode ? 'text-gray-600' : 'text-gray-300'}>/</span>

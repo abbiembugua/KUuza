@@ -1,11 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { Upload, X, Loader2, ArrowLeft, Zap } from 'lucide-react';
+import { Upload, X, Loader2, Zap } from 'lucide-react';
 import DashboardNavbar from '../Components/Layout/DashboardNavbar';
 import { useTheme } from '../context/Themecontext';
 import { createListing, uploadListingImages, refineListingWithAI } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 import { Toaster, toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import BackButton from '../Components/shared/BackButton';
 
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -262,8 +263,8 @@ const SellPage = () => {
       errors[field]
         ? 'border-red-500'
         : darkMode
-          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500'
-          : 'bg-white border-gray-300 focus:border-blue-500'
+          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-emerald-500'
+          : 'bg-white border-gray-300 focus:border-emerald-500'
     }`;
 
 
@@ -279,16 +280,7 @@ const SellPage = () => {
 
           {/* ── Header ── */}
           <div className="mb-8">
-            <button
-              onClick={() => window.history.back()}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg mb-6 transition-colors ${
-                darkMode
-                  ? 'bg-gray-800 hover:bg-gray-700 text-gray-200'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-              }`}
-            >
-              <ArrowLeft size={20} /> Back
-            </button>
+            <BackButton darkMode={darkMode} className="mb-6" />
             <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
               Create a Listing
             </h1>
@@ -319,7 +311,7 @@ const SellPage = () => {
                         onClick={() => handleListingTypeToggle(value)}
                         className={`p-4 rounded-xl border-2 text-left transition-all ${
                           formData.listing_type === value
-                            ? 'border-blue-500 bg-blue-500/10'
+                            ? 'border-emerald-500 bg-emerald-500/10'
                             : darkMode
                               ? 'border-gray-600 hover:border-gray-500'
                               : 'border-gray-200 hover:border-gray-300'
@@ -374,7 +366,7 @@ const SellPage = () => {
                   {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
                   {/* Inform user that selecting Services auto-switches type */}
                   {formData.category === 'services' && (
-                    <p className={`text-sm mt-1 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                    <p className={`text-sm mt-1 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
                       Services category automatically set listing type to Service.
                     </p>
                   )}
@@ -383,16 +375,16 @@ const SellPage = () => {
                 {/* ── AI panel — appears after title + category filled ── */}
                 {formData.title && formData.category && (
                   <div className={`border-2 border-dashed rounded-xl p-5 ${
-                    darkMode ? 'border-blue-500 bg-blue-900/20' : 'border-blue-400 bg-blue-50'
+                    darkMode ? 'border-emerald-500 bg-emerald-900/20' : 'border-emerald-400 bg-emerald-50'
                   }`}>
                     <div className="flex items-center gap-2 mb-2">
                       <Zap size={20} className="text-yellow-500" />
-                      <h3 className={`font-bold ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>
-                        Refine with AI
+                      <h3 className={`font-bold ${darkMode ? 'text-emerald-300' : 'text-emerald-700'}`}>
+                        Generate with AI
                       </h3>
                     </div>
                     <p className={`text-sm mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                      AI will improve your title, description, and suggest a fair price based on what you have entered so far.
+                      AI will generate a description,refine your title and suggest a fair price based on what you have entered so far.
                     </p>
                     <button
                       type="button"
@@ -401,7 +393,7 @@ const SellPage = () => {
                       className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all ${
                         refiningAI
                           ? 'bg-gray-400 cursor-not-allowed text-white'
-                          : 'bg-blue-600 hover:bg-blue-700 text-white'
+                          : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                       }`}
                     >
                       {refiningAI
@@ -452,7 +444,7 @@ const SellPage = () => {
                           }}
                           className={`py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
                             formData.condition === value
-                              ? 'border-blue-500 bg-blue-500/10 text-blue-600'
+                              ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600'
                               : darkMode
                                 ? 'border-gray-600 text-gray-300 hover:border-gray-500'
                                 : 'border-gray-200 text-gray-700 hover:border-gray-300'
@@ -509,7 +501,7 @@ const SellPage = () => {
                           className="rounded-lg object-cover h-24 w-full border-2 border-gray-300"
                         />
                         {i === 0 && (
-                          <span className="absolute bottom-1 left-1 bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded">
+                          <span className="absolute bottom-1 left-1 bg-emerald-600 text-white text-xs px-1.5 py-0.5 rounded">
                             Cover
                           </span>
                         )}
@@ -569,7 +561,7 @@ const SellPage = () => {
                       name="negotiable"
                       checked={formData.negotiable}
                       onChange={handleChange}
-                      className="w-4 h-4 text-blue-600 rounded"
+                      className="w-4 h-4 text-emerald-600 rounded"
                     />
                     <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       Price is negotiable
@@ -588,8 +580,8 @@ const SellPage = () => {
                     onChange={handleChange}
                     placeholder={
                       isService
-                        ? 'e.g. KU Main Campus, available on weekdays'
-                        : 'e.g. KSIT Building, available evenings'
+                        ? 'e.g. KU Main Campus,'
+                        : 'e.g. BSSC'
                     }
                     className={inputClass('area_of_operation')}
                   />
@@ -621,7 +613,7 @@ const SellPage = () => {
                         }}
                         className={`py-3 px-4 rounded-xl border-2 font-medium transition-all ${
                           formData.contact_preference === value
-                            ? 'border-blue-500 bg-blue-500/10'
+                            ? 'border-emerald-500 bg-emerald-500/10'
                             : darkMode
                               ? 'border-gray-600 text-gray-300 hover:border-gray-500'
                               : 'border-gray-200 text-gray-700 hover:border-gray-300'
@@ -710,7 +702,7 @@ const SellPage = () => {
                     className={`w-full py-3 rounded-xl font-bold transition-all ${
                       loading || refiningAI
                         ? 'bg-gray-400 cursor-not-allowed text-white'
-                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                     }`}
                   >
                     {loading

@@ -37,6 +37,8 @@ export const getAllListings = async (filters = {}) => {
   if (filters.category)  params.append('category',  filters.category);
   if (filters.listing_type) params.append('listing_type', filters.listing_type);
   if (filters.condition) params.append('condition', filters.condition);
+  if (filters.min_price !== undefined) params.append('min_price', filters.min_price);
+  if (filters.max_price !== undefined) params.append('max_price', filters.max_price);
   if (filters.status)    params.append('status',    filters.status || 'active');
   if (filters.ordering)  params.append('ordering',  filters.ordering);
   if (filters.page)      params.append('page',      filters.page);
@@ -168,7 +170,7 @@ export const getCategories = async () => [
   { id: 'fashion',        name: 'Fashion' },
   { id: 'furniture',      name: 'Furniture' },
   { id: 'food_beverages', name: 'Food & Beverages' },
-  { id: 'services',       name: 'Services' },
+  { id: 'beauty',         name: 'Beauty' },
   { id: 'other',          name: 'Other' },
 ];
 

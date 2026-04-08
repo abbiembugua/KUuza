@@ -57,21 +57,23 @@ const { darkMode, toggleTheme } = useTheme();
       <div className="max-w-7xl mx-auto px-4">
         <div className="h-16 flex items-center justify-between">
 
-          {/* Logo Section */}
+          {/* Logo Section - Farthest Left */}
           <Link to="/dashboard" className="flex items-center gap-3 flex-shrink-0">
-            <Shield 
-              size={24} 
-              className="text-emerald-600" 
-            />
-            <span className={`text-xl font-bold tracking-tight ${
-              darkMode ? 'text-white' : 'text-gray-900'
-            }`}>
-              KU<span className="text-emerald-600">uza</span>
-            </span>
+            <div className={`p-2 rounded-lg ${darkMode ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
+              <ShoppingBag className={`w-6 h-6 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
+            </div>
+            <div>
+              <h1 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                KU<span className="text-emerald-500">uza</span>
+              </h1>
+              <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                Kenyatta University Official Marketplace
+              </p>
+            </div>
           </Link>
 
-          {/* Navigation Links */}
-          <div className="hidden md:flex items-center gap-6 flex-shrink-0">
+          {/* Navigation Links - Moved after logo */}
+          <div className="hidden md:flex items-center gap-6 ml-8">
             <Link
               to="/dashboard"
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -259,6 +261,7 @@ const { darkMode, toggleTheme } = useTheme();
                         }`}
                       >
                         <Settings size={16} />
+                        Settings
                       </Link>
 
                       <hr className={`my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />

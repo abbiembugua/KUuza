@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './Pages/Loginpage';
 import SignUpPage from './Pages/Signupage';
-import DashboardPage from './Pages/DashboardPage';
 import IntegratedDashboard from './Pages/IntegratedDashboard';
 import IntegratedBrowsePage from './Pages/IntegratedBrowsePage';
 import IntegratedCartPage from './Pages/IntegratedCartPage';
@@ -36,7 +35,6 @@ const App = () => {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignUpPage />} />
             <Route path="/dashboard" element={<IntegratedDashboard />} />
-            <Route path="/dashboard-old" element={<DashboardPage scrolled={scrolled} />} />
             <Route path="/browse" element={<IntegratedBrowsePage />} />
             <Route path="/cart" element={<IntegratedCartPage />} />
             <Route path="/needs" element={<NeedsPage />} />

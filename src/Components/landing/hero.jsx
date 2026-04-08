@@ -2,9 +2,12 @@
 import React from 'react';
 import { Sparkles, ArrowRight } from 'lucide-react';
 import { useTheme } from '../../context/Themecontext';
+import { useNavigate } from 'react-router-dom';
 
 const Hero = () => {
   const { darkMode } = useTheme();
+  const navigate = useNavigate();
+
   
   const stats = [
     { label: 'Verified Students', value: '10K+' },
@@ -12,6 +15,9 @@ const Hero = () => {
     { label: 'Secure Transactions', value: '98%' },
     { label: 'AI-Powered', value: '100%' },
   ];
+const handleSignIn = () => {
+    navigate('/login'); // or '/login' depending on your route path
+  };
 
   return (
     <section className={`pt-32 pb-20 px-6 transition-colors duration-200 ${
@@ -21,7 +27,6 @@ const Hero = () => {
         <div className={`inline-flex items-center space-x-2 mb-6 px-4 py-2 rounded-full transition-colors duration-200 ${
           darkMode ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-500/10 border border-emerald-500/20'
         }`}>
-          <Sparkles className="w-4 h-4 text-emerald-400" />
           <span className={`text-sm font-medium transition-colors duration-200 ${
             darkMode ? 'text-emerald-300' : 'text-emerald-700'
           }`}>
@@ -48,7 +53,9 @@ const Hero = () => {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-          <button className={`group px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 ${
+          <button 
+           onClick={handleSignIn}
+          className={`group px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 ${
             darkMode 
               ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/30'
               : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/30'
@@ -56,13 +63,7 @@ const Hero = () => {
             Sign in with student ID
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </button>
-          <button className={`group px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 hover:scale-105 ${
-            darkMode 
-              ? 'bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white shadow-lg shadow-gray-800/30'
-              : 'bg-white hover:bg-gray-50 border border-gray-200 text-gray-800 shadow-lg shadow-gray-200/30'
-          }`}>
-            Browse as guest
-          </button>
+          
         </div>
 
         <div className={`grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto p-6 rounded-2xl backdrop-blur-lg transition-colors duration-200 ${

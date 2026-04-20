@@ -64,29 +64,46 @@ class ListingViewSet(viewsets.ModelViewSet):
           their own content regardless of status.
         """
         user = self.request.user
+        min_price = self.request.query_params.get('min_price')
+        max_price = self.request.query_params.get('max_price')
 
         if self.action == 'my_listings':
-            return (
+            queryset = (
                 Listing.objects
                 .filter(seller=user)
                 .select_related('seller')
                 .prefetch_related('images')
                 .order_by('-created_at')
             )
+            if min_price:
+                queryset = queryset.filter(price__gte=min_price)
+            if max_price:
+                queryset = queryset.filter(price__lte=max_price)
+            return queryset
 
         base_qs = Listing.objects.select_related('seller').prefetch_related('images')
 
         if user.is_authenticated:
-            return base_qs.filter(
+            queryset = base_qs.filter(
                 Q(status='active', is_draft=False) |  # visible to all buyers
                 Q(seller=user)                         # seller sees all their own
             ).order_by('-created_at')
+            if min_price:
+                queryset = queryset.filter(price__gte=min_price)
+            if max_price:
+                queryset = queryset.filter(price__lte=max_price)
+            return queryset
 
         # Unauthenticated: only active, published listings
-        return base_qs.filter(
+        queryset = base_qs.filter(
             status='active',
             is_draft=False
         ).order_by('-created_at')
+        if min_price:
+            queryset = queryset.filter(price__gte=min_price)
+        if max_price:
+            queryset = queryset.filter(price__lte=max_price)
+        return queryset
 
     # ── Create ───────────────────────────────────────────────────────────────
     def perform_create(self, serializer):

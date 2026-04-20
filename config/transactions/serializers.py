@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Transaction
+from django.db import connection
+from .models import Notification, Transaction
 from listings.serializers import ListingSerializer
 
 
@@ -100,4 +101,43 @@ class TransactionSerializer(serializers.ModelSerializer):
             'service_use' if listing.listing_type == 'service' else 'purchase'
         )
 
-        return super().create(validated_data)
+        transaction = super().create(validated_data)
+
+        if 'transactions_notification' in connection.introspection.table_names():
+            Notification.objects.create(
+                recipient=transaction.seller,
+                actor=transaction.buyer,
+                transaction=transaction,
+                notification_type='purchase_created',
+                title='New purchase request',
+                body=f'{transaction.buyer.full_name} placed an order for {listing.title}.',
+            )
+            Notification.objects.create(
+                recipient=transaction.buyer,
+                actor=transaction.seller,
+                transaction=transaction,
+                notification_type='receipt_ready',
+                title='Receipt ready',
+                body=f'Your receipt for {listing.title} is ready to download.',
+            )
+
+        return transaction
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    actor_name = serializers.CharField(source='actor.full_name', read_only=True)
+    transaction_id = serializers.UUIDField(source='transaction.id', read_only=True)
+
+    class Meta:
+        model = Notification
+        fields = [
+            'id',
+            'title',
+            'body',
+            'notification_type',
+            'is_read',
+            'created_at',
+            'read_at',
+            'actor_name',
+            'transaction_id',
+        ]

@@ -111,3 +111,55 @@ class Transaction(models.Model):
             and self.listing
         ):
             self.listing.increment_usage()
+
+        if (
+            self.status in ('completed', 'auto_completed')
+            and self.buyer_id
+            and self.listing_id
+        ):
+            from Cart.models import CartItem
+
+            CartItem.objects.filter(
+                cart__user=self.buyer,
+                listing_id=self.listing_id,
+            ).delete()
+
+
+class Notification(models.Model):
+    TYPE_CHOICES = [
+        ('purchase_created', 'Purchase Created'),
+        ('receipt_ready', 'Receipt Ready'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='notifications'
+    )
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='sent_notifications'
+    )
+    transaction = models.ForeignKey(
+        Transaction,
+        on_delete=models.CASCADE,
+        related_name='notifications'
+    )
+    notification_type = models.CharField(max_length=32, choices=TYPE_CHOICES)
+    title = models.CharField(max_length=255)
+    body = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['recipient', 'is_read']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.notification_type} for {self.recipient}"

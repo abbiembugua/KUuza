@@ -5,8 +5,8 @@ from django.contrib.auth.password_validation import validate_password
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'full_name', 'is_active', 'created_at']
-        read_only_fields = ['id', 'is_active', 'created_at']
+        fields = ['id', 'email', 'full_name', 'is_active', 'created_at', 'is_email_verified']
+        read_only_fields = ['id', 'is_active', 'created_at', 'is_email_verified']
 
 class SignUpSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
@@ -45,3 +45,15 @@ class SignUpSerializer(serializers.ModelSerializer):
         # Remove confirm_password from validated data before creating user
         validated_data.pop('confirm_password', None)
         return User.objects.create_user(**validated_data)
+
+
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['full_name']
+
+    def validate_full_name(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Full name cannot be empty.")
+        return value

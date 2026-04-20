@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   CheckCircle, XCircle, Loader2, RefreshCw,
-  Shield, Phone, Mail, Download,
+  Shield, Phone, Mail, Download, ShoppingBag,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { generateReceipt } from './generateReceipt';
@@ -22,7 +22,6 @@ function MpesaPaymentStatus({ transactionId, token, darkMode, onRetry, onComplet
   const [status,       setStatus]       = useState('processing');
   const [errorMessage, setErrorMessage] = useState('');
   const [checkCount,   setCheckCount]   = useState(0);
-  const [txn,          setTxn]          = useState(null);
 
   useEffect(() => {
     let interval;
@@ -31,7 +30,6 @@ function MpesaPaymentStatus({ transactionId, token, darkMode, onRetry, onComplet
     const check = async () => {
       try {
         const data = await checkTransactionStatus(transactionId, token);
-        setTxn(data);
 
         if (data.status === 'completed') {
           setStatus('completed');
@@ -71,7 +69,6 @@ function MpesaPaymentStatus({ transactionId, token, darkMode, onRetry, onComplet
 
   return (
     <div className={`rounded-2xl p-6 shadow-sm ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-
       {status === 'processing' && (
         <>
           <div className="flex items-center gap-3 mb-4">
@@ -134,7 +131,7 @@ function ContactRevealBox({ contact, darkMode }) {
   const Icon       = isWhatsApp ? Phone : Mail;
   const label      = isWhatsApp ? 'WhatsApp' : 'Email';
   const action     = isWhatsApp
-    ? `https://wa.me/${contact.contact_value.replace(/[^0-9]/g, '')}`
+    ? `https://wa.me/${contact.contact_value?.replace(/[^0-9]/g, '')}`
     : `mailto:${contact.contact_value}`;
 
   return (
@@ -171,6 +168,28 @@ function ContactRevealBox({ contact, darkMode }) {
   );
 }
 
+// ── Bulk contact list ─────────────────────────────────────────────────────────
+
+function BulkContactList({ bulkItems, darkMode }) {
+  // In bulk, sellers are surfaced via item.seller_id — we can't fetch all
+  // contacts here (that happens per-transaction on the backend). Show a
+  // helpful nudge to check Purchases instead.
+  return (
+    <div className={`rounded-xl border-l-4 border-emerald-500 p-5 ${darkMode ? 'bg-gray-800' : 'bg-emerald-50'}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <Shield size={16} className="text-emerald-500" />
+        <p className="text-xs font-bold uppercase tracking-wider text-emerald-500">
+          Seller Contact Details
+        </p>
+      </div>
+      <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+        Contact details for all {bulkItems.length} sellers are available on your{' '}
+        <strong>Purchases</strong> page — tap each transaction to reveal them.
+      </p>
+    </div>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 const Confirmation = ({
@@ -186,19 +205,27 @@ const Confirmation = ({
   onRetryMpesa,
   onNavigatePurchases,
   onNavigateDashboard,
+  // bulk props
+  isBulk    = false,
+  bulkItems = [],
+  bulkTotal = 0,
+  bulkTxns  = [],
 }) => {
+  // In single mode, listing is always set; in bulk it's null — guard everything
   const isService = listing?.listing_type === 'service';
   const paymentDone = paymentMethod !== 'mpesa' || mpesaPaymentStatus === 'completed';
 
+  // Single-mode M-Pesa completion: fetch seller contact
   const handleMpesaComplete = async (completedTxn) => {
     setMpesaPaymentStatus('completed');
+    if (isBulk) return; // bulk contacts are on Purchases page
     try {
-      const res = await fetch(`${API_BASE}/listings/${listing.id}/contact_details/`, {
+      const res = await fetch(`${API_BASE}/listings/${listing?.id}/contact_details/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const data = await res.json();
-        setContact({ ...data, listing_type: listing.listing_type });
+        setContact({ ...data, listing_type: listing?.listing_type });
       }
     } catch (err) {
       console.error('Contact fetch failed:', err);
@@ -214,6 +241,11 @@ const Confirmation = ({
         scheduledTime,
         paymentMethod,
         contact,
+        // pass bulk data so generateReceipt can handle it if needed
+        isBulk,
+        bulkItems,
+        bulkTotal,
+        bulkTxns,
       });
       toast.success('Receipt downloaded!');
     } catch (err) {
@@ -223,21 +255,27 @@ const Confirmation = ({
   };
 
   const fmtPaymentLabel = () => {
-    if (paymentMethod === 'mpesa')            return 'M-Pesa';
+    if (paymentMethod === 'mpesa')             return 'M-Pesa';
     if (paymentMethod === 'pay_after_service') return 'Pay After Service';
     return 'Cash on Pickup';
   };
 
+  const totalAmount = isBulk
+    ? bulkTotal
+    : listing?.price ? parseFloat(listing.price) : null;
+
   return (
     <div className="space-y-4">
 
-      {/* ── Success header ── */}
+      {/* Success header */}
       <div className={`rounded-2xl p-6 text-center shadow-sm ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <CheckCircle size={32} className="text-green-500" />
         </div>
         <h2 className={`text-xl font-bold mb-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-          {isService ? 'Booking Confirmed!' : 'Order Confirmed!'}
+          {isBulk
+            ? `${bulkItems.length} Orders Confirmed!`
+            : isService ? 'Booking Confirmed!' : 'Order Confirmed!'}
         </h2>
         <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
           {paymentMethod === 'mpesa'
@@ -246,7 +284,7 @@ const Confirmation = ({
         </p>
       </div>
 
-      {/* ── M-Pesa status poller ── */}
+      {/* M-Pesa status poller — uses first transaction ID for bulk */}
       {paymentMethod === 'mpesa' && (
         <MpesaPaymentStatus
           transactionId={transaction?.id}
@@ -257,7 +295,7 @@ const Confirmation = ({
         />
       )}
 
-      {/* ── Transaction details + receipt download ── */}
+      {/* Transaction details */}
       {paymentDone && (
         <div className={`rounded-2xl p-5 shadow-sm ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
           <div className="flex items-center justify-between mb-4">
@@ -274,20 +312,48 @@ const Confirmation = ({
           </div>
 
           <div className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Item</span>
-              <span className={`font-medium text-right max-w-[200px] ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                {listing.title}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Amount</span>
-              <span className={`font-bold ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                {listing.price
-                  ? `KSh ${parseFloat(listing.price).toLocaleString('en-KE')}`
-                  : 'Negotiable'}
-              </span>
-            </div>
+            {isBulk ? (
+              /* Bulk: list each item */
+              <>
+                {bulkItems.map((item, i) => (
+                  <div key={item.cart_item_id || item.listing_id || i} className="flex justify-between">
+                    <span className={`truncate max-w-[200px] ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {item.title}
+                      {item.quantity > 1 && <span className="ml-1">×{item.quantity}</span>}
+                    </span>
+                    <span className={`font-medium flex-shrink-0 ml-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      KSh {(item.price * item.quantity).toLocaleString('en-KE')}
+                    </span>
+                  </div>
+                ))}
+                <div className={`flex justify-between pt-2 border-t ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
+                  <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Total</span>
+                  <span className={`font-bold ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                    KSh {bulkTotal.toLocaleString('en-KE')}
+                  </span>
+                </div>
+              </>
+            ) : (
+              /* Single: original layout */
+              <>
+                <div className="flex justify-between">
+                  <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Item</span>
+                  <span className={`font-medium text-right max-w-[200px] ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {listing?.title}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Amount</span>
+                  <span className={`font-bold ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                    {listing?.price
+                      ? `KSh ${parseFloat(listing.price).toLocaleString('en-KE')}`
+                      : 'Negotiable'}
+                  </span>
+                </div>
+              </>
+            )}
+
+            {/* Shared rows */}
             <div className="flex justify-between">
               <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Payment</span>
               <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -329,24 +395,26 @@ const Confirmation = ({
         </div>
       )}
 
-      {/* ── Contact reveal ── */}
-      {paymentDone && contact && (
-        <ContactRevealBox contact={contact} darkMode={darkMode} />
+      {/* Contact reveal */}
+      {paymentDone && (
+        isBulk
+          ? <BulkContactList bulkItems={bulkItems} darkMode={darkMode} />
+          : contact && <ContactRevealBox contact={contact} darkMode={darkMode} />
       )}
 
-      {/* ── Info note ── */}
+      {/* Info note */}
       <div className={`p-4 rounded-xl text-sm flex items-start gap-3 ${
         darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-50 text-gray-500'
       }`}>
         <Shield size={16} className="flex-shrink-0 mt-0.5 text-emerald-400" />
         <p>
-          Once the {isService ? 'service is delivered' : 'item is handed over'}, the seller will mark
-          the transaction as complete and you will both be prompted to leave a review. If no action is
-          taken within 7 days of the scheduled date, the transaction auto-completes.
+          {isBulk
+            ? `Once each item is handed over, the seller will mark the transaction as complete and you'll both be prompted to leave a review. Transactions auto-complete after 7 days if no action is taken.`
+            : `Once the ${isService ? 'service is delivered' : 'item is handed over'}, the seller will mark the transaction as complete and you will both be prompted to leave a review. If no action is taken within 7 days of the scheduled date, the transaction auto-completes.`}
         </p>
       </div>
 
-      {/* ── Actions ── */}
+      {/* Actions */}
       <div className="grid grid-cols-2 gap-3">
         <button
           onClick={onNavigatePurchases}

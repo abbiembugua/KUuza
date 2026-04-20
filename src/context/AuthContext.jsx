@@ -1,29 +1,40 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { getCurrentUser, logout as logoutApi } from "../api/authapi";
 import { useNavigate } from "react-router-dom";
+import { clearAuthStorage, getCurrentUser, logout as logoutApi } from "../api/authapi";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null); // ✅ Add token state
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     const accessToken = localStorage.getItem("access");
+
     if (!accessToken) {
       setLoading(false);
       return;
     }
 
-    setToken(accessToken); // ✅ Set token in state
+    setToken(accessToken);
 
     getCurrentUser()
-      .then(setUser)
+      .then((currentUser) => {
+        if (currentUser?.is_email_verified === false) {
+          clearAuthStorage();
+          setUser(null);
+          setToken(null);
+          return;
+        }
+
+        setUser(currentUser);
+      })
       .catch(() => {
+        clearAuthStorage();
         setUser(null);
-        setToken(null); // ✅ Clear token on error
+        setToken(null);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -35,16 +46,20 @@ export const AuthProvider = ({ children }) => {
       console.warn("Logout API failed, clearing session anyway");
     }
 
-    localStorage.removeItem("access");
-    localStorage.removeItem("refresh");
+    clearAuthStorage();
     setUser(null);
-    setToken(null); // ✅ Clear token state
+    setToken(null);
     navigate("/");
   };
 
-  // ✅ Provide token in context
+  const refreshUser = async () => {
+    const latestUser = await getCurrentUser();
+    setUser(latestUser);
+    return latestUser;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, logout, setUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { toast, Toaster } from 'react-hot-toast';
 
-import DashboardNavbar from '../Components/Layout/DashboardNavbar';
-import BackButton from '../Components/shared/BackButton';
-import { useTheme } from '../context/Themecontext';
-import { useAuth } from '../context/AuthContext';
+import DashboardNavbar  from '../Components/Layout/DashboardNavbar';
+import BackButton       from '../Components/shared/BackButton';
+import { useTheme }     from '../context/Themecontext';
+import { useAuth }      from '../context/AuthContext';
 
-import OrderReview   from '../Components/Checkout/Orderreview';
+import OrderReview    from '../Components/Checkout/Orderreview';
 import ScheduleAndPay from '../Components/Checkout/Scheduleandpay/';
-import Confirmation  from '../Components/Checkout/Confirmation';
+import Confirmation   from '../Components/Checkout/Confirmation';
 
 const API_BASE = 'http://127.0.0.1:8000/api';
 
@@ -68,38 +68,48 @@ function validateStep2({ scheduledDate, scheduledTime, paymentMethod, mpesaPhone
 // ── Component ─────────────────────────────────────────────────────────────────
 
 const CheckoutPage = () => {
-  const { id }     = useParams();
-  const navigate   = useNavigate();
+  const { id }       = useParams();
+  const location     = useLocation();
+  const navigate     = useNavigate();
   const { darkMode } = useTheme();
-  const { token }  = useAuth();
+  const { token }    = useAuth();
 
-  // Page state
+  // ── Detect mode ────────────────────────────────────────────────────────────
+  const locationState = location.state || {};
+  const isBulk        = locationState.checkoutType === 'bulk';
+  const bulkItems     = isBulk ? (locationState.items    || []) : [];
+  const bulkTotal     = isBulk ? (locationState.totalAmount || 0) : 0;
+
+  // ── Page state ─────────────────────────────────────────────────────────────
   const [step,    setStep]    = useState(1);
   const [listing, setListing] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!isBulk); // bulk skips the listing fetch
 
-  // Transaction & contact
+  // ── Transaction & contact ──────────────────────────────────────────────────
   const [transaction, setTransaction] = useState(null);
+  const [bulkTxns,    setBulkTxns]    = useState([]);
   const [contact,     setContact]     = useState(null);
 
-  // Form state
-  const [scheduledDate,   setScheduledDate]   = useState('');
-  const [scheduledTime,   setScheduledTime]   = useState('');
-  const [paymentMethod,   setPaymentMethod]   = useState('mpesa');
-  const [inquiryNote,     setInquiryNote]     = useState('');
-  const [mpesaPhone,      setMpesaPhone]      = useState('');
-  const [errors,          setErrors]          = useState({});
+  // ── Form state ─────────────────────────────────────────────────────────────
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('mpesa');
+  const [inquiryNote,   setInquiryNote]   = useState('');
+  const [mpesaPhone,    setMpesaPhone]    = useState('');
+  const [errors,        setErrors]        = useState({});
 
-  // Payment flow state
+  // ── Payment flow state ─────────────────────────────────────────────────────
   const [submitting,         setSubmitting]         = useState(false);
   const [mpesaError,         setMpesaError]         = useState(null);
   const [mpesaPaymentStatus, setMpesaPaymentStatus] = useState(null);
 
-  const isService = listing?.listing_type === 'service';
-  const isGood    = listing?.listing_type === 'good';
+  const isService = !isBulk && listing?.listing_type === 'service';
+  // Bulk is always goods; single respects listing_type
+  const isGood    = isBulk || listing?.listing_type === 'good';
 
-  // ── Load listing ───────────────────────────────────────────────────────────
+  // ── Load listing (single mode only) ───────────────────────────────────────
   useEffect(() => {
+    if (isBulk) return;
     if (!token) { navigate('/login'); return; }
     (async () => {
       try {
@@ -113,9 +123,90 @@ const CheckoutPage = () => {
         setLoading(false);
       }
     })();
-  }, [id, token]);
+  }, [id, token, isBulk]);
 
-  // ── Confirm handler ────────────────────────────────────────────────────────
+  // ── Single confirm ─────────────────────────────────────────────────────────
+  const handleSingleConfirm = async () => {
+    const payload = {
+      listing:          listing.id,
+      interaction_type: isService ? 'service_use' : 'purchase',
+      agreed_price:     listing.price,
+      payment_method:   paymentMethod,
+      scheduled_date:   scheduledDate,
+      ...(isGood && inquiryNote && { inquiry_note: inquiryNote }),
+      ...(paymentMethod === 'mpesa' && { mpesa_phone: mpesaPhone }),
+    };
+
+    const txn = await createTransaction(payload, token);
+    setTransaction(txn);
+
+    if (paymentMethod === 'mpesa') {
+      const mpesaRes = await fetch(`${API_BASE}/transactions/${txn.id}/initiate_mpesa/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ phone_number: mpesaPhone }),
+      });
+      if (!mpesaRes.ok) {
+        const errData = await mpesaRes.json();
+        throw new Error(errData.error || 'Could not send M-Pesa prompt');
+      }
+      setMpesaPaymentStatus('processing');
+      toast.success('M-Pesa prompt sent! Check your phone.');
+    } else {
+      const contactData = await fetchContactDetails(listing.id, token);
+      setContact({ ...contactData, listing_type: listing.listing_type });
+      toast.success('Booking confirmed!');
+    }
+
+    setStep(3);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // ── Bulk confirm ───────────────────────────────────────────────────────────
+  const handleBulkConfirm = async () => {
+    // Create one transaction per item sequentially
+    const createdTxns = [];
+    for (const item of bulkItems) {
+      const payload = {
+        listing:          item.listing_id,
+        interaction_type: 'purchase',
+        agreed_price:     item.price,
+        payment_method:   paymentMethod,
+        scheduled_date:   scheduledDate,
+        ...(inquiryNote && { inquiry_note: inquiryNote }),
+        ...(paymentMethod === 'mpesa' && { mpesa_phone: mpesaPhone }),
+      };
+      const txn = await createTransaction(payload, token);
+      createdTxns.push(txn);
+    }
+    setBulkTxns(createdTxns);
+
+    if (paymentMethod === 'mpesa') {
+      // One STK push for the combined total, referencing the first transaction
+      const mpesaRes = await fetch(`${API_BASE}/transactions/${createdTxns[0].id}/initiate_mpesa/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          phone_number:           mpesaPhone,
+          amount:                 bulkTotal,
+          bulk_transaction_ids:   createdTxns.map(t => t.id),
+        }),
+      });
+      if (!mpesaRes.ok) {
+        const errData = await mpesaRes.json();
+        throw new Error(errData.error || 'Could not send M-Pesa prompt');
+      }
+      setMpesaPaymentStatus('processing');
+      toast.success(`M-Pesa prompt sent for ${bulkItems.length} items! Check your phone.`);
+    } else {
+      toast.success(`${bulkItems.length} orders confirmed!`);
+    }
+
+    setStep(3);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // ── Confirm dispatcher ─────────────────────────────────────────────────────
   const handleConfirm = async () => {
     const errs = validateStep2({ scheduledDate, scheduledTime, paymentMethod, mpesaPhone, isGood });
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
@@ -124,41 +215,11 @@ const CheckoutPage = () => {
     setMpesaError(null);
 
     try {
-      const payload = {
-        listing:          listing.id,
-        interaction_type: isService ? 'service_use' : 'purchase',
-        agreed_price:     listing.price,
-        payment_method:   paymentMethod,
-        scheduled_date:   scheduledDate,
-        ...(isGood && inquiryNote && { inquiry_note: inquiryNote }),
-        ...(paymentMethod === 'mpesa' && { mpesa_phone: mpesaPhone }),
-      };
-
-      const txn = await createTransaction(payload, token);
-      setTransaction(txn);
-
-      if (paymentMethod === 'mpesa') {
-        const mpesaRes = await fetch(`${API_BASE}/transactions/${txn.id}/initiate_mpesa/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ phone_number: mpesaPhone }),
-        });
-        if (!mpesaRes.ok) {
-          const errData = await mpesaRes.json();
-          throw new Error(errData.error || 'Could not send M-Pesa prompt');
-        }
-        setStep(3);
-        setMpesaPaymentStatus('processing');
-        toast.success('M-Pesa prompt sent! Check your phone.');
+      if (isBulk) {
+        await handleBulkConfirm();
       } else {
-        const contactData = await fetchContactDetails(listing.id, token);
-        setContact({ ...contactData, listing_type: listing.listing_type });
-        setStep(3);
-        toast.success('Booking confirmed!');
+        await handleSingleConfirm();
       }
-
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-
     } catch (err) {
       setMpesaError(err.message);
       toast.error(err.message || 'Something went wrong. Please try again.');
@@ -171,11 +232,18 @@ const CheckoutPage = () => {
   const handleRetryMpesa = async () => {
     setMpesaError(null);
     setMpesaPaymentStatus('processing');
+    const txnId = isBulk ? bulkTxns[0]?.id : transaction?.id;
     try {
-      const res = await fetch(`${API_BASE}/transactions/${transaction.id}/initiate_mpesa/`, {
+      const res = await fetch(`${API_BASE}/transactions/${txnId}/initiate_mpesa/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ phone_number: mpesaPhone }),
+        body: JSON.stringify({
+          phone_number: mpesaPhone,
+          ...(isBulk && {
+            amount:               bulkTotal,
+            bulk_transaction_ids: bulkTxns.map(t => t.id),
+          }),
+        }),
       });
       if (!res.ok) {
         const errData = await res.json();
@@ -189,7 +257,18 @@ const CheckoutPage = () => {
     }
   };
 
-  // ── Loading state ──────────────────────────────────────────────────────────
+  // ── Back button ────────────────────────────────────────────────────────────
+  const handleBack = () => {
+    if (step === 1 || step === 3) navigate(locationState.returnTo || -1);
+    else setStep(s => s - 1);
+  };
+
+  const backLabel =
+    step === 1 ? (isBulk ? 'Back to cart' : 'Back to listing')
+    : step === 2 ? 'Back'
+    : 'Continue browsing';
+
+  // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <DashboardNavbar />
@@ -199,13 +278,7 @@ const CheckoutPage = () => {
     </div>
   );
 
-  if (!listing) return null;
-
-  // ── Back button behaviour ──────────────────────────────────────────────────
-  const handleBack = () => {
-    if (step === 1 || step === 3) navigate(-1);
-    else setStep(s => s - 1);
-  };
+  if (!isBulk && !listing) return null;
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -218,7 +291,7 @@ const CheckoutPage = () => {
 
           <BackButton
             darkMode={darkMode}
-            label={step === 1 ? 'Back to listing' : step === 2 ? 'Back' : 'Continue browsing'}
+            label={backLabel}
             onClick={handleBack}
             className="mb-6"
           />
@@ -228,6 +301,9 @@ const CheckoutPage = () => {
               listing={listing}
               darkMode={darkMode}
               onContinue={() => setStep(2)}
+              isBulk={isBulk}
+              bulkItems={bulkItems}
+              bulkTotal={bulkTotal}
             />
           )}
 
@@ -244,13 +320,16 @@ const CheckoutPage = () => {
               mpesaError={mpesaError}
               submitting={submitting}
               onConfirm={handleConfirm}
+              isBulk={isBulk}
+              bulkItems={bulkItems}
+              bulkTotal={bulkTotal}
             />
           )}
 
           {step === 3 && (
             <Confirmation
               listing={listing}
-              transaction={transaction}
+              transaction={isBulk ? bulkTxns[0] : transaction}
               darkMode={darkMode}
               token={token}
               paymentMethod={paymentMethod}
@@ -263,6 +342,10 @@ const CheckoutPage = () => {
               onRetryMpesa={handleRetryMpesa}
               onNavigatePurchases={() => navigate('/purchases')}
               onNavigateDashboard={() => navigate('/dashboard')}
+              isBulk={isBulk}
+              bulkItems={bulkItems}
+              bulkTotal={bulkTotal}
+              bulkTxns={bulkTxns}
             />
           )}
 

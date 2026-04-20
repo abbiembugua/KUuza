@@ -1,21 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import LandingPage from './pages/LandingPage';
-import LoginPage from './Pages/Loginpage';
-import SignUpPage from './Pages/Signupage';
-import IntegratedDashboard from './Pages/IntegratedDashboard';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import ForgotPassword from './Pages/ForgotPassword';
 import IntegratedBrowsePage from './Pages/IntegratedBrowsePage';
 import IntegratedCartPage from './Pages/IntegratedCartPage';
-import SellPage from './Pages/SellPage';
-import ForgotPassword from './Pages/ForgotPassword';
-import MyListingsPage from './Pages/mylistingspage';
-import ListingDetailPage from './Pages/Listingdetailpage';
+import IntegratedDashboard from './Pages/IntegratedDashboard';
 import CheckoutPage from './Pages/CheckoutPage';
-import ReviewPage from './Pages/Reviewpage';
-import PurchasesPage from './Pages/PurchasesPage';
+import LandingPage from './pages/LandingPage';
+import ListingDetailPage from './Pages/Listingdetailpage';
+import LoginPage from './Pages/Loginpage';
+import MyListingsPage from './Pages/mylistingspage';
 import NeedsPage from './Pages/NeedsPage';
+import ProfilePage from './Pages/ProfilePage';
+import PurchasesPage from './Pages/PurchasesPage';
+import ReviewPage from './Pages/Reviewpage';
+import SellPage from './Pages/SellPage';
+import SignUpPage from './Pages/Signupage';
+import VerifyEmail from './Pages/VerifyEmaiPage';
+import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/Themecontext';
-  import { AuthProvider } from './context/AuthContext';
 
 const App = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -34,25 +36,21 @@ const App = () => {
             <Route path="/" element={<LandingPage scrolled={scrolled} />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignUpPage />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/ForgotPassword" element={<ForgotPassword />} />
             <Route path="/dashboard" element={<IntegratedDashboard />} />
             <Route path="/browse" element={<IntegratedBrowsePage />} />
             <Route path="/cart" element={<IntegratedCartPage />} />
             <Route path="/needs" element={<NeedsPage />} />
-            <Route path="/ForgotPassword" element={<ForgotPassword />} />
             <Route path="/sell" element={<SellPage />} />
             <Route path="/my-listings" element={<MyListingsPage />} />
             <Route path="/listings/:id" element={<ListingDetailPage />} />
             <Route path="/checkout/:id" element={<CheckoutPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/review/:transactionId" element={<ReviewPage />} />
             <Route path="/purchases" element={<PurchasesPage />} />
-
-
-
-
-
-
-            
-
+            <Route path="/profile" element={<ProfilePage />} />
           </Routes>
         </AuthProvider>
       </Router>

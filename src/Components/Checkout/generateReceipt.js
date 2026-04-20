@@ -1,173 +1,176 @@
 /**
  * generateReceipt.js
- * Generates a clean KUuza PDF receipt using jsPDF.
- * Call: generateReceipt({ listing, transaction, scheduledDate, scheduledTime, paymentMethod, contact })
+ * Generates a brief KUuza PDF receipt styled to match the purchases report.
  */
 
 import { jsPDF } from 'jspdf';
 
-const BRAND_GREEN = [16, 185, 129];   // emerald-500
-const BRAND_DARK  = [17,  24,  39];   // gray-900
-const GRAY_MID    = [107, 114, 128];  // gray-500
-const GRAY_LIGHT  = [243, 244, 246];  // gray-100
-const WHITE       = [255, 255, 255];
+const EMERALD = [5, 150, 105];
+const WHITE = [255, 255, 255];
+const INK = [17, 24, 39];
+const MUTED = [107, 114, 128];
+const LINE = [229, 231, 235];
+const SOFT = [240, 253, 250];
 
-// ── helpers ───────────────────────────────────────────────────────────────────
+const formatMoney = (value) => {
+  const amount = parseFloat(value || 0);
+  if (!Number.isFinite(amount) || amount <= 0) return 'Negotiable';
+  return `KSh ${amount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
 
-const fmt = (price) =>
-  price ? `KSh ${parseFloat(price).toLocaleString('en-KE')}` : 'Negotiable';
-
-const fmtDate = (dateStr) => {
-  if (!dateStr) return '—';
-  return new Date(dateStr).toLocaleDateString('en-KE', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+const formatShortDate = (value) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleDateString('en-KE', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
   });
 };
 
-const fmtPayment = (method) => {
-  const map = {
-    mpesa:            'M-Pesa (STK Push)',
-    cash_on_pickup:   'Cash on Pickup',
-    pay_after_service:'Pay After Service',
+const formatIssuedAt = (date) =>
+  date.toLocaleDateString('en-KE', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  }) +
+  ' at ' +
+  date.toLocaleTimeString('en-KE', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+const formatPayment = (method) => {
+  const labels = {
+    mpesa: 'M-Pesa',
+    cash_on_pickup: 'Cash',
+    pay_after_service: 'Pay after service',
   };
-  return map[method] ?? method;
+
+  return labels[method] ?? (method || 'Pending');
 };
 
-const fmtStatus = (txn) => {
-  if (!txn) return 'Pending';
-  if (txn.status === 'completed') return 'Paid';
+const formatStatus = (transaction) => {
+  const status = transaction?.status;
+  if (status === 'completed' || status === 'auto_completed') return 'Completed';
+  if (status === 'cancelled') return 'Cancelled';
   return 'Pending';
 };
 
-// ── main export ───────────────────────────────────────────────────────────────
+const formatCategory = (value) => {
+  if (!value) return '-';
+  return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+};
 
 export function generateReceipt({ listing, transaction, scheduledDate, scheduledTime, paymentMethod, contact }) {
-  const doc    = new jsPDF({ unit: 'mm', format: 'a4' });
-  const W      = doc.internal.pageSize.getWidth();   // 210
-  const margin = 20;
-  const col2   = 120; // x start for right-aligned values
-  let   y      = 0;
-
-  const isService = listing?.listing_type === 'service';
-
-  // ── Header band ────────────────────────────────────────────────────────────
-  doc.setFillColor(...BRAND_GREEN);
-  doc.rect(0, 0, W, 40, 'F');
-
-  // Logo text
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
-  doc.setTextColor(...WHITE);
-  doc.text('KUuza', margin, 18);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(200, 240, 220);
-  doc.text('Campus Marketplace · Kenyatta University', margin, 25);
-
-  // Receipt label (top-right)
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(...WHITE);
-  doc.text('RECEIPT', W - margin, 18, { align: 'right' });
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(200, 240, 220);
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 14;
+  const headerHeight = 30;
+  const now = new Date();
   const receiptNo = transaction?.id
-    ? `#${String(transaction.id).substring(0, 8).toUpperCase()}`
+    ? `#${String(transaction.id).slice(0, 8).toUpperCase()}`
     : `#${Date.now().toString(36).toUpperCase()}`;
-  doc.text(receiptNo, W - margin, 25, { align: 'right' });
-  doc.text(`Issued: ${new Date().toLocaleDateString('en-KE')}`, W - margin, 30, { align: 'right' });
+  const isService = listing?.listing_type === 'service';
+  const scheduleLabel = isService ? 'Service date' : 'Pickup date';
+  const scheduleValue = scheduledDate ? formatShortDate(scheduledDate) : '-';
+  const scheduleDetail = !isService && scheduledTime ? `${scheduleValue} at ${scheduledTime}` : scheduleValue;
+  const sellerName = listing?.seller_name || transaction?.seller_username || 'KU Student';
+  const contactValue = contact?.contact_value || '-';
 
-  y = 52;
-
-  // ── Section helper ─────────────────────────────────────────────────────────
-  const sectionTitle = (title) => {
-    doc.setFillColor(...GRAY_LIGHT);
-    doc.roundedRect(margin, y, W - margin * 2, 8, 1, 1, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(...GRAY_MID);
-    doc.text(title.toUpperCase(), margin + 3, y + 5.5);
-    y += 12;
-  };
-
-  const row = (label, value, highlight = false) => {
+  const drawKeyValue = (label, value, y, options = {}) => {
+    const { highlight = false } = options;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.setTextColor(...GRAY_MID);
-    doc.text(label, margin, y);
+    doc.setFontSize(8);
+    doc.setTextColor(...MUTED);
+    doc.text(label.toUpperCase(), margin, y);
 
     doc.setFont('helvetica', highlight ? 'bold' : 'normal');
-    doc.setTextColor(highlight ? BRAND_GREEN[0] : BRAND_DARK[0],
-                     highlight ? BRAND_GREEN[1] : BRAND_DARK[1],
-                     highlight ? BRAND_GREEN[2] : BRAND_DARK[2]);
-    doc.text(String(value ?? '—'), W - margin, y, { align: 'right' });
-    y += 7;
+    doc.setFontSize(highlight ? 11 : 10);
+    doc.setTextColor(...(highlight ? EMERALD : INK));
+    doc.text(String(value || '-'), pageWidth - margin, y, { align: 'right' });
   };
 
-  const divider = () => {
-    doc.setDrawColor(229, 231, 235);
-    doc.line(margin, y, W - margin, y);
-    y += 5;
-  };
+  doc.setFillColor(...EMERALD);
+  doc.rect(0, 0, pageWidth, headerHeight, 'F');
 
-  // ── Listing info ───────────────────────────────────────────────────────────
-  sectionTitle('Item Details');
-  row('Title',    listing?.title ?? '—');
-  row('Type',     isService ? 'Service' : 'Physical Good');
-  row('Category', listing?.category?.replace('_', ' ') ?? '—');
-  row('Seller',   listing?.seller_name ?? 'KU Student');
-  row('Location', listing?.area_of_operation ?? '—');
-  divider();
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(...WHITE);
+  doc.text('KUuza', margin, 16);
 
-  // ── Scheduling ─────────────────────────────────────────────────────────────
-  sectionTitle(isService ? 'Service Appointment' : 'Pickup Details');
-  row(isService ? 'Service Date' : 'Pickup Date', fmtDate(scheduledDate));
-  if (!isService && scheduledTime) row('Pickup Time', scheduledTime);
-  divider();
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(200, 245, 230);
+  doc.text('Kenyatta University Official Marketplace', margin, 23);
 
-  // ── Payment ────────────────────────────────────────────────────────────────
-  sectionTitle('Payment');
-  row('Method',         fmtPayment(paymentMethod));
-  row('Status',         fmtStatus(transaction));
-  if (transaction?.mpesa_receipt) row('M-Pesa Receipt', transaction.mpesa_receipt);
-  divider();
-
-  // ── Total ──────────────────────────────────────────────────────────────────
-  y += 2;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
-  doc.setTextColor(...BRAND_DARK);
-  doc.text('Total Amount', margin, y);
-  doc.setTextColor(...BRAND_GREEN);
-  doc.text(fmt(listing?.price), W - margin, y, { align: 'right' });
-  y += 12;
-
-  // ── Contact block (only if revealed) ──────────────────────────────────────
-  if (contact?.contact_value) {
-    divider();
-    sectionTitle('Seller Contact');
-    row('Method', contact.contact_preference === 'whatsapp' ? 'WhatsApp' : 'Email');
-    row('Contact', contact.contact_value);
-    y += 2;
-  }
-
-  // ── Footer ─────────────────────────────────────────────────────────────────
-  const footerY = doc.internal.pageSize.getHeight() - 22;
-  doc.setFillColor(...BRAND_GREEN);
-  doc.rect(0, footerY, W, 22, 'F');
+  doc.text('Receipt', pageWidth - margin, 13, { align: 'right' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.setTextColor(...WHITE);
-  doc.text('Thank you for using KUuza — the KU campus marketplace.', W / 2, footerY + 7, { align: 'center' });
-  doc.text('For support, contact support@kuuza.ku.ac.ke', W / 2, footerY + 13, { align: 'center' });
-  doc.setTextColor(200, 240, 220);
-  doc.text('This receipt was generated automatically and is valid without a signature.', W / 2, footerY + 19, { align: 'center' });
+  doc.text(`Reference: ${receiptNo}`, pageWidth - margin, 20, { align: 'right' });
+  doc.text(`Issued: ${formatIssuedAt(now)}`, pageWidth - margin, 25, { align: 'right' });
 
-  // ── Save ───────────────────────────────────────────────────────────────────
-  const filename = `KUuza_Receipt_${receiptNo.replace('#', '')}.pdf`;
-  doc.save(filename);
+  doc.setDrawColor(16, 185, 129);
+  doc.setLineWidth(0.3);
+  doc.line(0, headerHeight, pageWidth, headerHeight);
+
+  doc.setFillColor(...SOFT);
+  doc.roundedRect(margin, 40, pageWidth - margin * 2, 18, 2, 2, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...MUTED);
+  doc.text('Transaction summary', margin + 4, 47);
+  doc.setFontSize(16);
+  doc.setTextColor(...EMERALD);
+  doc.text(formatMoney(transaction?.agreed_price || listing?.price), margin + 4, 55);
+
+  let y = 70;
+
+  drawKeyValue('Listing', listing?.title || '-', y);
+  y += 10;
+  drawKeyValue('Category', formatCategory(listing?.category), y);
+  y += 10;
+  drawKeyValue('Seller', sellerName, y);
+  y += 10;
+  drawKeyValue(scheduleLabel, scheduleDetail, y);
+  y += 10;
+  drawKeyValue('Payment', formatPayment(paymentMethod), y);
+  y += 10;
+  drawKeyValue('Status', formatStatus(transaction), y);
+  y += 10;
+
+  if (transaction?.mpesa_receipt) {
+    drawKeyValue('M-Pesa code', transaction.mpesa_receipt, y);
+    y += 10;
+  }
+
+  if (contactValue !== '-') {
+    drawKeyValue('Seller contact', contactValue, y);
+    y += 10;
+  }
+
+  y += 2;
+  doc.setDrawColor(...LINE);
+  doc.setLineWidth(0.2);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 10;
+  drawKeyValue('Total', formatMoney(transaction?.agreed_price || listing?.price), y, { highlight: true });
+
+  const footerY = pageHeight - 12;
+  doc.setDrawColor(...LINE);
+  doc.line(margin, footerY - 4, pageWidth - margin, footerY - 4);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(...MUTED);
+  doc.text('Automatically generated by KUuza.', margin, footerY);
+  doc.text('Valid without a signature.', pageWidth - margin, footerY, { align: 'right' });
+
+  doc.save(`KUuza_Receipt_${receiptNo.replace('#', '')}.pdf`);
 }

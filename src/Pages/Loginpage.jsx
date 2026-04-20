@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, LogIn, Shield, Mail } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Eye, EyeOff, LogIn, Mail, Shield } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useTheme } from '../context/Themecontext';
 import { Toaster, toast } from 'react-hot-toast';
-import { login } from '../api/authapi';
-import SharedButton from '../Components/shared/Button';
+import { clearAuthStorage, getCurrentUser, login } from '../api/authapi';
 import AuthCard from '../Components/shared/AuthCard';
 import AuthPageShell from '../Components/shared/AuthPageShell';
 import BackButton from '../Components/shared/BackButton';
+import SharedButton from '../Components/shared/Button';
+import { useTheme } from '../context/Themecontext';
 
 const LoginPage = () => {
   const { darkMode } = useTheme();
@@ -25,13 +25,28 @@ const LoginPage = () => {
       setEmail(savedEmail);
       setRememberMe(true);
     }
-    const token = localStorage.getItem('access');
-    if (token) navigate('/dashboard');
-  }, []);
 
-  const validateKUEmail = (email) => {
+    const token = localStorage.getItem('access');
+    if (!token) return;
+
+    getCurrentUser()
+      .then((currentUser) => {
+        if (currentUser?.is_email_verified === false) {
+          clearAuthStorage();
+          setError('Please verify your email before logging in.');
+          return;
+        }
+
+        navigate('/dashboard');
+      })
+      .catch(() => {
+        clearAuthStorage();
+      });
+  }, [navigate]);
+
+  const validateKUEmail = (value) => {
     const kuEmailPattern = /^[A-Za-z0-9]+\.20\d{2}@students\.ku\.ac\.ke$/;
-    return kuEmailPattern.test(email);
+    return kuEmailPattern.test(value);
   };
 
   const handleSubmit = async (e) => {
@@ -64,12 +79,7 @@ const LoginPage = () => {
     }
 
     try {
-      const response = await login({
-        email,
-        password,
-      });
-
-      console.log('Login successful:', response);
+      await login({ email, password });
 
       toast.success('Login successful! Redirecting to dashboard...', {
         duration: 4000,
@@ -102,19 +112,10 @@ const LoginPage = () => {
     }
   };
 
-  const handleBack = () => {
-    navigate('/');
-  };
-
-  const handleForgotPassword = () => {
-    alert('Password reset link would be sent to your KU email.');
-  };
-
   return (
     <AuthPageShell darkMode={darkMode} background="login">
       <Toaster
         toastOptions={{
-          className: '',
           style: {
             borderRadius: '10px',
             padding: '16px',
@@ -127,7 +128,7 @@ const LoginPage = () => {
       <BackButton
         darkMode={darkMode}
         label="Back to Home"
-        onClick={handleBack}
+        onClick={() => navigate('/')}
         className="absolute top-6 left-6 z-10"
       />
 
@@ -225,15 +226,14 @@ const LoginPage = () => {
                   Remember me
                 </span>
               </label>
-              <button
-                type="button"
-                onClick={handleForgotPassword}
+              <Link
+                to="/forgot-password"
                 className={`text-sm font-medium hover:underline transition ${
                   darkMode ? 'text-emerald-400 hover:text-emerald-300' : 'text-emerald-500 hover:text-emerald-600'
                 }`}
               >
                 Forgot Password?
-              </button>
+              </Link>
             </div>
 
             <SharedButton

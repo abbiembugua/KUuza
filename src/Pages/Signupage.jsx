@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, UserPlus, User, Mail, Lock, Check } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { signup } from '../api/authapi';
+import { resendVerification, signup } from '../api/authapi';
 import { Toaster, toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/Themecontext';
@@ -55,8 +54,8 @@ const SignUpPage = () => {
     setEmail(value);
   };
 
-  const resendVerification = async (email) => {
-    await axios.post('/api/accounts/resend-verification/', { email });
+  const handleResendVerification = async (emailAddress) => {
+    await resendVerification(emailAddress);
     toast.success('Verification email resent!');
   };
 
@@ -174,11 +173,16 @@ const SignUpPage = () => {
             We sent a verification link to <strong>{email}</strong>
           </p>
           <button
-            onClick={() => resendVerification(email)}
+            onClick={() => handleResendVerification(email)}
             className="text-emerald-500 underline text-sm hover:text-emerald-600"
           >
             Didn't receive it? Resend email
           </button>
+          <div className="mt-4">
+            <Link to="/login" className="text-sm font-medium text-sky-500 hover:underline">
+              Back to login
+            </Link>
+          </div>
         </div>
       </div>
     );

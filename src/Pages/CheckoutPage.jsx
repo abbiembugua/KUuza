@@ -77,6 +77,8 @@ const CheckoutPage = () => {
   // ── Detect mode ────────────────────────────────────────────────────────────
   const locationState = location.state || {};
   const isBulk        = locationState.checkoutType === 'bulk';
+  const singleItem    = !isBulk ? (locationState.item || null) : null;
+  const listingId     = id || singleItem?.listing_id;
   const bulkItems     = isBulk ? (locationState.items    || []) : [];
   const bulkTotal     = isBulk ? (locationState.totalAmount || 0) : 0;
 
@@ -106,15 +108,22 @@ const CheckoutPage = () => {
   const isService = !isBulk && listing?.listing_type === 'service';
   // Bulk is always goods; single respects listing_type
   const isGood    = isBulk || listing?.listing_type === 'good';
+  const singleQuantity = Math.max(1, Number(singleItem?.quantity || 1));
+  const singleTotal = listing?.price ? parseFloat(listing.price) * singleQuantity : 0;
 
   // ── Load listing (single mode only) ───────────────────────────────────────
   useEffect(() => {
     if (isBulk) return;
     if (!token) { navigate('/login'); return; }
+    if (!listingId) {
+      toast.error('Missing listing details for checkout.');
+      navigate(locationState.returnTo || '/cart');
+      return;
+    }
     (async () => {
       try {
         setLoading(true);
-        const data = await fetchListing(id, token);
+        const data = await fetchListing(listingId, token);
         setListing(data);
       } catch (err) {
         toast.error(err.message);
@@ -123,7 +132,7 @@ const CheckoutPage = () => {
         setLoading(false);
       }
     })();
-  }, [id, token, isBulk]);
+  }, [listingId, token, isBulk, navigate, locationState.returnTo]);
 
   // ── Single confirm ─────────────────────────────────────────────────────────
   const handleSingleConfirm = async () => {
@@ -131,8 +140,10 @@ const CheckoutPage = () => {
       listing:          listing.id,
       interaction_type: isService ? 'service_use' : 'purchase',
       agreed_price:     listing.price,
+      quantity:         singleQuantity,
       payment_method:   paymentMethod,
       scheduled_date:   scheduledDate,
+      ...(isGood && scheduledTime && { scheduled_time: scheduledTime }),
       ...(isGood && inquiryNote && { inquiry_note: inquiryNote }),
       ...(paymentMethod === 'mpesa' && { mpesa_phone: mpesaPhone }),
     };
@@ -171,8 +182,10 @@ const CheckoutPage = () => {
         listing:          item.listing_id,
         interaction_type: 'purchase',
         agreed_price:     item.price,
+        quantity:         Math.max(1, Number(item.quantity || 1)),
         payment_method:   paymentMethod,
         scheduled_date:   scheduledDate,
+        ...(scheduledTime && { scheduled_time: scheduledTime }),
         ...(inquiryNote && { inquiry_note: inquiryNote }),
         ...(paymentMethod === 'mpesa' && { mpesa_phone: mpesaPhone }),
       };
@@ -304,6 +317,7 @@ const CheckoutPage = () => {
               isBulk={isBulk}
               bulkItems={bulkItems}
               bulkTotal={bulkTotal}
+              singleQuantity={singleQuantity}
             />
           )}
 
@@ -323,6 +337,8 @@ const CheckoutPage = () => {
               isBulk={isBulk}
               bulkItems={bulkItems}
               bulkTotal={bulkTotal}
+              singleQuantity={singleQuantity}
+              singleTotal={singleTotal}
             />
           )}
 
@@ -346,6 +362,8 @@ const CheckoutPage = () => {
               bulkItems={bulkItems}
               bulkTotal={bulkTotal}
               bulkTxns={bulkTxns}
+              singleQuantity={singleQuantity}
+              singleTotal={singleTotal}
             />
           )}
 

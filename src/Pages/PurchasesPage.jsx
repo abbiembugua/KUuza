@@ -65,12 +65,13 @@ const TABS = [
   { key: 'seller', label: 'Sales' },
 ];
 
+// ── cancelled added here ──────────────────────────────────────────────────────
 const STATUS_OPTIONS = [
-  { value: '', label: 'All statuses' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'completed', label: 'Completed' },
+  { value: '',               label: 'All statuses'   },
+  { value: 'pending',        label: 'Pending'        },
+  { value: 'completed',      label: 'Completed'      },
   { value: 'auto_completed', label: 'Auto-completed' },
-  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'cancelled',      label: 'Cancelled'      },
 ];
 
 const PurchasesPage = () => {
@@ -130,7 +131,6 @@ const PurchasesPage = () => {
       setSearchParams({}, { replace: true });
       return;
     }
-
     setSearchParams({ tab: activeTab }, { replace: true });
   }, [activeTab, setSearchParams]);
 
@@ -154,6 +154,13 @@ const PurchasesPage = () => {
         setPendingReviewIds(arr.map((item) => item.id));
       })
       .catch(() => {});
+  };
+
+  // ── optimistically flip status to cancelled in local state ────────────────
+  const handleCancel = (id) => {
+    setTransactions((prev) => prev.map((transaction) => (
+      transaction.id === id ? { ...transaction, status: 'cancelled' } : transaction
+    )));
   };
 
   const handleReviewSubmitted = () => {
@@ -240,6 +247,8 @@ const PurchasesPage = () => {
                     transactions={filtered}
                     currentUserId={user?.id}
                     dateRange={dateRange}
+                    activeTab={activeTab}
+                    downloaderName={user?.full_name}
                   />
                 </div>
               </div>
@@ -337,7 +346,9 @@ const PurchasesPage = () => {
                   currentUserId={user?.id}
                   darkMode={darkMode}
                   token={token}
+                  downloaderName={user?.full_name}
                   onComplete={handleComplete}
+                  onCancel={handleCancel}
                   onReview={(txn, target) => setReviewModal({ isOpen: true, transaction: txn, reviewTarget: target })}
                   pendingReviewIds={pendingReviewIds}
                 />

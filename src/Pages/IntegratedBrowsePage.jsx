@@ -72,6 +72,14 @@ const getConditionBadgeColor = (condition) => {
 };
 
 const ITEMS_PER_PAGE = 12;
+const getAvailableQuantity = (item) => Number(item?.quantity ?? item?.listing_quantity ?? 0);
+const normalizeId = (value) => {
+  if (!value) return '';
+  if (typeof value === 'object') {
+    return String(value.id || value.uuid || value.pk || '');
+  }
+  return String(value);
+};
 
 const IntegratedBrowsePage = () => {
   const { darkMode } = useTheme();
@@ -185,7 +193,7 @@ const IntegratedBrowsePage = () => {
     navigate(`/listings/${listingId}`);
   };
 
-  const isOwner = (sellerId) => user?.id === sellerId;
+  const isOwner = (sellerId) => normalizeId(user?.id) === normalizeId(sellerId);
 
   const getContextualHeader = () => {
     if (searchQuery) return `Search results for "${searchQuery}"`;
@@ -422,19 +430,24 @@ const IntegratedBrowsePage = () => {
               ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
               : 'space-y-4'
           }>
-            {listings.map(item => (
+            {listings.map(item => {
+              const isOutOfStock = item.listing_type !== 'service' && getAvailableQuantity(item) <= 0;
+              const isMarkedSold = item.status === 'sold';
+              const isUnavailable = item.listing_type === 'service' ? isMarkedSold : isOutOfStock;
+
+              return (
               <div
                 key={item.id}
                 onClick={() => handleViewListing(item.id)}
                 className={`relative rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer hover:scale-105 ${
                   viewMode === 'list' ? 'flex' : ''
                 } ${darkMode ? 'bg-gray-800' : 'bg-white'} ${
-                  item.status === 'sold' ? 'opacity-60 saturate-50 pointer-events-none' : ''
+                  isUnavailable ? 'opacity-60 saturate-50' : ''
                 }`}
               >
-                {item.status === 'sold' && (
+                {isUnavailable && (
                   <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold z-10 -rotate-12">
-                    SOLD
+                    {item.listing_type === 'service' ? 'UNAVAILABLE' : 'OUT'}
                   </div>
                 )}
 
@@ -514,7 +527,13 @@ const IntegratedBrowsePage = () => {
                     </span>
                   </div>
 
-                  {!isOwner(item.seller) && item.status !== 'sold' && (
+                  {item.listing_type !== 'service' && (
+                    <p className={`mb-3 text-xs font-medium ${isOutOfStock ? 'text-red-500' : darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {isOutOfStock ? 'Out of stock' : `${getAvailableQuantity(item)} available`}
+                    </p>
+                  )}
+
+                  {!isOwner(item.seller) && !isUnavailable && (
                     <button
                       onClick={e => { e.stopPropagation(); handleAddToCart(item); }}
                       className="w-full px-3 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-lg font-medium text-sm transition-colors"
@@ -524,7 +543,7 @@ const IntegratedBrowsePage = () => {
                   )}
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         )}
 

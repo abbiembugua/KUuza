@@ -312,7 +312,7 @@ const IntegratedCartPage = () => {
                       KSh {subtotal.toLocaleString('en-KE')}
                     </span>
                   </div>
-                  <div className="flex justify-between pt-3 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}">
+                  <div className={`flex justify-between pt-3 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                     <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Total</span>
                     <span className="text-2xl font-bold text-emerald-600">
                       KSh {subtotal.toLocaleString('en-KE')}

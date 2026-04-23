@@ -1,6 +1,11 @@
 import React from 'react';
 import { TrendingDown, TrendingUp } from 'lucide-react';
 
+const getTransactionQuantity = (transaction) => {
+  const q = Number(transaction?.quantity);
+  return Number.isFinite(q) && q > 0 ? q : 1;
+};
+
 export default function FinancialSummary({ transactions, currentUserId, darkMode }) {
   const completed = transactions.filter((transaction) =>
     ['completed', 'auto_completed'].includes(transaction.status)
@@ -8,11 +13,11 @@ export default function FinancialSummary({ transactions, currentUserId, darkMode
 
   const totalEarned = completed
     .filter((transaction) => transaction.seller === currentUserId && transaction.agreed_price)
-    .reduce((sum, transaction) => sum + parseFloat(transaction.agreed_price || 0), 0);
+    .reduce((sum, transaction) => sum + (parseFloat(transaction.agreed_price || 0) * getTransactionQuantity(transaction)), 0);
 
   const totalSpent = completed
     .filter((transaction) => transaction.buyer === currentUserId && transaction.agreed_price)
-    .reduce((sum, transaction) => sum + parseFloat(transaction.agreed_price || 0), 0);
+    .reduce((sum, transaction) => sum + (parseFloat(transaction.agreed_price || 0) * getTransactionQuantity(transaction)), 0);
 
   if (totalEarned === 0 && totalSpent === 0) return null;
 

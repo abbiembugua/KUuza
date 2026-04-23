@@ -1,44 +1,74 @@
-// src/Components/transactions/ReportGenerator.jsx
-
 import { useState } from "react";
-import { FileText, Table2, Loader2 } from "lucide-react";
+import { FileText, Loader2 } from "lucide-react";
 
-export default function ReportGenerator({ transactions, currentUserId, dateRange }) {
+const EMERALD = [5, 150, 105];
+const WHITE = [255, 255, 255];
+const getTransactionQuantity = (transaction) => {
+  const candidates = [
+    transaction?.quantity,
+    transaction?.item_quantity,
+    transaction?.purchase_quantity,
+    transaction?.requested_quantity,
+    transaction?.units,
+    transaction?.count,
+  ];
+
+  for (const value of candidates) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  return 1;
+};
+
+export default function ReportGenerator({
+  transactions,
+  currentUserId,
+  dateRange,
+  activeTab = "all",
+  downloaderName,
+}) {
   const [loading, setLoading] = useState(null);
 
-  // Calculate financial summary for the document only
-  const completedTransactions = transactions.filter(t =>
-    ['completed', 'auto_completed'].includes(t.status)
+  const completedTransactions = transactions.filter((transaction) =>
+    ["completed", "auto_completed"].includes(transaction.status)
   );
-  
-  const incompleteTransactions = transactions.filter(t =>
-    !['completed', 'auto_completed'].includes(t.status)
+
+  const incompleteTransactions = transactions.filter(
+    (transaction) => !["completed", "auto_completed"].includes(transaction.status)
   );
 
   const totalEarned = completedTransactions
-    .filter(t => (t.seller === currentUserId || t.seller?.id === currentUserId) && t.agreed_price)
-    .reduce((sum, t) => sum + parseFloat(t.agreed_price || 0), 0);
+    .filter((transaction) => transaction.seller === currentUserId || transaction.seller?.id === currentUserId)
+    .reduce((sum, transaction) => sum + (parseFloat(transaction.agreed_price || 0) * getTransactionQuantity(transaction)), 0);
 
   const totalSpent = completedTransactions
-    .filter(t => (t.buyer === currentUserId || t.buyer?.id === currentUserId) && t.agreed_price)
-    .reduce((sum, t) => sum + parseFloat(t.agreed_price || 0), 0);
+    .filter((transaction) => transaction.buyer === currentUserId || transaction.buyer?.id === currentUserId)
+    .reduce((sum, transaction) => sum + (parseFloat(transaction.agreed_price || 0) * getTransactionQuantity(transaction)), 0);
 
   const incompleteEarned = incompleteTransactions
-    .filter(t => (t.seller === currentUserId || t.seller?.id === currentUserId) && t.agreed_price)
-    .reduce((sum, t) => sum + parseFloat(t.agreed_price || 0), 0);
+    .filter((transaction) => transaction.seller === currentUserId || transaction.seller?.id === currentUserId)
+    .reduce((sum, transaction) => sum + (parseFloat(transaction.agreed_price || 0) * getTransactionQuantity(transaction)), 0);
 
   const incompleteSpent = incompleteTransactions
-    .filter(t => (t.buyer === currentUserId || t.buyer?.id === currentUserId) && t.agreed_price)
-    .reduce((sum, t) => sum + parseFloat(t.agreed_price || 0), 0);
+    .filter((transaction) => transaction.buyer === currentUserId || transaction.buyer?.id === currentUserId)
+    .reduce((sum, transaction) => sum + (parseFloat(transaction.agreed_price || 0) * getTransactionQuantity(transaction)), 0);
 
-  // Format currency
-  const fmtCurrency = (n) =>
-    `KSh ${n.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmtCurrency = (value) =>
+    `KSh ${Number(value || 0).toLocaleString("en-KE", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
 
-  // Date helpers
-  const fmt = (dateStr) => {
-    if (!dateStr) return "—";
-    return new Date(dateStr).toLocaleDateString("en-KE", {
+  const fmtDate = (dateStr) => {
+    if (!dateStr) return "-";
+
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return "-";
+
+    return date.toLocaleDateString("en-KE", {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -47,100 +77,72 @@ export default function ReportGenerator({ transactions, currentUserId, dateRange
 
   const fmtFull = (date) =>
     date.toLocaleDateString("en-KE", {
-      weekday: "long",
+      weekday: "short",
       day: "2-digit",
-      month: "long",
+      month: "short",
       year: "numeric",
     }) +
-    " at " +
-    date.toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit", hour12: true });
+    " " +
+    date.toLocaleTimeString("en-KE", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
 
   const rangeLabel = () => {
     if (!dateRange?.from && !dateRange?.to) return "All Time";
-    const f = dateRange.from ? fmt(dateRange.from) : "Start";
-    const t = dateRange.to ? fmt(dateRange.to) : "Today";
-    return `${f} – ${t}`;
+    const from = dateRange.from ? fmtDate(dateRange.from) : "Start";
+    const to = dateRange.to ? fmtDate(dateRange.to) : "Today";
+    return `${from} - ${to}`;
   };
 
-  // Helper to get amount from transaction
-  const getAmount = (tx) => {
-    const amount = tx.agreed_price || tx.amount || tx.price || 0;
-    const parsed = parseFloat(amount);
-    return isNaN(parsed) ? 0 : parsed;
+  const getAmount = (transaction) => {
+    const parsed = parseFloat(transaction.agreed_price || transaction.amount || transaction.price || 0) * getTransactionQuantity(transaction);
+    return Number.isNaN(parsed) ? 0 : parsed;
   };
 
-  // Build rows for the report
-  const buildRows = () =>
-    transactions.map((tx) => {
-      const isSeller = tx.seller === currentUserId || tx.seller?.id === currentUserId;
-      const counterparty = isSeller
-        ? (tx.buyer_username ?? tx.buyer?.username ?? "Buyer")
-        : (tx.seller_username ?? tx.seller?.username ?? "Seller");
-
-      const amountValue = getAmount(tx);
-
-      return {
-        date: fmt(tx.created_at),
-        delivery: fmt(tx.scheduled_date),
-        type: isSeller ? "Sale" : "Purchase",
-        counterparty,
-        listing: tx.listing_title ?? tx.listing?.title ?? "—",
-        amount: amountValue > 0 ? `KES ${amountValue.toLocaleString("en-KE")}` : "KES 0",
-        status: tx.status ?? "—",
-        reference: tx.id ?? "—",
-      };
-    });
-
-  const HEADERS = ["Date", "Delivery Date", "Type", "Counterparty", "Listing", "Amount", "Status", "Reference"];
-  const KEYS = ["date", "delivery", "type", "counterparty", "listing", "amount", "status", "reference"];
-
-  // CSV download
-  const downloadCSV = async () => {
-    setLoading("csv");
-    await new Promise((r) => setTimeout(r, 300));
-
-    const now = new Date();
-    const rows = buildRows();
-    const esc = (v) => `"${String(v).replace(/"/g, '""')}"`;
-
-    const lines = [
-      `# KUuza — Kenyatta University Official Marketplace`,
-      `# Transaction Report`,
-      `# Period: ${rangeLabel()}`,
-      `# Downloaded: ${fmtFull(now)}`,
-      `# Transactions: ${rows.length}`,
-      ``,
-      `# COMPLETED TRANSACTIONS:`,
-      `#   Total Earned (from sales): ${fmtCurrency(totalEarned)}`,
-      `#   Total Spent (on purchases): ${fmtCurrency(totalSpent)}`,
-      ``,
-      `# INCOMPLETE TRANSACTIONS:`,
-      `#   Total Earned (from sales): ${fmtCurrency(incompleteEarned)}`,
-      `#   Total Spent (on purchases): ${fmtCurrency(incompleteSpent)}`,
-      ``,
-      `# ALL TRANSACTIONS:`,
-      `#   Total Earned: ${fmtCurrency(totalEarned + incompleteEarned)}`,
-      `#   Total Spent: ${fmtCurrency(totalSpent + incompleteSpent)}`,
-      "",
-      HEADERS.map(esc).join(","),
-      ...rows.map((r) => KEYS.map((k) => esc(r[k])).join(",")),
-    ];
-
-    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `KUuza_Report_${Date.now()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    setLoading(null);
+  const formatStatus = (status) => {
+    if (!status) return "-";
+    if (status === "auto_completed") return "Auto-completed";
+    return status.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
   };
 
-  // PDF download
+  const buildRows = (mode) =>
+    transactions
+      .filter((transaction) => {
+        const isSeller = transaction.seller === currentUserId || transaction.seller?.id === currentUserId;
+        if (mode === "buyer") return !isSeller;
+        if (mode === "seller") return isSeller;
+        return true;
+      })
+      .map((transaction) => ({
+        date: fmtDate(transaction.created_at),
+        delivery: fmtDate(transaction.scheduled_date),
+        listing: transaction.listing_title ?? transaction.listing?.title ?? "-",
+        amount: fmtCurrency(getAmount(transaction)),
+        status: formatStatus(transaction.status),
+        reference: transaction.id ?? "-",
+      }));
+
+  const purchaseRows = buildRows("buyer");
+  const salesRows = buildRows("seller");
+
+  const reportTitle =
+    activeTab === "buyer"
+      ? "Purchase Report"
+      : activeTab === "seller"
+        ? "Sales Report"
+        : "Transaction Report";
+
+  const HEADERS = ["Date", "Delivery Date", "Listing", "Amount", "Status", "Reference"];
+  const KEYS = ["date", "delivery", "listing", "amount", "status", "reference"];
+
   const downloadPDF = async () => {
     setLoading("pdf");
 
-    let jsPDF, autoTable;
+    let jsPDF;
+    let autoTable;
+
     try {
       ({ jsPDF } = await import("jspdf"));
       ({ default: autoTable } = await import("jspdf-autotable"));
@@ -151,144 +153,136 @@ export default function ReportGenerator({ transactions, currentUserId, dateRange
     }
 
     const now = new Date();
-    const rows = buildRows();
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-    const PAGE_W = 297;
-    const HDR_H = 30;
-    const EMERALD = [5, 150, 105];
-    const WHITE = [255, 255, 255];
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const headerHeight = 32;
 
-    // Header band
+    // Draw green header background
     doc.setFillColor(...EMERALD);
-    doc.rect(0, 0, PAGE_W, HDR_H, "F");
+    doc.rect(0, 0, pageWidth, headerHeight, "F");
 
-    // Logo and title
+    // Left side: Platform name and description
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
     doc.setTextColor(...WHITE);
-    doc.text("KUuza", 14, 16);
+    doc.text("KUuza", 14, 12);
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
+    doc.setFontSize(8);
     doc.setTextColor(200, 245, 230);
-    doc.text("Kenyatta University Official Marketplace", 14, 23);
+    doc.text("Kenyatta University Official Marketplace", 14, 18);
 
+    // Right side: Report title and metadata (all fitting within 32mm height)
     doc.setFont("helvetica", "bold");
     doc.setFontSize(13);
-    doc.text("Transaction Report", PAGE_W - 14, 13, { align: "right" });
+    doc.setTextColor(...WHITE);
+    doc.text(reportTitle, pageWidth - 14, 10, { align: "right" });
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(200, 245, 230);
-    doc.text(`Period: ${rangeLabel()}`, PAGE_W - 14, 20, { align: "right" });
-    doc.text(`Downloaded: ${fmtFull(now)}`, PAGE_W - 14, 26, { align: "right" });
+    doc.text("For:", pageWidth - 14, 17, { align: "right" });
 
-    doc.setDrawColor(16, 185, 129);
-    doc.setLineWidth(0.3);
-    doc.line(0, HDR_H, PAGE_W, HDR_H);
-
-    // Financial Summary Section (in document only)
-    let currentY = HDR_H + 6;
-    
-    doc.setFontSize(9);
-    doc.setTextColor(0, 0, 0);
     doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(...WHITE);
+    doc.text(String(downloaderName || "KU Student").toUpperCase(), pageWidth - 14, 22, { align: "right" });
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(200, 245, 230);
+    doc.text(fmtFull(now), pageWidth - 14, 28, { align: "right" });
+
+    // Line separator
+    doc.setDrawColor(255, 255, 255);
+    doc.setLineWidth(0.3);
+    doc.line(0, headerHeight, pageWidth, headerHeight);
+
+    let currentY = headerHeight + 6;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
     doc.text("Financial Summary", 14, currentY);
     currentY += 6;
-    
-    doc.setFontSize(8);
+
     doc.setFont("helvetica", "normal");
-    
-    // Completed Transactions
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(5, 150, 105);
-    doc.text("Completed Transactions:", 14, currentY);
+    doc.setFontSize(9);
+    doc.text(`Completed sales: ${fmtCurrency(totalEarned)}`, 14, currentY);
     currentY += 5;
-    
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(0, 0, 0);
-    doc.text(`  Earned from sales: ${fmtCurrency(totalEarned)}`, 14, currentY);
-    currentY += 4;
-    doc.text(`  Spent on purchases: ${fmtCurrency(totalSpent)}`, 14, currentY);
-    currentY += 6;
-    
-    // Incomplete Transactions
+    doc.text(`Completed purchases: ${fmtCurrency(totalSpent)}`, 14, currentY);
+    currentY += 5;
+
     if (incompleteEarned > 0 || incompleteSpent > 0) {
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(180, 120, 0);
-      doc.text("Incomplete Transactions:", 14, currentY);
+      doc.text(`Pending sales: ${fmtCurrency(incompleteEarned)}`, 14, currentY);
       currentY += 5;
-      
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(0, 0, 0);
-      doc.text(`  Earned from sales: ${fmtCurrency(incompleteEarned)}`, 14, currentY);
-      currentY += 4;
-      doc.text(`  Spent on purchases: ${fmtCurrency(incompleteSpent)}`, 14, currentY);
-      currentY += 6;
+      doc.text(`Pending purchases: ${fmtCurrency(incompleteSpent)}`, 14, currentY);
+      currentY += 5;
     }
-    
-    // All Transactions Total
-    const totalAllEarned = totalEarned + incompleteEarned;
-    const totalAllSpent = totalSpent + incompleteSpent;
-    
+
     doc.setFillColor(240, 253, 250);
-    doc.roundedRect(14, currentY - 2, 120, 12, 2, 2, "F");
+    doc.roundedRect(14, currentY - 1, 138, 11, 2, 2, "F");
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(0, 0, 0);
-    doc.text("TOTAL (All Transactions):", 18, currentY + 3);
-    doc.setTextColor(5, 150, 105);
-    doc.text(`Earned: ${fmtCurrency(totalAllEarned)}`, 18, currentY + 8);
-    doc.setTextColor(180, 120, 0);
-    doc.text(`Spent: ${fmtCurrency(totalAllSpent)}`, 65, currentY + 8);
-    
-    currentY += 15;
-    
-    // Transaction count
-    doc.setFontSize(7.5);
-    doc.setTextColor(70, 70, 70);
-    doc.text(`Total transactions in report: ${rows.length} (${completedTransactions.length} completed, ${incompleteTransactions.length} incomplete)`, 14, currentY);
-    currentY += 6;
+    doc.text(`Period: ${rangeLabel()}`, 18, currentY + 4);
+    currentY += 16;
 
-    // Data table
-    autoTable(doc, {
-      startY: currentY,
-      head: [HEADERS],
-      body: rows.map((r) => KEYS.map((k) => r[k])),
-      styles: { fontSize: 7.5, cellPadding: 2.5, overflow: "ellipsize" },
-      headStyles: { fillColor: EMERALD, textColor: WHITE, fontStyle: "bold", fontSize: 8 },
-      alternateRowStyles: { fillColor: [240, 253, 250] },
-      columnStyles: {
-        0: { cellWidth: 24 },
-        1: { cellWidth: 24 },
-        2: { cellWidth: 22 },
-        3: { cellWidth: 32 },
-        4: { cellWidth: 48 },
-        5: { cellWidth: 28 },
-        6: { cellWidth: 22 },
-        7: { cellWidth: 48 },
-      },
-      didParseCell: (data) => {
-        if (data.section === "body" && data.column.index === 2) {
-          data.cell.styles.textColor = data.cell.raw === "Sale" ? [5, 150, 105] : [180, 120, 0];
-          data.cell.styles.fontStyle = "bold";
-        }
-      },
-    });
+    const drawTable = (title, rows, startY) => {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(...EMERALD);
+      doc.text(`${title} (${rows.length})`, 14, startY);
 
-    // Footer
+      autoTable(doc, {
+        startY: startY + 3,
+        head: [HEADERS],
+        body: rows.map((row) => KEYS.map((key) => row[key])),
+        styles: {
+          fontSize: 8.5,
+          cellPadding: 3,
+          overflow: "ellipsize",
+        },
+        headStyles: {
+          fillColor: EMERALD,
+          textColor: WHITE,
+          fontStyle: "bold",
+          fontSize: 9,
+        },
+        alternateRowStyles: { fillColor: [240, 253, 250] },
+        columnStyles: {
+          0: { cellWidth: 28 },
+          1: { cellWidth: 30 },
+          2: { cellWidth: 85 },
+          3: { cellWidth: 34 },
+          4: { cellWidth: 34 },
+          5: { cellWidth: 62 },
+        },
+      });
+
+      return doc.lastAutoTable.finalY + 8;
+    };
+
+    if (activeTab === "all") {
+      currentY = drawTable("Purchase Report", purchaseRows, currentY);
+      drawTable("Sales Report", salesRows, currentY);
+    } else if (activeTab === "buyer") {
+      drawTable(reportTitle, purchaseRows, currentY);
+    } else {
+      drawTable(reportTitle, salesRows, currentY);
+    }
+
     const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
+    for (let page = 1; page <= pageCount; page += 1) {
+      doc.setPage(page);
       const footerY = doc.internal.pageSize.height - 7;
 
       doc.setDrawColor(210, 210, 210);
       doc.setLineWidth(0.2);
-      doc.line(14, footerY - 2.5, PAGE_W - 14, footerY - 2.5);
+      doc.line(14, footerY - 2.5, pageWidth - 14, footerY - 2.5);
 
       doc.setFontSize(6.5);
       doc.setTextColor(150, 150, 150);
-      doc.text("KUuza — Kenyatta University Official Marketplace", 14, footerY);
-      doc.text(`Page ${i} of ${pageCount}`, PAGE_W - 14, footerY, { align: "right" });
+      doc.text("KUuza - Kenyatta University Official Marketplace", 14, footerY);
+      doc.text(`Page ${page} of ${pageCount}`, pageWidth - 14, footerY, { align: "right" });
     }
 
     doc.save(`KUuza_Report_${Date.now()}.pdf`);
@@ -299,29 +293,14 @@ export default function ReportGenerator({ transactions, currentUserId, dateRange
 
   return (
     <div className="flex items-center gap-3 justify-end">
-        <span className="text-xs text-gray-500 dark:text-gray-400">
-  Export {transactions.length} transaction{transactions.length !== 1 ? "s" : ""}
-</span>
-      <button
-        onClick={downloadCSV}
-        disabled={!!loading}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-500
-                   text-emerald-600 dark:text-emerald-400 text-sm font-medium
-                   hover:bg-emerald-50 dark:hover:bg-emerald-900/20
-                   disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      >
-        {loading === "csv" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Table2 className="w-4 h-4" />}
-        CSV
-      </button>
+      <span className="text-xs text-gray-500 dark:text-gray-400">
+        Export {transactions.length} transaction{transactions.length !== 1 ? "s" : ""}
+      </span>
 
       <button
         onClick={downloadPDF}
         disabled={!!loading}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
-                   bg-gradient-to-r from-emerald-600 to-cyan-600
-                   text-white text-sm font-medium
-                   hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed
-                   transition-opacity shadow-sm"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-cyan-600 text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity shadow-sm"
       >
         {loading === "pdf" ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
         PDF

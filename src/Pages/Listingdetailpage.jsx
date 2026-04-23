@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, MapPin, Star, Eye, Users, Package,
   Wrench, ShoppingCart, Zap, ChevronLeft, ChevronRight,
-  Shield, Tag, AlertCircle, CheckCircle, Loader2
+  Shield, Tag, AlertCircle, CheckCircle, Loader2, Minus, Plus
 } from 'lucide-react';
 import DashboardNavbar from '../Components/Layout/DashboardNavbar';
 import BackButton from '../Components/shared/BackButton';
@@ -28,11 +28,26 @@ async function incrementViews(id, token) {
   }).catch(() => {});
 }
 
-async function addToCartAPI(listingId, token) {
+const toAbsoluteImageUrl = (imageUrl) => {
+  if (!imageUrl) return null;
+  if (imageUrl.startsWith('http')) return imageUrl;
+  if (imageUrl.startsWith('/')) return `http://127.0.0.1:8000${imageUrl}`;
+  return imageUrl;
+};
+
+const normalizeId = (value) => {
+  if (!value) return '';
+  if (typeof value === 'object') {
+    return String(value.id || value.uuid || value.pk || '');
+  }
+  return String(value);
+};
+
+async function addToCartAPI(listingId, token, quantity = 1) {
   const res = await fetch(`${API_BASE}/cart/add/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ listing_id: listingId }),
+    body: JSON.stringify({ listing_id: listingId, quantity }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -76,7 +91,8 @@ function ImageGallery({ images, title, darkMode }) {
     <div className="space-y-3">
       <div className={`relative w-full aspect-square rounded-2xl overflow-hidden shadow-lg group ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
         <img
-            src={images[active].image}          alt={`${title} image ${active + 1}`}
+          src={toAbsoluteImageUrl(images[active].image)}
+          alt={`${title} image ${active + 1}`}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
         {images.length > 1 && (
@@ -99,7 +115,7 @@ function ImageGallery({ images, title, darkMode }) {
         <div className="flex gap-2 overflow-x-auto pb-1">
           {images.map((img, i) => (
             <button key={i} onClick={() => setActive(i)} className={`flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${i === active ? 'border-emerald-500 scale-105' : darkMode ? 'border-gray-600 opacity-60 hover:opacity-100' : 'border-gray-300 opacity-60 hover:opacity-100'}`}>
-              <img src={`http://127.0.0.1:8000${img.image}`} alt={`Thumb ${i + 1}`} className="w-full h-full object-cover" />
+              <img src={toAbsoluteImageUrl(img.image)} alt={`Thumb ${i + 1}`} className="w-full h-full object-cover" />
             </button>
           ))}
         </div>
@@ -129,6 +145,7 @@ const ListingDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [cartLoading, setCartLoading] = useState(false);
+  const [selectedQuantity, setSelectedQuantity] = useState(1);
 
   const load = useCallback(async () => {
     try {
@@ -145,10 +162,25 @@ const ListingDetailPage = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const isOwn = listing && user && listing.seller === user.id;
+  useEffect(() => {
+    if (!listing || listing.listing_type !== 'good') {
+      setSelectedQuantity(1);
+      return;
+    }
+
+    const maxAllowed = Math.max(1, Number(listing.quantity ?? 1));
+    setSelectedQuantity((current) => Math.min(Math.max(1, current), maxAllowed));
+  }, [listing]);
+
+  const sellerId = normalizeId(listing?.seller);
+  const isOwn = Boolean(listing && user && sellerId === normalizeId(user.id));
   const isService = listing?.listing_type === 'service';
   const isGood = listing?.listing_type === 'good';
-  const isSold = listing?.status === 'sold';
+  const quantityAvailable = Number(listing?.quantity ?? 0);
+  const maxSelectableQuantity = Math.max(1, quantityAvailable);
+  const isStockDepleted = isGood && quantityAvailable <= 0;
+  const isMarkedSold = listing?.status === 'sold';
+  const isSold = isService ? isMarkedSold : isStockDepleted;
   const isDeactivated = listing?.status === 'deactivated';
   const isUnavailable = isSold || isDeactivated;
 
@@ -159,7 +191,7 @@ const ListingDetailPage = () => {
     if (!token) { toast.error('Please log in to add items to your cart.', { duration: 4000, position: 'top-center', style: errorStyle }); return; }
     try {
       setCartLoading(true);
-      await addToCartAPI(listing.id, token);
+      await addToCartAPI(listing.id, token, selectedQuantity);
       toast.success('Added to cart!', { duration: 3000, position: 'top-center', style: successStyle });
     } catch (err) {
       toast.error(err.message, { duration: 4000, position: 'top-center', style: errorStyle });
@@ -168,9 +200,37 @@ const ListingDetailPage = () => {
     }
   };
 
-  const handleBuyNow = () => navigate(`/checkout/${listing.id}`);
-  const handleBookNow = () => navigate(`/checkout/${listing.id}`);
-  const handleEdit = () => navigate(`/sell/edit/${listing.id}`);
+  const handleBuyNow = () => navigate(`/checkout/${listing.id}`, {
+    state: {
+      checkoutType: 'single',
+      item: {
+        listing_id: listing.id,
+        title: listing.title,
+        price: parseFloat(listing.price || 0),
+        quantity: selectedQuantity,
+        image: listing.images?.[0]?.image || null,
+        listing_type: listing.listing_type,
+        condition: listing.condition,
+        seller_id: sellerId,
+      },
+      returnTo: `/listings/${listing.id}`,
+    },
+  });
+  const handleBookNow = () => navigate(`/checkout/${listing.id}`, {
+    state: {
+      checkoutType: 'single',
+      item: {
+        listing_id: listing.id,
+        title: listing.title,
+        price: parseFloat(listing.price || 0),
+        quantity: 1,
+        image: listing.images?.[0]?.image || null,
+        listing_type: listing.listing_type,
+        seller_id: sellerId,
+      },
+      returnTo: `/listings/${listing.id}`,
+    },
+  });
 
   if (loading) return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
@@ -221,7 +281,7 @@ const ListingDetailPage = () => {
           {isUnavailable && (
             <div className={`mb-6 px-4 py-3 rounded-xl flex items-center gap-3 ${isSold ? 'bg-red-100 border border-red-200 text-red-700' : darkMode ? 'bg-gray-800 border border-gray-700 text-gray-400' : 'bg-gray-100 border border-gray-200 text-gray-600'}`}>
               <AlertCircle size={18} className="flex-shrink-0" />
-              <p className="text-sm font-medium">{isSold ? 'This item has already been sold and is no longer available.' : 'This listing has been temporarily deactivated by the seller.'}</p>
+              <p className="text-sm font-medium">{isSold ? isService ? 'This service is no longer available.' : 'This item is out of stock and is no longer available.' : 'This listing has been temporarily deactivated by the seller.'}</p>
             </div>
           )}
 
@@ -252,7 +312,7 @@ const ListingDetailPage = () => {
                       <Users size={11} />{listing.usage_count} used this
                     </span>
                   )}
-                  {isSold && <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">Sold</span>}
+                  {isSold && <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">{isService ? 'Unavailable' : 'Sold Out'}</span>}
                 </div>
 
                 {/* Title */}
@@ -279,8 +339,64 @@ const ListingDetailPage = () => {
                 )}
 
                 {/* Quantity */}
-                {isGood && listing.quantity > 1 && (
-                  <p className={`text-sm mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{listing.quantity} available</p>
+                {isGood && (
+                  <p className={`text-sm mb-4 ${isStockDepleted ? 'text-red-500' : darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {isStockDepleted ? 'Out of stock' : `${quantityAvailable} available`}
+                  </p>
+                )}
+
+                {isGood && !isUnavailable && (
+                  <div className="mb-5">
+                    <label className={`mb-2 block text-sm font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                      Quantity
+                    </label>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className={`inline-flex items-center gap-3 rounded-xl border px-3 py-2 ${
+                        darkMode ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-gray-50'
+                      }`}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedQuantity((current) => Math.max(1, current - 1))}
+                          disabled={selectedQuantity <= 1}
+                          className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
+                            selectedQuantity <= 1
+                              ? 'cursor-not-allowed opacity-40'
+                              : darkMode ? 'bg-gray-800 text-gray-200 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          <Minus size={16} />
+                        </button>
+                        <div className="min-w-[3rem] text-center">
+                          <p className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {selectedQuantity}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedQuantity((current) => Math.min(maxSelectableQuantity, current + 1))}
+                          disabled={selectedQuantity >= maxSelectableQuantity}
+                          className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
+                            selectedQuantity >= maxSelectableQuantity
+                              ? 'cursor-not-allowed opacity-40'
+                              : darkMode ? 'bg-gray-800 text-gray-200 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
+
+                      <div className="text-right">
+                        <p className={`text-xs uppercase tracking-[0.18em] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                          Total
+                        </p>
+                        <p className="mt-1 text-lg font-bold text-emerald-600">
+                          {listing.price
+                            ? `KSh ${(parseFloat(listing.price) * selectedQuantity).toLocaleString('en-KE')}`
+                            : 'Negotiable'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 )}
 
                 <div className={`border-t mb-5 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
@@ -310,7 +426,12 @@ const ListingDetailPage = () => {
                 <div className={`border-t mb-5 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
 
                 {/* Seller */}
-                <div className="flex items-center gap-3 mb-5">
+                <Link
+                  to={`/sellers/${sellerId}`}
+                  className={`flex items-center gap-3 mb-5 rounded-2xl p-2 -m-2 transition-colors ${
+                    darkMode ? 'hover:bg-gray-700/60' : 'hover:bg-gray-50'
+                  }`}
+                >
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-600 to-cyan-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                     {listing.seller_name ? listing.seller_name.charAt(0).toUpperCase() : 'K'}
                   </div>
@@ -321,7 +442,7 @@ const ListingDetailPage = () => {
                   <div className={`flex items-center gap-1 text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                     <Eye size={13} />{listing.views_count || 0} views
                   </div>
-                </div>
+                </Link>
 
                 {/* Privacy note — same style as SellPage tips */}
                 <div className={`p-3 rounded-lg mb-5 flex items-center gap-2.5 ${darkMode ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
@@ -333,19 +454,21 @@ const ListingDetailPage = () => {
 
                 {/* Action buttons */}
                 {isOwn ? (
-                  <div className="space-y-4">
-                    <button onClick={handleEdit} className={`w-full py-4 rounded-xl font-bold text-lg transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}>
-                      Edit Listing
-                    </button>
-                    <p className={`text-sm text-center ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      This is your listing.{' '}
-                      <Link to="/my-listings" className="text-emerald-500 hover:text-emerald-600 font-medium">Manage it in My Listings →</Link>
+                  <div className={`rounded-xl border p-4 ${darkMode ? 'border-emerald-900/40 bg-emerald-900/10' : 'border-emerald-100 bg-emerald-50'}`}>
+                    <p className={`text-sm ${darkMode ? 'text-emerald-100' : 'text-emerald-900'}`}>
+                      This is your listing. Use My Listings to edit details, manage stock, or remove it from the marketplace.
                     </p>
+                    <Link
+                      to="/my-listings"
+                      className="mt-3 inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 px-4 py-3 text-sm font-semibold text-white transition-all hover:from-emerald-700 hover:to-cyan-700"
+                    >
+                      Manage in My Listings
+                    </Link>
                   </div>
 
                 ) : isUnavailable ? (
                   <button disabled className="w-full py-4 rounded-xl font-bold text-lg bg-gray-300 text-gray-400 cursor-not-allowed">
-                    {isSold ? 'Sold Out' : 'Currently Unavailable'}
+                    {isSold ? isService ? 'Unavailable' : 'Sold Out' : 'Currently Unavailable'}
                   </button>
 
                 ) : isGood ? (

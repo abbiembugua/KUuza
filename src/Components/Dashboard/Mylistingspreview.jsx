@@ -23,6 +23,12 @@ const MyListingsPreview = ({ listings, darkMode, onView }) => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {listings.slice(0, 4).map((item) => (
+          (() => {
+            const quantityAvailable = Number(item?.quantity ?? item?.listing_quantity ?? 0);
+            const isOutOfStock = item.listing_type !== 'service' && quantityAvailable <= 0;
+            const isUnavailable = item.listing_type === 'service' ? Boolean(item.is_sold || item.status === 'sold') : isOutOfStock;
+
+            return (
           <div
             key={item.id}
             onClick={() => onView(item.id)}
@@ -38,10 +44,10 @@ const MyListingsPreview = ({ listings, darkMode, onView }) => {
                 alt={item.title}
                 className="w-full h-full object-cover"
               />
-              {item.is_sold && (
+              {isUnavailable && (
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                   <span className="text-white font-bold text-sm bg-red-600 px-2 py-1 rounded-full">
-                    SOLD
+                    {item.listing_type === 'service' ? 'UNAVAILABLE' : 'OUT OF STOCK'}
                   </span>
                 </div>
               )}
@@ -55,6 +61,11 @@ const MyListingsPreview = ({ listings, darkMode, onView }) => {
               <p className="text-emerald-600 font-bold text-sm">
                 KSh {item.price?.toLocaleString()}
               </p>
+              {item.listing_type !== 'service' && (
+                <p className={`mt-1 text-xs ${isOutOfStock ? 'text-red-500' : darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {isOutOfStock ? 'Out of stock' : `${quantityAvailable} available`}
+                </p>
+              )}
               <div className={`flex items-center gap-1 mt-1 text-xs ${
                 darkMode ? 'text-gray-400' : 'text-gray-500'
               }`}>
@@ -63,6 +74,8 @@ const MyListingsPreview = ({ listings, darkMode, onView }) => {
               </div>
             </div>
           </div>
+            );
+          })()
         ))}
       </div>
     </div>

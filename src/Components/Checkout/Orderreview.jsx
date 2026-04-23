@@ -1,7 +1,7 @@
 import React from 'react';
 import { MapPin, Package, Wrench, ChevronRight, ShoppingBag, Tag } from 'lucide-react';
 
-const OrderReview = ({ listing, darkMode, onContinue, isBulk, bulkItems = [], bulkTotal = 0 }) => {
+const OrderReview = ({ listing, darkMode, onContinue, isBulk, bulkItems = [], bulkTotal = 0, singleQuantity = 1 }) => {
   const isService  = listing?.listing_type === 'service';
   const coverImage = listing?.images?.[0]?.image ?? null;
 
@@ -135,6 +135,11 @@ const OrderReview = ({ listing, darkMode, onContinue, isBulk, bulkItems = [], bu
               <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                 Sold by {listing.seller_name || 'KU Student'}
               </p>
+              {!isService && (
+                <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Quantity: {singleQuantity}
+                </p>
+              )}
               {listing.area_of_operation && (
                 <div className="flex items-center gap-1 mt-1">
                   <MapPin size={11} className="text-gray-400" />
@@ -149,7 +154,7 @@ const OrderReview = ({ listing, darkMode, onContinue, isBulk, bulkItems = [], bu
             <div className="text-right flex-shrink-0">
               <p className={`font-bold text-lg ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
                 {listing.price
-                  ? `KSh ${parseFloat(listing.price).toLocaleString('en-KE')}`
+                  ? `KSh ${(parseFloat(listing.price) * singleQuantity).toLocaleString('en-KE')}`
                   : 'Negotiable'}
               </p>
               {listing.negotiable && listing.price && (

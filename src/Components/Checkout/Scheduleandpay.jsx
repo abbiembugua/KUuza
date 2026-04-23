@@ -76,6 +76,8 @@ const ScheduleAndPay = ({
   isBulk   = false,
   bulkItems = [],
   bulkTotal = 0,
+  singleQuantity = 1,
+  singleTotal = 0,
 }) => {
   // In bulk mode all items are goods; single mode respects listing_type
   const isService = !isBulk && listing?.listing_type === 'service';
@@ -343,6 +345,12 @@ const ScheduleAndPay = ({
                   {listing?.seller_name || 'KU Student'}
                 </span>
               </div>
+              {!isService && (
+                <div className="flex justify-between">
+                  <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Quantity</span>
+                  <span className={darkMode ? 'text-white' : 'text-gray-900'}>{singleQuantity}</span>
+                </div>
+              )}
               {scheduledDate && (
                 <div className="flex justify-between">
                   <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>
@@ -360,7 +368,7 @@ const ScheduleAndPay = ({
                 <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Total</span>
                 <span className={`font-bold text-lg ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
                   {listing?.price
-                    ? `KSh ${parseFloat(listing.price).toLocaleString('en-KE')}`
+                    ? `KSh ${singleTotal.toLocaleString('en-KE')}`
                     : 'Negotiable'}
                 </span>
               </div>
@@ -387,7 +395,7 @@ const ScheduleAndPay = ({
         ) : paymentMethod === 'mpesa' ? (
           isBulk
             ? `Confirm & Pay KSh ${bulkTotal.toLocaleString('en-KE')} via M-Pesa`
-            : 'Confirm & Pay via M-Pesa'
+            : `Confirm & Pay ${listing?.price ? `KSh ${singleTotal.toLocaleString('en-KE')}` : ''} via M-Pesa`.trim()
         ) : (
           isBulk
             ? `Confirm ${bulkItems.length} Orders`

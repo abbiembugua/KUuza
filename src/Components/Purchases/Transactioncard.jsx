@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   Package, Wrench, Calendar, CheckCircle, Clock, AlertCircle,
-  Star, ChevronDown, ChevronUp, Phone, Mail, Shield, Loader2, MapPin,
+  Star, ChevronDown, ChevronUp, Phone, Mail, Shield, Loader2, MapPin, Download, X,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { generateReceipt } from '../Checkout/generateReceipt';
 
 const API_BASE = 'http://127.0.0.1:8000/api';
 
@@ -46,6 +47,11 @@ const PAYMENT_LABELS = {
   pay_after_service: 'Pay After Service',
 };
 
+const getTransactionQuantity = (transaction) => {
+  const q = Number(transaction?.quantity);
+  return Number.isFinite(q) && q > 0 ? q : 1;
+};
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatShortDate(dateStr) {
@@ -69,6 +75,24 @@ async function markComplete(transactionId, token) {
   if (!res.ok) {
     const err = await res.json();
     throw new Error(err.error || 'Could not mark as complete');
+  }
+  return res.json();
+}
+
+async function cancelTransaction(transactionId, token) {
+  const res = await fetch(
+    `${API_BASE}/transactions/${transactionId}/cancel/`,
+    {
+      method:  'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization:  `Bearer ${token}`,
+      },
+    }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Could not cancel transaction');
   }
   return res.json();
 }
@@ -146,6 +170,49 @@ function ContactDetails({ listingId, token, darkMode }) {
   );
 }
 
+// ── CancelConfirmPopup ────────────────────────────────────────────────────────
+
+function CancelConfirmPopup({ darkMode, onConfirm, onDismiss, loading }) {
+  return (
+    <div className={`mt-3 rounded-xl border p-3 flex items-start gap-3 ${
+      darkMode
+        ? 'bg-red-950/30 border-red-900/50'
+        : 'bg-red-50 border-red-200'
+    }`}>
+      <AlertCircle size={15} className="text-red-500 flex-shrink-0 mt-0.5" />
+      <div className="flex-1 min-w-0">
+        <p className={`text-xs font-semibold ${darkMode ? 'text-red-400' : 'text-red-700'}`}>
+          Cancel this transaction?
+        </p>
+        <p className={`text-xs mt-0.5 ${darkMode ? 'text-red-500/70' : 'text-red-500'}`}>
+          This can't be undone.
+        </p>
+        <div className="flex items-center gap-2 mt-2.5">
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
+          >
+            {loading ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
+            {loading ? 'Cancelling…' : 'Yes, cancel'}
+          </button>
+          <button
+            onClick={onDismiss}
+            disabled={loading}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+              darkMode
+                ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                : 'bg-white hover:bg-gray-100 text-gray-600 border border-gray-200'
+            }`}
+          >
+            Keep it
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── TransactionCard ───────────────────────────────────────────────────────────
 
 /**
@@ -157,6 +224,7 @@ function ContactDetails({ listingId, token, darkMode }) {
  *   darkMode         {boolean}
  *   token            {string}   — JWT access token
  *   onComplete       (transactionId: string) => void
+ *   onCancel         (transactionId: string) => void
  *   onReview         (transaction, reviewTarget) => void
  *   pendingReviewIds {string[]} — ids that still need a review
  */
@@ -165,12 +233,17 @@ export default function TransactionCard({
   currentUserId,
   darkMode,
   token,
+  downloaderName,
   onComplete,
+  onCancel,
   onReview,
   pendingReviewIds,
 }) {
-  const [expanded,   setExpanded]   = useState(false);
-  const [completing, setCompleting] = useState(false);
+  const [expanded,          setExpanded]          = useState(false);
+  const [completing,        setCompleting]        = useState(false);
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false);
+  const [showCancelPrompt,  setShowCancelPrompt]  = useState(false);
+  const [cancelling,        setCancelling]        = useState(false);
 
   const isBuyer  = transaction.buyer  === currentUserId;
   const isSeller = transaction.seller === currentUserId;
@@ -182,14 +255,16 @@ export default function TransactionCard({
 
   const isComplete  = ['completed', 'auto_completed'].includes(transaction.status);
   const canComplete = isSeller && transaction.status === 'pending';
+  const canCancel   = transaction.status === 'pending'; // both buyer and seller
   const needsReview = isComplete && pendingReviewIds.includes(transaction.id);
 
   const reviewTarget = isBuyer
-    ? { id: transaction.seller, name: transaction.seller_name }
-    : { id: transaction.buyer,  name: transaction.buyer_name  };
+    ? { id: transaction.seller, full_name: transaction.seller_name }
+    : { id: transaction.buyer,  full_name: transaction.buyer_name  };
 
   const counterpartyName = isBuyer ? transaction.seller_name : transaction.buyer_name;
   const counterpartyRole = isBuyer ? 'Seller' : 'Buyer';
+  const transactionQuantity = getTransactionQuantity(transaction);
 
   const handleComplete = async () => {
     setCompleting(true);
@@ -201,6 +276,65 @@ export default function TransactionCard({
       toast.error(err.message);
     } finally {
       setCompleting(false);
+    }
+  };
+
+  const handleCancelConfirm = async () => {
+    setCancelling(true);
+    try {
+      await cancelTransaction(transaction.id, token);
+      toast.success('Transaction cancelled.');
+      setShowCancelPrompt(false);
+      onCancel(transaction.id);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handleDownloadReceipt = async () => {
+    setDownloadingReceipt(true);
+
+    try {
+      let contact = null;
+
+      if (transaction.listing && token) {
+        const response = await fetch(`${API_BASE}/listings/${transaction.listing}/contact_details/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.ok) {
+          contact = await response.json();
+        }
+      }
+
+      generateReceipt({
+        listing: {
+          id: transaction.listing,
+          title: transaction.listing_title,
+          seller_name: transaction.seller_name,
+          listing_type: transaction.listing_type,
+          category: transaction.listing_category,
+          price: transaction.agreed_price || transaction.price,
+        },
+        transaction: {
+          ...transaction,
+          downloaded_by_name: downloaderName,
+          quantity: transactionQuantity,
+        },
+        scheduledDate: transaction.scheduled_date,
+        scheduledTime: transaction.scheduled_time,
+        paymentMethod: transaction.payment_method,
+        contact,
+      });
+
+      toast.success('Receipt downloaded.');
+    } catch (error) {
+      console.error('Receipt download failed:', error);
+      toast.error('Could not download the receipt right now.');
+    } finally {
+      setDownloadingReceipt(false);
     }
   };
 
@@ -259,8 +393,13 @@ export default function TransactionCard({
             <p className={`font-semibold text-sm line-clamp-1 mb-1.5 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
               {transaction.listing_title || 'Listing no longer available'}
             </p>
+            {transaction.listing_type !== 'service' && (
+              <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                Quantity: {transactionQuantity}
+              </p>
+            )}
 
-            {/* Dates — clearly labelled */}
+            {/* Dates */}
             <div className="flex flex-col gap-1">
               {transaction.created_at && (
                 <div className={`flex items-center gap-1.5 text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
@@ -285,7 +424,7 @@ export default function TransactionCard({
             {/* Price */}
             <p className="text-sm font-bold mt-1.5 bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent">
               {transaction.agreed_price
-                ? `KSh ${parseFloat(transaction.agreed_price).toLocaleString('en-KE')}`
+                ? `KSh ${(parseFloat(transaction.agreed_price) * transactionQuantity).toLocaleString('en-KE')}`
                 : 'Negotiable'}
             </p>
           </div>
@@ -331,6 +470,33 @@ export default function TransactionCard({
             </button>
           )}
 
+          <button
+            onClick={handleDownloadReceipt}
+            disabled={downloadingReceipt}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 ${
+              darkMode
+                ? 'bg-gray-700 hover:bg-gray-600 text-gray-100'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+            }`}
+          >
+            {downloadingReceipt ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+            Receipt
+          </button>
+
+          {/* ── Cancel button — only on pending ── */}
+          {canCancel && !showCancelPrompt && (
+            <button
+              onClick={() => setShowCancelPrompt(true)}
+              className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                darkMode
+                  ? 'text-red-400 hover:bg-red-950/40 hover:text-red-300'
+                  : 'text-red-500 hover:bg-red-50 hover:text-red-600'
+              }`}
+            >
+              <X size={12} /> Cancel
+            </button>
+          )}
+
           {isComplete && !needsReview && (
             <div className={`flex items-center gap-1 text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
               <CheckCircle size={12} className="text-emerald-500" /> Reviewed
@@ -353,6 +519,16 @@ export default function TransactionCard({
             {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
           </button>
         </div>
+
+        {/* ── Inline cancel confirmation ── */}
+        {showCancelPrompt && (
+          <CancelConfirmPopup
+            darkMode={darkMode}
+            onConfirm={handleCancelConfirm}
+            onDismiss={() => setShowCancelPrompt(false)}
+            loading={cancelling}
+          />
+        )}
       </div>
 
       {/* ── Expanded details ── */}
@@ -385,6 +561,17 @@ export default function TransactionCard({
                 </p>
                 <p className={`text-sm italic ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                   &ldquo;{transaction.inquiry_note}&rdquo;
+                </p>
+              </div>
+            )}
+
+            {transaction.listing_type !== 'service' && (
+              <div>
+                <p className={`text-xs uppercase tracking-wider font-semibold mb-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Quantity
+                </p>
+                <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+                  {transactionQuantity}
                 </p>
               </div>
             )}

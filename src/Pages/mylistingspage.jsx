@@ -1,9 +1,9 @@
 // src/Pages/MyListingsPage.jsx
 // View, edit, and delete user's listings
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Edit2, Trash2, Plus, ArrowLeft, Eye, Package } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import DashboardNavbar from '../Components/Layout/DashboardNavbar';
 import { useTheme } from '../context/Themecontext';
 import { useAuth } from '../context/AuthContext';
@@ -15,8 +15,10 @@ import { Toaster, toast } from 'react-hot-toast'; // Add this import
 
 const MyListingsPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { darkMode } = useTheme();
   const { user } = useAuth();
+  const autoOpenedEditRef = useRef(false);
   
   // State
   const [listings, setListings] = useState([]);
@@ -37,6 +39,18 @@ const MyListingsPage = () => {
   useEffect(() => {
     fetchListings();
   }, []);
+
+  useEffect(() => {
+    const editListingId = location.state?.editListingId;
+    if (!editListingId || autoOpenedEditRef.current || listings.length === 0) return;
+
+    const targetListing = listings.find((item) => String(item.id) === String(editListingId));
+    if (!targetListing) return;
+
+    autoOpenedEditRef.current = true;
+    handleEdit(targetListing);
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [listings, location.pathname, location.state, navigate]);
 
   const fetchListings = async () => {
     try {

@@ -18,6 +18,11 @@ const formatMoney = (value) => {
   return `KSh ${amount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+const formatQuantity = (value) => {
+  const quantity = Number(value || 1);
+  return Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
+};
+
 const formatShortDate = (value) => {
   if (!value) return '-';
   const date = new Date(value);
@@ -80,7 +85,17 @@ export function generateReceipt({ listing, transaction, scheduledDate, scheduled
   const scheduleValue = scheduledDate ? formatShortDate(scheduledDate) : '-';
   const scheduleDetail = !isService && scheduledTime ? `${scheduleValue} at ${scheduledTime}` : scheduleValue;
   const sellerName = listing?.seller_name || transaction?.seller_username || 'KU Student';
+  const recipientName =
+    transaction?.downloaded_by_name ||
+    transaction?.buyer_name ||
+    transaction?.buyer_username ||
+    'KU Student';
   const contactValue = contact?.contact_value || '-';
+  const quantity = formatQuantity(transaction?.quantity);
+  const unitPrice = parseFloat(transaction?.agreed_price || listing?.price || 0);
+  const totalPrice = Number.isFinite(unitPrice) && unitPrice > 0
+    ? unitPrice * quantity
+    : transaction?.agreed_price || listing?.price;
 
   const drawKeyValue = (label, value, y, options = {}) => {
     const { highlight = false } = options;
@@ -110,28 +125,32 @@ export function generateReceipt({ listing, transaction, scheduledDate, scheduled
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
-  doc.text('Receipt', pageWidth - margin, 13, { align: 'right' });
+  doc.text(`Receipt for ${recipientName}`, pageWidth - margin, 13, { align: 'right' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.text(`Reference: ${receiptNo}`, pageWidth - margin, 20, { align: 'right' });
-  doc.text(`Issued: ${formatIssuedAt(now)}`, pageWidth - margin, 25, { align: 'right' });
+  doc.text(`Issued on: ${formatIssuedAt(now)}`, pageWidth - margin, 25, { align: 'right' });
 
   doc.setDrawColor(16, 185, 129);
   doc.setLineWidth(0.3);
   doc.line(0, headerHeight, pageWidth, headerHeight);
 
   doc.setFillColor(...SOFT);
-  doc.roundedRect(margin, 40, pageWidth - margin * 2, 18, 2, 2, 'F');
+  doc.roundedRect(margin, 40, pageWidth - margin * 2, 24, 2, 2, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(...MUTED);
   doc.text('Transaction summary', margin + 4, 47);
   doc.setFontSize(16);
   doc.setTextColor(...EMERALD);
-  doc.text(formatMoney(transaction?.agreed_price || listing?.price), margin + 4, 55);
+  doc.text(formatMoney(totalPrice), margin + 4, 55);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...INK);
+  doc.text(`Prepared for ${recipientName}`, margin + 4, 61);
 
-  let y = 70;
+  let y = 76;
 
   drawKeyValue('Listing', listing?.title || '-', y);
   y += 10;
@@ -139,6 +158,10 @@ export function generateReceipt({ listing, transaction, scheduledDate, scheduled
   y += 10;
   drawKeyValue('Seller', sellerName, y);
   y += 10;
+  if (!isService) {
+    drawKeyValue('Quantity', quantity, y);
+    y += 10;
+  }
   drawKeyValue(scheduleLabel, scheduleDetail, y);
   y += 10;
   drawKeyValue('Payment', formatPayment(paymentMethod), y);
@@ -161,7 +184,7 @@ export function generateReceipt({ listing, transaction, scheduledDate, scheduled
   doc.setLineWidth(0.2);
   doc.line(margin, y, pageWidth - margin, y);
   y += 10;
-  drawKeyValue('Total', formatMoney(transaction?.agreed_price || listing?.price), y, { highlight: true });
+  drawKeyValue('Total', formatMoney(totalPrice), y, { highlight: true });
 
   const footerY = pageHeight - 12;
   doc.setDrawColor(...LINE);

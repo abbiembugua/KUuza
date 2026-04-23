@@ -210,6 +210,8 @@ const Confirmation = ({
   bulkItems = [],
   bulkTotal = 0,
   bulkTxns  = [],
+  singleQuantity = 1,
+  singleTotal = 0,
 }) => {
   // In single mode, listing is always set; in bulk it's null — guard everything
   const isService = listing?.listing_type === 'service';
@@ -236,7 +238,11 @@ const Confirmation = ({
     try {
       generateReceipt({
         listing,
-        transaction,
+        transaction: {
+          ...transaction,
+          downloaded_by_name: transaction?.buyer_name,
+          quantity: singleQuantity,
+        },
         scheduledDate,
         scheduledTime,
         paymentMethod,
@@ -259,10 +265,6 @@ const Confirmation = ({
     if (paymentMethod === 'pay_after_service') return 'Pay After Service';
     return 'Cash on Pickup';
   };
-
-  const totalAmount = isBulk
-    ? bulkTotal
-    : listing?.price ? parseFloat(listing.price) : null;
 
   return (
     <div className="space-y-4">
@@ -346,10 +348,18 @@ const Confirmation = ({
                   <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Amount</span>
                   <span className={`font-bold ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
                     {listing?.price
-                      ? `KSh ${parseFloat(listing.price).toLocaleString('en-KE')}`
+                      ? `KSh ${singleTotal.toLocaleString('en-KE')}`
                       : 'Negotiable'}
                   </span>
                 </div>
+                {!isService && (
+                  <div className="flex justify-between">
+                    <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Quantity</span>
+                    <span className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {singleQuantity}
+                    </span>
+                  </div>
+                )}
               </>
             )}
 

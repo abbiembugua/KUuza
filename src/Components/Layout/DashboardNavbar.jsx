@@ -135,7 +135,10 @@ const { darkMode, toggleTheme } = useTheme();
         listing_type: transaction.listing_type,
         price: transaction.agreed_price,
       },
-      transaction,
+      transaction: {
+        ...transaction,
+        downloaded_by_name: user?.full_name,
+      },
       scheduledDate: transaction.scheduled_date,
       paymentMethod: transaction.payment_method,
       contact: null,

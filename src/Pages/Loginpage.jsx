@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Eye, EyeOff, LogIn, Mail, Shield } from 'lucide-react';
+import { Eye, EyeOff, Loader2, LogIn, Mail, Shield } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
-import { clearAuthStorage, getCurrentUser, login } from '../api/authapi';
+import { clearAuthStorage, getCurrentUser, login, resendVerification } from '../api/authapi';
 import AuthCard from '../Components/shared/AuthCard';
 import AuthPageShell from '../Components/shared/AuthPageShell';
 import BackButton from '../Components/shared/BackButton';
@@ -16,6 +16,7 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
 
@@ -47,6 +48,39 @@ const LoginPage = () => {
   const validateKUEmail = (value) => {
     const kuEmailPattern = /^[A-Za-z0-9]+\.20\d{2}@students\.ku\.ac\.ke$/;
     return kuEmailPattern.test(value);
+  };
+
+  const isVerificationError = /verify|verification|unverified/i.test(error);
+
+  const handleResendVerification = async () => {
+    if (!validateKUEmail(email)) {
+      setError('Enter your KU student email first so we know where to resend the verification link.');
+      return;
+    }
+
+    setIsResendingVerification(true);
+
+    try {
+      await resendVerification(email);
+      toast.success(`Verification email sent to ${email}.`, {
+        duration: 4000,
+        position: 'top-center',
+      });
+    } catch (resendError) {
+      const resendMessage = resendError.message || 'Could not resend verification email.';
+      setError(resendMessage);
+      toast.error(resendMessage, {
+        duration: 4000,
+        position: 'top-center',
+        style: {
+          background: '#fee2e2',
+          color: '#dc2626',
+          border: '1px solid #fecaca',
+        },
+      });
+    } finally {
+      setIsResendingVerification(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -163,6 +197,22 @@ const LoginPage = () => {
               <div className="w-2 h-2 bg-red-500 rounded-full"></div>
               <p className="text-sm font-medium">{error}</p>
             </div>
+          )}
+
+          {isVerificationError && (
+            <button
+              type="button"
+              onClick={handleResendVerification}
+              disabled={isResendingVerification}
+              className={`mb-6 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${
+                darkMode
+                  ? 'bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+                  : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+              } disabled:cursor-not-allowed disabled:opacity-60`}
+            >
+              {isResendingVerification ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
+              {isResendingVerification ? 'Resending verification...' : 'Resend verification email'}
+            </button>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">

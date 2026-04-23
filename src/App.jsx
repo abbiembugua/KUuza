@@ -13,6 +13,7 @@ import NeedsPage from './Pages/NeedsPage';
 import ProfilePage from './Pages/ProfilePage';
 import PurchasesPage from './Pages/PurchasesPage';
 import ReviewPage from './Pages/Reviewpage';
+import SellerProfilePage from './Pages/SellerProfilePage';
 import SellPage from './Pages/SellPage';
 import SignUpPage from './Pages/Signupage';
 import VerifyEmail from './Pages/VerifyEmaiPage';
@@ -51,6 +52,7 @@ const App = () => {
             <Route path="/review/:transactionId" element={<ReviewPage />} />
             <Route path="/purchases" element={<PurchasesPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/sellers/:sellerId" element={<SellerProfilePage />} />
           </Routes>
         </AuthProvider>
       </Router>

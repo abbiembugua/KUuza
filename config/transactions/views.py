@@ -66,6 +66,28 @@ class TransactionViewSet(viewsets.ModelViewSet):
         return Response(
             TransactionSerializer(transaction, context={'request': request}).data
         )
+    @action(detail=True, methods=['patch'])
+    def cancel(self, request, pk=None):
+        transaction = self.get_object()
+
+        if transaction.status != 'pending':
+            return Response(
+                {'error': 'Only pending transactions can be cancelled.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if request.user != transaction.buyer and request.user != transaction.seller:
+            return Response(
+                {'error': 'You are not authorised to cancel this transaction.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        transaction.status = 'cancelled'
+        transaction.save(update_fields=['status'])
+
+        return Response(
+            TransactionSerializer(transaction, context={'request': request}).data
+        )
 
     @action(detail=False, methods=['get'])
     def pending_reviews(self, request):
@@ -178,8 +200,9 @@ class TransactionViewSet(viewsets.ModelViewSet):
                 transaction.completed_at = timezone.now()
                 transaction.save(update_fields=['mpesa_receipt', 'status', 'completed_at', 'updated_at'])
 
-                if transaction.listing and transaction.interaction_type == 'purchase':
-                    transaction.listing.mark_sold()
+                if transaction.listing:
+                    transaction.listing.mark_sold(quantity_sold=transaction.quantity or 1)
+
             else:
                 transaction.mpesa_receipt = ''
                 transaction.save(update_fields=['mpesa_receipt'])

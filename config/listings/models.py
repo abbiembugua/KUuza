@@ -105,10 +105,20 @@ class Listing(models.Model):
     def __str__(self):
         return f"[{self.get_listing_type_display()}] {self.title}"
 
-    def mark_sold(self):
-        if self.listing_type == 'good':
+    def mark_sold(self, quantity_sold=1):
+        if self.listing_type != 'good':
+            return
+
+        from django.db.models import F
+        Listing.objects.filter(pk=self.pk).update(
+            quantity=F('quantity') - quantity_sold
+        )
+        self.refresh_from_db(fields=['quantity', 'status'])
+
+        if self.quantity <= 0:
+            self.quantity = 0
             self.status = 'sold'
-            self.save(update_fields=['status', 'updated_at'])
+            self.save(update_fields=['quantity', 'status', 'updated_at'])
 
     def increment_usage(self):
         if self.listing_type == 'service':

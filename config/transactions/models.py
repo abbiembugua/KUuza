@@ -75,6 +75,9 @@ class Transaction(models.Model):
     created_at   = models.DateTimeField(auto_now_add=True)
     updated_at   = models.DateTimeField(auto_now=True)
 
+    quantity = models.PositiveIntegerField(default=1)
+
+
     class Meta:
         ordering = ['-created_at']
         indexes  = [
@@ -96,13 +99,14 @@ class Transaction(models.Model):
         super().save(*args, **kwargs)
 
         # If this is a completed purchase of a good, mark the listing as sold
+        # AFTER
         if (
             self.status == 'completed'
             and self.interaction_type == 'purchase'
             and self.listing
             and self.listing.status == 'active'
         ):
-            self.listing.mark_sold()
+            self.listing.mark_sold(quantity_sold=self.quantity)
 
         # If this is a completed service use, increment usage count
         if (

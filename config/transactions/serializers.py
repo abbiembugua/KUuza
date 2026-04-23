@@ -9,9 +9,9 @@ class TransactionSerializer(serializers.ModelSerializer):
     seller_name = serializers.CharField(source='seller.full_name', read_only=True)
 
     # Listing snapshot fields for display
-    listing_title  = serializers.CharField(source='listing.title',              read_only=True)
-    listing_image  = serializers.SerializerMethodField()
-    listing_type   = serializers.CharField(source='listing.listing_type',       read_only=True)
+    listing_title = serializers.CharField(source='listing.title',        read_only=True)
+    listing_image = serializers.SerializerMethodField()
+    listing_type  = serializers.CharField(source='listing.listing_type', read_only=True)
 
     class Meta:
         model  = Transaction
@@ -22,6 +22,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             'seller', 'seller_name',
             'interaction_type',
             'agreed_price',
+            'quantity',
             'payment_method',
             'status',
             'scheduled_date',
@@ -75,6 +76,21 @@ class TransactionSerializer(serializers.ModelSerializer):
         if listing.is_draft:
             raise serializers.ValidationError('This listing is not published yet.')
 
+        # Validate requested quantity against available stock (goods only)
+        quantity_requested = data.get('quantity', 1)
+        if listing.listing_type == 'good':
+            if quantity_requested < 1:
+                raise serializers.ValidationError(
+                    {'quantity': 'Quantity must be at least 1.'}
+                )
+            if quantity_requested > listing.quantity:
+                raise serializers.ValidationError({
+                    'quantity': (
+                        f'Only {listing.quantity} unit(s) available. '
+                        f'You requested {quantity_requested}.'
+                    )
+                })
+
         # Validate payment method matches listing type
         listing_type   = listing.listing_type
         payment_method = data.get('payment_method', '')
@@ -125,11 +141,11 @@ class TransactionSerializer(serializers.ModelSerializer):
 
 
 class NotificationSerializer(serializers.ModelSerializer):
-    actor_name = serializers.CharField(source='actor.full_name', read_only=True)
-    transaction_id = serializers.UUIDField(source='transaction.id', read_only=True)
+    actor_name     = serializers.CharField(source='actor.full_name', read_only=True)
+    transaction_id = serializers.UUIDField(source='transaction.id',  read_only=True)
 
     class Meta:
-        model = Notification
+        model  = Notification
         fields = [
             'id',
             'title',

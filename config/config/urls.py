@@ -25,9 +25,9 @@ urlpatterns = [
     path('api/listings/', include('listings.urls')),
     path('api/', include('reviews.urls')),
     path('api/', include('transactions.urls')),  # ← add this
-    path('api/', include('Cart.urls')),  # ← add this
-
-
+    path('api/', include('Cart.urls')),
+    path('api/', include('reports.urls')),
+    path('api/admin-panel/', include('admin_api.urls')),
 
 
 

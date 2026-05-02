@@ -140,7 +140,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
             )
 
         phone = transaction.mpesa_phone or request.data.get('phone_number', '')
-        amount = transaction.agreed_price or 1
+        amount = request.data.get('amount') or transaction.agreed_price or 1
 
         if not phone:
             return Response(

@@ -39,7 +39,6 @@ class CartItemSerializer(serializers.ModelSerializer):
             'id':            listing.id,
             'title':         listing.title,
             'price':         str(listing.price) if listing.price else None,
-            'negotiable':    listing.negotiable,
             'condition':     listing.condition,
             'category':      listing.category,
             'listing_type':  listing.listing_type,

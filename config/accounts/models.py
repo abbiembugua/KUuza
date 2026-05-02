@@ -34,6 +34,7 @@ class UserManager(BaseUserManager):
         )
         user.is_staff = True
         user.is_superuser = True
+        user.is_email_verified = True
         user.save()
         return user
 
@@ -53,6 +54,16 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_email_verified = models.BooleanField(default=False)
     email_verification_token = models.CharField(max_length=64, blank=True, null=True)
 
+    # Seller verification fields
+    student_id = models.CharField(max_length=50, blank=True, null=True)
+    national_id = models.CharField(max_length=50, blank=True, null=True)
+    mpesa_phone = models.CharField(max_length=20, blank=True, null=True)
+    seller_terms_accepted = models.BooleanField(default=False)
+    is_verified_seller = models.BooleanField(default=False)
+    course = models.CharField(max_length=200, blank=True, null=True)
+    school = models.CharField(max_length=200, blank=True, null=True)
+    department = models.CharField(max_length=200, blank=True, null=True)
+    year_of_study = models.CharField(max_length=20, blank=True, null=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['full_name']

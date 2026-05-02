@@ -9,33 +9,38 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from .models import User
-from .serializers import ProfileUpdateSerializer, SignUpSerializer, UserSerializer
+from .serializers import ProfileUpdateSerializer, SellerVerificationSerializer, SignUpSerializer, UserSerializer
 from rest_framework.permissions import IsAuthenticated
 from .emails import send_password_reset_email, send_verification_email
 
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        user = request.user
-        return Response({
+    def _user_data(self, user):
+        return {
             "id": user.id,
             "full_name": user.full_name,
             "email": user.email,
             "is_email_verified": user.is_email_verified,
-        })
+            "is_verified_seller": user.is_verified_seller,
+            "student_id": user.student_id,
+            "national_id": user.national_id,
+            "mpesa_phone": user.mpesa_phone,
+            "seller_terms_accepted": user.seller_terms_accepted,
+            "course": user.course,
+            "school": user.school,
+            "department": user.department,
+            "year_of_study": user.year_of_study,
+        }
+
+    def get(self, request):
+        return Response(self._user_data(request.user))
 
     def patch(self, request):
         serializer = ProfileUpdateSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-
-        return Response({
-            "id": request.user.id,
-            "full_name": request.user.full_name,
-            "email": request.user.email,
-            "is_email_verified": request.user.is_email_verified,
-        })
+        return Response(self._user_data(request.user))
 
     def delete(self, request):
         request.user.delete()
@@ -89,7 +94,7 @@ class LoginView(APIView):
         user = authenticate(request, username=email, password=password)
         
         if user is not None:
-            if not user.is_email_verified:
+            if not user.is_email_verified and not user.is_staff:
                 return Response(
                     {'error': 'Please verify your email before logging in.'},
                     status=status.HTTP_403_FORBIDDEN
@@ -244,3 +249,35 @@ class ResetPasswordView(APIView):
         user.save(update_fields=['password'])
 
         return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
+
+
+class SellerVerifyView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if request.user.is_verified_seller:
+            return Response({"message": "Already verified.", "is_verified_seller": True})
+
+        serializer = SellerVerificationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        user = request.user
+        user.student_id = data['student_id']
+        user.national_id = data['national_id']
+        user.mpesa_phone = data['mpesa_phone']
+        user.seller_terms_accepted = data['seller_terms_accepted']
+        user.course = data['course']
+        user.school = data['school']
+        user.department = data['department']
+        user.year_of_study = data['year_of_study']
+        user.is_verified_seller = True
+        user.save(update_fields=[
+            'student_id', 'national_id', 'mpesa_phone', 'seller_terms_accepted',
+            'course', 'school', 'department', 'year_of_study', 'is_verified_seller',
+        ])
+
+        return Response(
+            {"message": "Seller verification complete.", "is_verified_seller": True},
+            status=status.HTTP_200_OK,
+        )

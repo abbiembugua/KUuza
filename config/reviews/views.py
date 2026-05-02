@@ -64,11 +64,22 @@ class ReviewViewSet(viewsets.ModelViewSet):
     def for_user(self, request, user_id=None):
         """
         All reviews received BY a specific user.
-        Used on the seller profile page and listing detail reviews section.
+        Pass ?as_seller=true to restrict to reviews from transactions where
+        the user was the seller (i.e. buyer-reviewing-seller feedback only).
         """
         reviews = Review.objects.filter(
             reviewee__id=user_id
         ).select_related('reviewer', 'reviewee').order_by('-created_at')
+
+        as_seller = request.query_params.get('as_seller', '').lower() in ('true', '1')
+        as_buyer  = request.query_params.get('as_buyer',  '').lower() in ('true', '1')
+        if as_seller or as_buyer:
+            from transactions.models import Transaction
+            role_field = 'seller__id' if as_seller else 'buyer__id'
+            role_txn_ids = Transaction.objects.filter(
+                **{role_field: user_id}
+            ).values_list('id', flat=True)
+            reviews = reviews.filter(transaction_id__in=role_txn_ids)
 
         page = self.paginate_queryset(reviews)
         if page is not None:

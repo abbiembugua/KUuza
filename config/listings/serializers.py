@@ -31,7 +31,7 @@ class ListingSerializer(serializers.ModelSerializer):
             'id', 'seller', 'seller_name',
             'listing_type', 'status',
             'title', 'category', 'description',
-            'price', 'negotiable',
+            'price',
             'condition', 'quantity',
             'usage_count',
             'area_of_operation',
@@ -95,10 +95,6 @@ class ListingSerializer(serializers.ModelSerializer):
             'condition',
             getattr(instance, 'condition', '')
         )
-        negotiable = data.get(
-            'negotiable',
-            getattr(instance, 'negotiable', False)
-        )
         price = data.get(
             'price',
             getattr(instance, 'price', None)
@@ -122,10 +118,10 @@ class ListingSerializer(serializers.ModelSerializer):
         if listing_type == 'service':
             data['condition'] = ''
 
-        # ── Price: required unless negotiable ────────────────────────────────
-        if not negotiable and not price:
+        # ── Price: always required ───────────────────────────────────────────
+        if not price:
             raise serializers.ValidationError(
-                {'price': 'Enter a price or mark as negotiable.'}
+                {'price': 'A price is required.'}
             )
 
         # ── Contact value: always required ───────────────────────────────────

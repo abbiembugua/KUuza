@@ -55,7 +55,10 @@ INSTALLED_APPS = [
     'listings',
     'reviews',
     'transactions',
-    'Cart'
+    'Cart',
+    'offers',
+    'reports',
+    'admin_api',
 ]
 
 # Custom User Model

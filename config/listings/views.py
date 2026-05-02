@@ -42,7 +42,6 @@ class ListingViewSet(viewsets.ModelViewSet):
         'listing_type': ['exact'],
         'category':     ['exact'],
         'status':       ['exact'],
-        'negotiable':   ['exact'],
         'condition':    ['exact'],
         'is_draft':     ['exact'],
     }

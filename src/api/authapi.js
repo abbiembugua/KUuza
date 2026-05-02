@@ -215,6 +215,36 @@ export const requestPasswordReset = async (email) => {
   return result;
 };
 
+export const submitSellerVerification = async (data) => {
+  const token = localStorage.getItem("access");
+  if (!token) throw new Error("No token found");
+
+  const response = await fetch(`${API_URL}/seller/verify/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  const result = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const msg =
+      result.student_id?.[0] ||
+      result.national_id?.[0] ||
+      result.mpesa_phone?.[0] ||
+      result.seller_terms_accepted?.[0] ||
+      result.detail ||
+      result.error ||
+      "Verification failed";
+    throw new Error(msg);
+  }
+
+  return result;
+};
+
 export const resetPassword = async ({ uid, token, password, confirm_password }) => {
   const response = await fetch(`${API_URL}/reset-password/`, {
     method: "POST",

@@ -184,7 +184,7 @@ const ReviewModal = ({
 
               {/* Who you are rating */}
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center text-white font-bold">
                   {reviewee?.full_name?.charAt(0).toUpperCase() || '?'}
                 </div>
                 <div>
@@ -256,7 +256,7 @@ const ReviewModal = ({
                 className={`flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all ${
                   score === 0 || submitting
                     ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
+                    : 'bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700'
                 }`}
               >
                 {submitting ? (

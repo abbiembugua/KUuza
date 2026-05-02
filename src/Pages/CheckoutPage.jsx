@@ -57,8 +57,8 @@ function validateStep2({ scheduledDate, scheduledTime, paymentMethod, mpesaPhone
       e.mpesaPhone = 'Enter your M-Pesa phone number';
     } else {
       const clean = mpesaPhone.replace(/\D/g, '');
-      if (!/^(254|0)[7-9][0-9]{8}$/.test(clean)) {
-        e.mpesaPhone = 'Enter a valid Kenyan phone number (e.g. 0712345678)';
+      if (!/^(254|0)(1[0-9]|[7-9][0-9])[0-9]{7}$/.test(clean)) {
+        e.mpesaPhone = 'Enter a valid Kenyan number (e.g. 0712345678, 0110123456 or 254712345678)';
       }
     }
   }

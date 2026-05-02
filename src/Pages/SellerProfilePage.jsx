@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Loader2, MapPin, Package, Star, Store, UserRound, Wrench } from 'lucide-react';
+import { Flag, Loader2, MapPin, Package, Star, Store, UserRound, Wrench } from 'lucide-react';
+import ReportModal from '../Components/ReportModal';
 import DashboardNavbar from '../Components/Layout/DashboardNavbar';
 import BackButton from '../Components/shared/BackButton';
 import { getAllListings } from '../api/dashboardapi';
-import { getReviews } from '../api/reviewsapi';
+import { getReviewsForUser } from '../api/reviewsapi';
 import { useTheme } from '../context/Themecontext';
 import { useAuth } from '../context/AuthContext';
 
@@ -55,6 +56,95 @@ const getRevieweeName = (review) =>
   '';
 const sortByNewest = (items) => [...items].sort((a, b) => new Date(b?.created_at || 0) - new Date(a?.created_at || 0));
 
+function ReviewCard({ review, darkMode }) {
+  return (
+    <div className={`rounded-2xl border p-4 ${darkMode ? 'border-gray-800 bg-gray-900' : 'border-stone-200 bg-white'}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 text-sm font-semibold text-white flex-shrink-0">
+              {(review.reviewer_name || 'K').charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className={`truncate text-sm font-semibold ${darkMode ? 'text-white' : 'text-stone-900'}`}>
+                {review.reviewer_name || 'KU Student'}
+              </p>
+              <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-stone-400'}`}>
+                {formatDate(review.created_at)}
+              </p>
+            </div>
+          </div>
+          {review.listing_title && (
+            <p className={`mt-2 text-xs ${darkMode ? 'text-gray-500' : 'text-stone-500'}`}>
+              Re: {review.listing_title}
+            </p>
+          )}
+        </div>
+        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 flex-shrink-0">
+          <Star size={12} className="fill-amber-500 text-amber-500" />
+          {review.score}
+        </span>
+      </div>
+      {review.comment && (
+        <p className={`mt-3 text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-stone-700'}`}>
+          {review.comment}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ReviewGroup({ title, subtitle, reviews, emptyText, darkMode, accentColor }) {
+  const [expanded, setExpanded] = React.useState(true);
+  const accentClass = accentColor === 'cyan' ? 'text-cyan-500' : 'text-emerald-500';
+  const badgeBg     = accentColor === 'cyan' ? 'bg-cyan-100 text-cyan-700' : 'bg-emerald-100 text-emerald-700';
+
+  return (
+    <div className={`rounded-3xl border ${darkMode ? 'border-gray-800 bg-gray-950' : 'border-stone-200 bg-stone-50'}`}>
+      <button
+        type="button"
+        onClick={() => setExpanded(e => !e)}
+        className="w-full flex items-center justify-between gap-3 p-5 text-left"
+      >
+        <div className="flex items-center gap-3">
+          <span className={`flex h-11 w-11 items-center justify-center rounded-2xl flex-shrink-0 ${
+            darkMode ? 'bg-gray-900' : 'bg-white border border-stone-200'
+          } ${accentClass}`}>
+            <Store size={20} />
+          </span>
+          <div>
+            <p className={`text-xs uppercase tracking-[0.18em] ${darkMode ? 'text-gray-500' : 'text-stone-400'}`}>
+              {subtitle}
+            </p>
+            <h2 className={`mt-1 text-lg font-semibold ${darkMode ? 'text-white' : 'text-stone-900'}`}>
+              {title}
+            </h2>
+          </div>
+        </div>
+        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold flex-shrink-0 ${badgeBg}`}>
+          {reviews.length}
+        </span>
+      </button>
+
+      {expanded && (
+        <div className="px-5 pb-5 space-y-3">
+          {reviews.length === 0 ? (
+            <div className={`rounded-2xl border border-dashed p-4 text-sm ${
+              darkMode ? 'border-gray-800 text-gray-400' : 'border-stone-300 text-stone-500'
+            }`}>
+              {emptyText}
+            </div>
+          ) : (
+            reviews.slice(0, 8).map(review => (
+              <ReviewCard key={review.id} review={review} darkMode={darkMode} />
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Stars({ score = 0, totalReviews = 0 }) {
   return (
     <div className="flex items-center gap-1.5">
@@ -78,14 +168,13 @@ const SellerProfilePage = () => {
   const { darkMode } = useTheme();
   const { user } = useAuth();
 
-  const [listings, setListings] = useState([]);
-  const [reviewSummary, setReviewSummary] = useState({
-    average_rating: 0,
-    total_reviews: 0,
-    recent_reviews: [],
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [listings,      setListings]      = useState([]);
+  const [sellerReviews, setSellerReviews] = useState([]);
+  const [buyerReviews,  setBuyerReviews]  = useState([]);
+  const [reviewSummary, setReviewSummary] = useState({ average_rating: 0, total_reviews: 0 });
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState('');
+  const [reportOpen,  setReportOpen]  = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -101,9 +190,10 @@ const SellerProfilePage = () => {
       setError('');
 
       try {
-        const [listingData, reviewsData] = await Promise.all([
+        const [listingData, asSellerData, asBuyerData] = await Promise.all([
           getAllListings({ status: 'active', page_size: 100 }),
-          getReviews({ page_size: 200 }),
+          getReviewsForUser(sellerId, { asSeller: true }),
+          getReviewsForUser(sellerId, { asBuyer: true }),
         ]);
 
         if (!active) return;
@@ -111,18 +201,18 @@ const SellerProfilePage = () => {
         const allListings = Array.isArray(listingData)
           ? listingData
           : listingData?.results || [];
-        const sellerListings = allListings.filter((listing) => getListingSellerId(listing) === String(sellerId));
-        const sellerReviews = sortByNewest((Array.isArray(reviewsData) ? reviewsData : []).filter(
-          (review) => getRevieweeId(review) === String(sellerId)
-        ));
-        const totalReviews = sellerReviews.length;
-        const totalScore = sellerReviews.reduce((sum, review) => sum + (Number(review.score) || 0), 0);
+        const sellerListings   = allListings.filter((listing) => getListingSellerId(listing) === String(sellerId));
+        const asSeller         = sortByNewest(Array.isArray(asSellerData) ? asSellerData : []);
+        const asBuyer          = sortByNewest(Array.isArray(asBuyerData)  ? asBuyerData  : []);
+        const totalReviews     = asSeller.length;
+        const totalScore       = asSeller.reduce((sum, r) => sum + (Number(r.score) || 0), 0);
 
         setListings(sellerListings);
+        setSellerReviews(asSeller);
+        setBuyerReviews(asBuyer);
         setReviewSummary({
           average_rating: totalReviews > 0 ? totalScore / totalReviews : 0,
-          total_reviews: totalReviews,
-          recent_reviews: sellerReviews,
+          total_reviews:  totalReviews,
         });
       } catch (loadError) {
         if (!active) return;
@@ -142,14 +232,14 @@ const SellerProfilePage = () => {
   }, [sellerId]);
 
   const sellerName = useMemo(() => {
-    const firstReview = reviewSummary.recent_reviews?.[0];
+    const firstReview = sellerReviews[0] || buyerReviews[0];
     return (
       listings[0]?.seller_name ||
       getRevieweeName(firstReview) ||
       (user?.id === sellerId ? user?.full_name : '') ||
       'KU Student'
     );
-  }, [listings, reviewSummary.recent_reviews, sellerId, user?.full_name, user?.id]);
+  }, [listings, sellerReviews, buyerReviews, sellerId, user?.full_name, user?.id]);
 
   const isOwnProfile = normalizeId(user?.id) === String(sellerId);
 
@@ -219,8 +309,26 @@ const SellerProfilePage = () => {
                       totalReviews={reviewSummary.total_reviews}
                     />
                   </div>
+                  {!isOwnProfile && (
+                    <button
+                      onClick={() => setReportOpen(true)}
+                      className="mt-2 flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <Flag size={11} />
+                      Report this seller
+                    </button>
+                  )}
                 </div>
               </div>
+
+              {!isOwnProfile && (
+                <ReportModal
+                  sellerId={sellerId}
+                  sellerName={sellerName}
+                  isOpen={reportOpen}
+                  onClose={() => setReportOpen(false)}
+                />
+              )}
 
               <div className="grid grid-cols-2 gap-3 sm:w-auto">
                 <div className={`rounded-3xl border px-4 py-3 ${
@@ -339,80 +447,29 @@ const SellerProfilePage = () => {
               )}
             </section>
 
-            <section>
+            <section className="space-y-4">
+
+              {/* ── Reviews as a Seller ── */}
+              <ReviewGroup
+                title="Reviews as a Seller"
+                subtitle={`${sellerReviews.length} review${sellerReviews.length === 1 ? '' : 's'} from buyers`}
+                reviews={sellerReviews}
+                emptyText="No seller reviews yet. Reviews from buyers will appear here after completed sales."
+                darkMode={darkMode}
+                accentColor="emerald"
+              />
+
+              {/* ── Reviews as a Buyer ── */}
+              <ReviewGroup
+                title="Reviews as a Buyer"
+                subtitle={`${buyerReviews.length} review${buyerReviews.length === 1 ? '' : 's'} from sellers`}
+                reviews={buyerReviews}
+                emptyText="No buyer reviews yet. Reviews from sellers will appear here after completed purchases."
+                darkMode={darkMode}
+                accentColor="cyan"
+              />
+
               <div className={`rounded-3xl border p-5 ${
-                darkMode ? 'border-gray-800 bg-gray-950' : 'border-stone-200 bg-stone-50'
-              }`}>
-                <div className="flex items-center gap-3">
-                  <span className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
-                    darkMode ? 'bg-gray-900 text-emerald-400' : 'bg-white text-emerald-600 border border-emerald-100'
-                  }`}>
-                    <Store size={20} />
-                  </span>
-                  <div>
-                    <p className={`text-xs uppercase tracking-[0.18em] ${darkMode ? 'text-gray-500' : 'text-stone-400'}`}>
-                      Reviews
-                    </p>
-                    <h2 className={`mt-1 text-xl font-semibold ${darkMode ? 'text-white' : 'text-stone-900'}`}>
-                      Recent ratings
-                    </h2>
-                  </div>
-                </div>
-
-                <div className="mt-5 space-y-4">
-                  {reviewSummary.recent_reviews.length === 0 ? (
-                    <div className={`rounded-2xl border border-dashed p-4 text-sm ${
-                      darkMode ? 'border-gray-800 text-gray-400' : 'border-stone-300 text-stone-500'
-                    }`}>
-                      No reviews yet. Completed transactions will start showing feedback here.
-                    </div>
-                  ) : (
-                    reviewSummary.recent_reviews.slice(0, 8).map((review) => (
-                      <div
-                        key={review.id}
-                        className={`rounded-2xl border p-4 ${
-                          darkMode ? 'border-gray-800 bg-gray-900' : 'border-stone-200 bg-white'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 text-sm font-semibold text-white">
-                                {(review.reviewer_name || 'K').charAt(0).toUpperCase()}
-                              </div>
-                              <div className="min-w-0">
-                                <p className={`truncate text-sm font-semibold ${darkMode ? 'text-white' : 'text-stone-900'}`}>
-                                  {review.reviewer_name || 'KU Student'}
-                                </p>
-                                <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-stone-400'}`}>
-                                  {formatDate(review.created_at)}
-                                </p>
-                              </div>
-                            </div>
-                            {review.listing_title && (
-                              <p className={`mt-2 text-xs ${darkMode ? 'text-gray-500' : 'text-stone-500'}`}>
-                                Re: {review.listing_title}
-                              </p>
-                            )}
-                          </div>
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                            <Star size={12} className="fill-amber-500 text-amber-500" />
-                            {review.score}
-                          </span>
-                        </div>
-
-                        {review.comment && (
-                          <p className={`mt-3 text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-stone-700'}`}>
-                            {review.comment}
-                          </p>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <div className={`mt-4 rounded-3xl border p-5 ${
                 darkMode ? 'border-gray-800 bg-gray-950' : 'border-stone-200 bg-stone-50'
               }`}>
                 <div className="flex items-center gap-3">

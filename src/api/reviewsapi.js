@@ -29,12 +29,19 @@ export async function getReviews(params = {}) {
   return normalizeCollection(await response.json());
 }
 
-// ── Reviews RECEIVED by a specific seller ─────────────────────────────────────
+// ── Reviews RECEIVED by a specific user ───────────────────────────────────────
 // Hits GET /api/reviews/for_user/{userId}/
-export async function getReviewsForUser(userId) {
+// Pass { asSeller: true } to return only reviews from transactions where the
+// user was the seller (buyer-reviewing-seller feedback only).
+export async function getReviewsForUser(userId, { asSeller = false, asBuyer = false } = {}) {
   if (!userId) return [];
 
-  const response = await fetch(`${BASE_URL}/reviews/for_user/${userId}/`, {
+  const params = new URLSearchParams();
+  if (asSeller) params.append('as_seller', 'true');
+  if (asBuyer)  params.append('as_buyer',  'true');
+  const query = params.toString() ? `?${params}` : '';
+
+  const response = await fetch(`${BASE_URL}/reviews/for_user/${userId}/${query}`, {
     headers: authHeaders(),
   });
 
@@ -67,6 +74,28 @@ export async function getMyGivenReviews() {
 
   if (!response.ok) throw new Error('Could not load your given reviews');
   return normalizeCollection(await response.json());
+}
+
+// ── Update a review the logged-in user has written ───────────────────────────
+// Hits PATCH /api/reviews/{id}/
+export async function updateReview(reviewId, data) {
+  const response = await fetch(`${BASE_URL}/reviews/${reviewId}/`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error('Could not update review');
+  return response.json();
+}
+
+// ── Delete a review the logged-in user has written ────────────────────────────
+// Hits DELETE /api/reviews/{id}/
+export async function deleteReview(reviewId) {
+  const response = await fetch(`${BASE_URL}/reviews/${reviewId}/`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!response.ok) throw new Error('Could not delete review');
 }
 
 // ── Check / fetch review for a specific transaction ───────────────────────────

@@ -244,7 +244,7 @@ const ScheduleAndPay = ({
               type="tel"
               value={mpesaPhone}
               onChange={e => { setMpesaPhone(e.target.value); clearError('mpesaPhone'); }}
-              placeholder="0712345678 or 254712345678"
+              placeholder="07xxxxxxxx, 011xxxxxxx or +254xxxxxxxxx"
               className={`w-full p-3 rounded-xl border-2 text-sm transition-all focus:outline-none ${
                 errors.mpesaPhone
                   ? 'border-red-500'

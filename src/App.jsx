@@ -12,12 +12,15 @@ import MyListingsPage from './Pages/mylistingspage';
 import NeedsPage from './Pages/NeedsPage';
 import ProfilePage from './Pages/ProfilePage';
 import PurchasesPage from './Pages/PurchasesPage';
-import ReviewPage from './Pages/Reviewpage';
 import SellerProfilePage from './Pages/SellerProfilePage';
 import SellPage from './Pages/SellPage';
 import SignUpPage from './Pages/Signupage';
 import VerifyEmail from './Pages/VerifyEmaiPage';
+import AdminLoginPage from './Pages/Admin/AdminLoginPage';
+import AdminDashboardPage from './Pages/Admin/AdminDashboardPage';
+import AdminManagePage from './Pages/Admin/AdminManagePage';
 import { AuthProvider } from './context/AuthContext';
+import { AdminAuthProvider } from './context/AdminAuthContext';
 import { ThemeProvider } from './context/Themecontext';
 
 const App = () => {
@@ -34,6 +37,7 @@ const App = () => {
       <Router>
         <AuthProvider>
           <Routes>
+            {/* Student-facing routes */}
             <Route path="/" element={<LandingPage scrolled={scrolled} />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignUpPage />} />
@@ -49,10 +53,23 @@ const App = () => {
             <Route path="/listings/:id" element={<ListingDetailPage />} />
             <Route path="/checkout/:id" element={<CheckoutPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
-            <Route path="/review/:transactionId" element={<ReviewPage />} />
             <Route path="/purchases" element={<PurchasesPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/sellers/:sellerId" element={<SellerProfilePage />} />
+
+            {/* Admin routes — wrapped in their own auth provider */}
+            <Route
+              path="/kuuza-control/*"
+              element={
+                <AdminAuthProvider>
+                  <Routes>
+                    <Route index element={<AdminLoginPage />} />
+                    <Route path="dashboard" element={<AdminDashboardPage />} />
+                    <Route path="manage" element={<AdminManagePage />} />
+                  </Routes>
+                </AdminAuthProvider>
+              }
+            />
           </Routes>
         </AuthProvider>
       </Router>

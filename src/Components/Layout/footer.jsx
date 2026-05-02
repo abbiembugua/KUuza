@@ -1,111 +1,78 @@
-// components/landing/Footer.jsx
-import React from 'react';
+import React, { useMemo } from 'react';
+import { ShoppingBag } from 'lucide-react';
 import { useTheme } from '../../context/Themecontext';
+
+// Stable bubble positions generated once per mount
+const Bubbles = ({ darkMode }) => {
+  const items = useMemo(
+    () =>
+      Array.from({ length: 12 }, () => ({
+        left:  `${Math.random() * 100}%`,
+        top:   `${Math.random() * 100}%`,
+        size:  `${Math.random() * 90 + 40}px`,
+        delay: `${(Math.random() * 4).toFixed(1)}s`,
+      })),
+    []
+  );
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+      {items.map((b, i) => (
+        <div
+          key={i}
+          className={`absolute rounded-full animate-pulse ${
+            darkMode ? 'bg-emerald-400/8' : 'bg-cyan-400/15'
+          }`}
+          style={{ left: b.left, top: b.top, width: b.size, height: b.size, animationDelay: b.delay }}
+        />
+      ))}
+    </div>
+  );
+};
 
 const Footer = () => {
   const { darkMode } = useTheme();
 
   return (
-    <footer className={`py-12 px-6 border-t transition-colors duration-200 ${
-      darkMode 
-        ? 'border-gray-800 bg-gray-900/50' 
-        : 'border-gray-200 bg-white/50'
+    <footer className={`relative overflow-hidden pt-14 pb-8 px-6 transition-colors duration-300 ${
+      darkMode ? 'bg-gray-800' : 'bg-gray-50'
     }`}>
-      <div className="container mx-auto grid md:grid-cols-4 gap-8">
-        {/* About */}
-        <div>
-          <h3 className={`text-lg font-bold mb-4 transition-colors duration-200 ${
-            darkMode ? 'text-white' : 'text-gray-900'
-          }`}>
-            About KU CampusTrade
-          </h3>
-          <p className={`transition-colors duration-200 leading-relaxed ${
-            darkMode ? 'text-gray-400' : 'text-gray-600'
-          }`}>
-            KU CampusTrade is a student-focused marketplace for Kenyatta University. 
-            Buy, sell, and exchange goods and services safely within campus.
-          </p>
-        </div>
+      <Bubbles darkMode={darkMode} />
 
-        {/* Quick Links */}
-        <div>
-          <h3 className={`text-lg font-bold mb-4 transition-colors duration-200 ${
-            darkMode ? 'text-white' : 'text-gray-900'
-          }`}>
-            Quick Links
-          </h3>
-          <ul className="space-y-3">
-            {['Home', 'Marketplace', 'Features', 'Sign Up'].map((item) => (
-              <li key={item}>
-                <a 
-                  href="#" 
-                  className={`transition-colors duration-200 hover:text-emerald-500 ${
-                    darkMode ? 'text-gray-400' : 'text-gray-600'
-                  }`}
-                >
-                  {item}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Support */}
-        <div>
-          <h3 className={`text-lg font-bold mb-4 transition-colors duration-200 ${
-            darkMode ? 'text-white' : 'text-gray-900'
-          }`}>
-            Support
-          </h3>
-          <ul className="space-y-3">
-            {['Help Center', 'Contact Support', 'Privacy Policy', 'Terms of Service'].map((item) => (
-              <li key={item}>
-                <a 
-                  href="#" 
-                  className={`transition-colors duration-200 hover:text-emerald-500 ${
-                    darkMode ? 'text-gray-400' : 'text-gray-600'
-                  }`}
-                >
-                  {item}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Contact */}
-        <div>
-          <h3 className={`text-lg font-bold mb-4 transition-colors duration-200 ${
-            darkMode ? 'text-white' : 'text-gray-900'
-          }`}>
-            Contact
-          </h3>
-          <div className="space-y-3">
-            <p className={`transition-colors duration-200 ${
-              darkMode ? 'text-gray-400' : 'text-gray-600'
-            }`}>
-              <span className="font-medium">Email:</span> support@kucampustrade.ac.ke
-            </p>
-            <p className={`transition-colors duration-200 ${
-              darkMode ? 'text-gray-400' : 'text-gray-600'
-            }`}>
-              <span className="font-medium">Phone:</span> +254 700 000 000
-            </p>
-            <p className={`transition-colors duration-200 ${
-              darkMode ? 'text-gray-400' : 'text-gray-600'
-            }`}>
-              <span className="font-medium">Location:</span> Kenyatta University, Nairobi
+      <div className="container mx-auto max-w-6xl relative z-10">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 mb-10">
+          {/* Wordmark + slogan */}
+          <div>
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className={`p-1.5 rounded-lg ${darkMode ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
+                <ShoppingBag className={`w-5 h-5 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
+              </div>
+              <span className={`text-2xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                KU<span className="text-emerald-500">uza</span>
+              </span>
+            </div>
+            <p className="text-amber-500 font-medium text-sm pl-0.5">
+              Uza Hapa, Pata Hapa
             </p>
           </div>
-        </div>
-      </div>
 
-      <div className={`text-center mt-12 pt-8 border-t text-sm transition-colors duration-200 ${
-        darkMode 
-          ? 'text-gray-500 border-gray-800' 
-          : 'text-gray-600 border-gray-200'
-      }`}>
-        © 2025 KU CampusTrade • All rights reserved
+          {/* Contact email */}
+          <a
+            href="mailto:hello.kuuza@gmail.com"
+            className={`text-sm font-medium transition-colors duration-200 ${
+              darkMode
+                ? 'text-gray-400 hover:text-emerald-400'
+                : 'text-gray-500 hover:text-emerald-600'
+            }`}
+          >
+            hello.kuuza@gmail.com
+          </a>
+        </div>
+
+        <div className={`border-t pt-6 text-center ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          <p className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
+            Built at Kenyatta University, for Kenyatta University.
+          </p>
+        </div>
       </div>
     </footer>
   );

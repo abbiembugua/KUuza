@@ -1,66 +1,78 @@
-// components/landing/CTA.jsx
-import React from 'react';
-import { CheckCircle } from 'lucide-react';
-import { useTheme } from '../../context/Themecontext';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
+import { useTheme } from '../../context/Themecontext';
 
 const CTA = () => {
   const { darkMode } = useTheme();
-  const navigate=useNavigate();
+  const navigate     = useNavigate();
+  const ref          = useRef(null);
+  const [inView, setInView] = useState(false);
 
-  const handleSignup =()=>{
-    navigate('/signup');
-  };
-  
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setInView(true); },
+      { threshold: 0.2 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <section className={`py-20 px-6 transition-colors duration-200 ${
-      darkMode ? 'bg-gray-900' : 'bg-white'
-    }`}>
-      <div className="container mx-auto">
-        <div className={`max-w-4xl mx-auto rounded-3xl p-12 text-center transition-colors duration-200 ${
-          darkMode
-            ? 'bg-gradient-to-r from-emerald-900/30 to-cyan-900/30 border border-emerald-500/20 shadow-2xl shadow-gray-900/50'
-            : 'bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border border-emerald-200 shadow-2xl shadow-gray-200/30'
-        }`}>
-          <h2 className={`text-4xl font-bold mb-6 transition-colors duration-200 ${
+    <section
+      ref={ref}
+      className={`py-28 px-6 transition-colors duration-300 ${
+        darkMode ? 'bg-gray-900' : 'bg-white'
+      }`}
+    >
+      <div
+        className={`container mx-auto max-w-3xl text-center
+          transition-all duration-700 ease-out
+          ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+      >
+        <h2
+          className={`font-display text-4xl md:text-5xl font-black mb-5 leading-tight ${
             darkMode ? 'text-white' : 'text-gray-900'
-          }`}>
-            Ready to Join the World class University's<br />
-            <span className="text-emerald-500">Student Marketplace</span>?
-          </h2>
-          <p className={`text-xl mb-10 max-w-2xl mx-auto transition-colors duration-200 ${
-            darkMode ? 'text-gray-300' : 'text-gray-600'
-          }`}>
-            Connect with thousands of verified KU students. Buy, sell, and trade securely within our trusted campus community.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
-            onClick={handleSignup}
-            className={`px-10 py-4 rounded-xl font-bold text-lg transition-all duration-300 hover:scale-105 ${
+          }`}
+        >
+          Your campus{' '}
+          <span className="text-emerald-500">marketplace</span>
+          <br />is waiting.
+        </h2>
+
+        <p
+          className={`text-lg mb-10 max-w-xl mx-auto leading-relaxed ${
+            darkMode ? 'text-gray-400' : 'text-gray-500'
+          }`}
+        >
+          Join KU students already buying and selling textbooks, clothes,
+          food, and services — all on campus, all verified.
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <button
+            onClick={() => navigate('/login')}
+            className="group px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold
+              text-lg rounded-xl shadow-lg shadow-emerald-500/20 transition-all duration-300
+              hover:scale-105 active:scale-100 flex items-center justify-center gap-2"
+          >
+            Sign in with Student ID
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </button>
+
+          <button
+            onClick={() => navigate('/signup')}
+            className={`px-8 py-4 border-2 font-bold text-lg rounded-xl
+              transition-all duration-300 hover:scale-105 active:scale-100 ${
               darkMode
-                ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-2xl shadow-emerald-500/30'
-                : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-2xl shadow-emerald-500/30'
-            }`}>
-              Create Free Account
-            </button>
-            <button className={`px-10 py-4 rounded-xl font-bold text-lg transition-all duration-300 hover:scale-105 ${
-              darkMode
-                ? 'bg-transparent border-2 border-cyan-400 hover:bg-cyan-400/10 text-cyan-400'
-                : 'bg-transparent border-2 border-cyan-600 hover:bg-cyan-600/10 text-cyan-700'
-            }`}>
-              Learn More
-            </button>
-          </div>
-          <div className="mt-10 flex items-center justify-center space-x-4">
-            <CheckCircle className={`w-5 h-5 transition-colors duration-200 ${
-              darkMode ? 'text-emerald-400' : 'text-emerald-600'
-            }`} />
-            <span className={`transition-colors duration-200 ${
-              darkMode ? 'text-gray-400' : 'text-gray-600'
-            }`}>
-              No hidden fees • M-Pesa integration • 24/7 support
-            </span>
-          </div>
+                ? 'border-gray-600 text-gray-300 hover:border-emerald-500 hover:text-emerald-400'
+                : 'border-gray-200 text-gray-700 hover:border-emerald-400 hover:text-emerald-600'
+            }`}
+          >
+            Create an account
+          </button>
         </div>
       </div>
     </section>

@@ -1,7 +1,17 @@
 import React from 'react';
 import SellerRow from '../shared/SellerRow';
+import { useAuth } from '../../context/AuthContext';
 
 const ListingCard = ({ item, darkMode, onView }) => {
+  const { user } = useAuth();
+  const normalizeId = (v) => {
+    if (!v) return '';
+    if (typeof v === 'object') return String(v.id || v.pk || '');
+    return String(v);
+  };
+  const isMyListing = user && item.seller &&
+    normalizeId(item.seller) === normalizeId(user.id);
+
   const quantityAvailable = Number(item?.quantity ?? item?.listing_quantity ?? 0);
   const isOutOfStock = item.listing_type !== 'service' && quantityAvailable <= 0;
   const isMarkedSold = item.status === 'sold';
@@ -12,9 +22,13 @@ const ListingCard = ({ item, darkMode, onView }) => {
       onClick={() => onView(item.id)}
       className={`flex-shrink-0 w-44 rounded-2xl overflow-hidden cursor-pointer
         transition-all duration-200 transform hover:-translate-y-1 hover:shadow-xl
-        ${darkMode
-          ? 'bg-gray-800 border border-gray-700'
-          : 'bg-white border border-gray-100 shadow-sm'
+        ${isMyListing
+          ? darkMode
+            ? 'bg-gray-800 border-2 border-green-600'
+            : 'bg-white border-2 border-green-600 shadow-sm'
+          : darkMode
+            ? 'bg-gray-800 border border-gray-700'
+            : 'bg-white border border-gray-100 shadow-sm'
         }`}
     >
       <div className="relative h-36">
@@ -23,6 +37,11 @@ const ListingCard = ({ item, darkMode, onView }) => {
           alt={item.title}
           className="w-full h-full object-cover"
         />
+        {isMyListing && (
+          <div className="absolute top-2 right-2 bg-green-700 text-white px-2 py-0.5 rounded-full text-xs font-bold tracking-wide shadow">
+            YOUR LISTING
+          </div>
+        )}
         {isUnavailable && (
           <div className="absolute top-2 left-2 bg-red-600 text-white px-2 py-0.5 rounded-full text-xs font-bold">
             {item.listing_type === 'service' ? 'UNAVAILABLE' : 'OUT'}

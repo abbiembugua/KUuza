@@ -9,7 +9,7 @@ import {
   CategoryGrid,
   HorizontalScrollSection,
   MyListingsPreview,
-} from '../components/dashboard';
+} from '../Components/Dashboard';
 import {
   getTrendingListings,
   getRecentListings,
@@ -91,7 +91,7 @@ const IntegratedDashboard = () => {
 
       <div className="h-16" />
 
-      <DashboardHero darkMode={darkMode} user={user} cartCount={cartItems.length} />
+      <DashboardHero darkMode={darkMode} user={user} />
 
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-10">
 

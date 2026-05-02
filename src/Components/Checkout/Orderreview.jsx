@@ -155,11 +155,8 @@ const OrderReview = ({ listing, darkMode, onContinue, isBulk, bulkItems = [], bu
               <p className={`font-bold text-lg ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
                 {listing.price
                   ? `KSh ${(parseFloat(listing.price) * singleQuantity).toLocaleString('en-KE')}`
-                  : 'Negotiable'}
+                  : 'Price on request'}
               </p>
-              {listing.negotiable && listing.price && (
-                <span className="text-xs text-amber-500 font-medium">Negotiable</span>
-              )}
             </div>
           </div>
         )}

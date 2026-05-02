@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @tailwind base;
@@ -29,5 +29,21 @@
   --gray: #6B7280;
 }
 
+/* KUuza Display Font */
+.font-display {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+/* Price tag ambient float — CSS classes used directly in JSX */
+@keyframes kuTagFloat {
+  0%,  100% { transform: translateY(0px)   rotate(-4deg); }
+  50%        { transform: translateY(-18px) rotate(4deg);  }
+}
+
+.ku-tag-1 { animation: kuTagFloat  7s 0.0s ease-in-out infinite; }
+.ku-tag-2 { animation: kuTagFloat  9s 1.0s ease-in-out infinite; }
+.ku-tag-3 { animation: kuTagFloat  8s 2.0s ease-in-out infinite; }
+.ku-tag-4 { animation: kuTagFloat  6s 0.5s ease-in-out infinite; }
+.ku-tag-5 { animation: kuTagFloat 10s 1.5s ease-in-out infinite; }
 
   

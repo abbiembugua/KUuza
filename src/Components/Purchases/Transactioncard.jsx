@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   Package, Wrench, Calendar, CheckCircle, Clock, AlertCircle,
-  Star, ChevronDown, ChevronUp, Phone, Mail, Shield, Loader2, MapPin, Download, X,
+  Star, ChevronDown, ChevronUp, Phone, Mail, Shield, Loader2, MapPin, Download, X, ExternalLink,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { generateReceipt } from '../Checkout/generateReceipt';
 
@@ -239,11 +240,13 @@ export default function TransactionCard({
   onReview,
   pendingReviewIds,
 }) {
-  const [expanded,          setExpanded]          = useState(false);
-  const [completing,        setCompleting]        = useState(false);
+  const navigate = useNavigate();
+
+  const [expanded,           setExpanded]           = useState(false);
+  const [completing,         setCompleting]         = useState(false);
   const [downloadingReceipt, setDownloadingReceipt] = useState(false);
-  const [showCancelPrompt,  setShowCancelPrompt]  = useState(false);
-  const [cancelling,        setCancelling]        = useState(false);
+  const [showCancelPrompt,   setShowCancelPrompt]   = useState(false);
+  const [cancelling,         setCancelling]         = useState(false);
 
   const isBuyer  = transaction.buyer  === currentUserId;
   const isSeller = transaction.seller === currentUserId;
@@ -264,6 +267,7 @@ export default function TransactionCard({
 
   const counterpartyName = isBuyer ? transaction.seller_name : transaction.buyer_name;
   const counterpartyRole = isBuyer ? 'Seller' : 'Buyer';
+  const counterpartyId   = isBuyer ? transaction.seller : transaction.buyer;
   const transactionQuantity = getTransactionQuantity(transaction);
 
   const handleComplete = async () => {
@@ -430,22 +434,29 @@ export default function TransactionCard({
           </div>
         </div>
 
-        {/* ── Counterparty strip ── */}
-        <div className={`mt-3 flex items-center gap-2.5 p-2.5 rounded-xl ${
-          darkMode ? 'bg-gray-700/50' : 'bg-gray-50'
-        }`}>
+        {/* ── Counterparty strip — clickable ── */}
+        <button
+          type="button"
+          onClick={() => counterpartyId && navigate(`/sellers/${counterpartyId}`)}
+          className={`mt-3 w-full flex items-center gap-2.5 p-2.5 rounded-xl text-left transition-colors group ${
+            darkMode
+              ? 'bg-gray-700/50 hover:bg-gray-700'
+              : 'bg-gray-50 hover:bg-emerald-50'
+          }`}
+        >
           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-600 to-cyan-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
             {counterpartyName?.charAt(0)?.toUpperCase() || 'K'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className={`text-xs font-semibold truncate ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <p className={`text-xs font-semibold truncate ${darkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-emerald-700'}`}>
               {counterpartyName}
             </p>
             <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-              {counterpartyRole}
+              {counterpartyRole} · View profile
             </p>
           </div>
-        </div>
+          <ExternalLink size={13} className={`flex-shrink-0 ${darkMode ? 'text-gray-600 group-hover:text-emerald-400' : 'text-gray-300 group-hover:text-emerald-500'}`} />
+        </button>
 
         {/* ── Action buttons ── */}
         <div className="flex items-center gap-2 mt-3 flex-wrap">

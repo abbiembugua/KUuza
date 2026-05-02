@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AlertTriangle, Eye, PencilLine, Save, Trash2 } from 'lucide-react';
 import DashboardNavbar from '../Components/Layout/DashboardNavbar';
 import BackButton from '../Components/shared/BackButton';
+import SellerVerificationSection from '../Components/Profile/SellerVerificationSection';
 import { deleteCurrentUser, updateCurrentUser } from '../api/authapi';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/Themecontext';
@@ -10,8 +11,10 @@ import { showToast } from '../Services/toastService';
 
 const ProfilePage = () => {
   const { darkMode } = useTheme();
-  const { user, setUser, logout } = useAuth();
+  const { user, setUser, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const sellerSectionRef = useRef(null);
 
   const [fullName, setFullName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,6 +27,13 @@ const ProfilePage = () => {
   useEffect(() => {
     setFullName(user?.full_name || '');
   }, [user?.full_name]);
+
+  useEffect(() => {
+    if (location.state?.verifyPrompt && sellerSectionRef.current) {
+      sellerSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      showToast('Complete seller verification to start listing items.', 'info', { duration: 5000 });
+    }
+  }, [location.state]);
 
   const handleSave = async () => {
     if (!fullName.trim()) {
@@ -171,6 +181,17 @@ const ProfilePage = () => {
                 </Link>
               </div>
             </section>
+
+            <div ref={sellerSectionRef}>
+              <SellerVerificationSection
+                user={user}
+                darkMode={darkMode}
+                onVerified={async () => {
+                  const updated = await refreshUser();
+                  setUser(updated);
+                }}
+              />
+            </div>
 
             <section className={`rounded-3xl border p-5 ${
               darkMode ? 'border-red-950 bg-red-950/20' : 'border-red-200 bg-red-50'

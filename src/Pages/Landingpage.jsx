@@ -1,18 +1,19 @@
-// pages/LandingPage.jsx
 import React from 'react';
 import LandingLayout from '../Layout/LandingLayout';
 import Hero from '../Components/landing/hero';
 import Features from '../Components/landing/features';
 import CTA from '../Components/landing/CTA';
-import { useTheme } from '../context/Themecontext'; // Add this import
+import ListingsPreview from '../Components/landing/ListingsPreview';
+import { useTheme } from '../context/Themecontext';
 
 const LandingPage = ({ scrolled }) => {
-  const { darkMode } = useTheme(); // Get darkMode from context instead of props
-  
+  const { darkMode, setDarkMode } = useTheme();
+
   return (
-    <LandingLayout scrolled={scrolled}>
+    <LandingLayout scrolled={scrolled} darkMode={darkMode} setDarkMode={setDarkMode}>
       <Hero />
       <Features />
+      <ListingsPreview />
       <CTA />
     </LandingLayout>
   );

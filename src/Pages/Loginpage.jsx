@@ -6,7 +6,7 @@ import { clearAuthStorage, getCurrentUser, login, resendVerification } from '../
 import AuthCard from '../Components/shared/AuthCard';
 import AuthPageShell from '../Components/shared/AuthPageShell';
 import BackButton from '../Components/shared/BackButton';
-import SharedButton from '../Components/shared/Button';
+import PolicyModal from '../Components/shared/PolicyModal';
 import { useTheme } from '../context/Themecontext';
 
 const LoginPage = () => {
@@ -18,6 +18,7 @@ const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isResendingVerification, setIsResendingVerification] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [openPolicy, setOpenPolicy] = useState(null); // 'terms' | 'privacy' | null
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -286,15 +287,13 @@ const LoginPage = () => {
               </Link>
             </div>
 
-            <SharedButton
+            <button
               type="submit"
               disabled={isLoading}
-              fullWidth
-              className={`py-3.5 font-semibold text-lg duration-300 ${
-                isLoading
-                  ? 'opacity-80 cursor-not-allowed'
-                  : 'hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]'
-              } bg-gradient-to-r from-emerald-500 to-sky-500 hover:from-emerald-600 hover:to-sky-600 shadow-lg shadow-emerald-500/30`}
+              className={`w-full inline-flex items-center justify-center gap-2 rounded-xl
+                py-3.5 font-semibold text-lg text-white bg-emerald-600 hover:bg-emerald-700
+                shadow-md shadow-emerald-600/30 transition-all duration-200
+                ${isLoading ? 'opacity-75 cursor-not-allowed' : 'hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]'}`}
             >
               {isLoading ? (
                 <>
@@ -307,7 +306,7 @@ const LoginPage = () => {
                   <span>Login to KUuza</span>
                 </>
               )}
-            </SharedButton>
+            </button>
           </form>
 
           <div className="flex items-center my-8">
@@ -319,24 +318,40 @@ const LoginPage = () => {
           </div>
 
           <div className="text-center">
-            <SharedButton
-              as={Link}
+            <Link
               to="/signup"
-              className={`px-6 py-3 hover:scale-105 ${
+              className={`inline-flex items-center justify-center gap-2 rounded-xl
+                px-6 py-3 font-semibold transition-all duration-200 hover:scale-105 border-2 ${
                 darkMode
-                  ? 'bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700'
-                  : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200'
+                  ? 'bg-gray-800 hover:bg-gray-700 text-gray-100 border-gray-600'
+                  : 'bg-white hover:bg-emerald-50 text-emerald-700 border-emerald-500'
               }`}
             >
               Create New Account
-            </SharedButton>
+            </Link>
           </div>
         </AuthCard>
 
         <p className={`mt-8 text-center text-sm ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>
-          By logging in, you agree to our <button className="hover:underline font-medium">Terms of Service</button>{' '}
-          and <button className="hover:underline font-medium">Privacy Policy</button>
+          By logging in, you agree to our{' '}
+          <button
+            type="button"
+            onClick={() => setOpenPolicy('terms')}
+            className={`hover:underline font-medium ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}
+          >
+            Terms of Service
+          </button>{' '}
+          and{' '}
+          <button
+            type="button"
+            onClick={() => setOpenPolicy('privacy')}
+            className={`hover:underline font-medium ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}
+          >
+            Privacy Policy
+          </button>
         </p>
+
+      <PolicyModal type={openPolicy} onClose={() => setOpenPolicy(null)} darkMode={darkMode} />
       </div>
     </AuthPageShell>
   );

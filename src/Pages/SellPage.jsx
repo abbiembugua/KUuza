@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Upload, X, Loader2, Zap } from 'lucide-react';
 import DashboardNavbar from '../Components/Layout/DashboardNavbar';
 import { useTheme } from '../context/Themecontext';
@@ -37,7 +37,6 @@ const INITIAL_FORM = {
   category:           '',
   description:        '',
   price:              '',
-  negotiable:         false,
   quantity:           1,
   condition:          '',
   area_of_operation:  '',
@@ -63,14 +62,12 @@ const buildPayload = (formData) => {
     title:              formData.title,
     category:           formData.category,
     description:        formData.description,
-    negotiable:         formData.negotiable,
     area_of_operation:  formData.area_of_operation,
     contact_preference: formData.contact_preference,
     contact_value:      formData.contact_value,
     is_draft:           formData.is_draft,
   };
 
-  // Price — convert to float or omit if negotiable
   if (formData.price) {
     const numeric = extractNumericPrice(formData.price);
     payload.price = numeric ? parseFloat(numeric) : null;
@@ -94,8 +91,14 @@ const buildPayload = (formData) => {
 const SellPage = () => {
   const fileInputRef   = useRef(null);
   const { darkMode }   = useTheme();
-  const { token }      = useAuth();
-  const navigate       = useNavigate();
+  const { token, user } = useAuth();
+  const navigate        = useNavigate();
+
+  useEffect(() => {
+    if (user && !user.is_verified_seller) {
+      navigate('/profile', { state: { verifyPrompt: true } });
+    }
+  }, [user, navigate]);
 
   const [formData,       setFormData]       = useState(INITIAL_FORM);
   const [previewImages,  setPreviewImages]  = useState([]);
@@ -143,8 +146,8 @@ const SellPage = () => {
     if (!formData.category)
       e.category = 'Category is required';
 
-    if (!formData.negotiable && !formData.price)
-      e.price = 'Enter a price or mark as negotiable';
+    if (!formData.price)
+      e.price = 'A price is required';
 
     if (formData.listing_type === 'good' && formData.images.length === 0)
       e.images = 'Upload at least one image for a physical item';
@@ -548,25 +551,10 @@ const SellPage = () => {
                     name="price"
                     value={formData.price}
                     onChange={handleChange}
-                    disabled={formData.negotiable}
                     placeholder={isService ? 'e.g. 500 per session' : 'e.g. 1500'}
-                    className={`${inputClass('price')} ${formData.negotiable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={inputClass('price')}
                   />
                   {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price}</p>}
-                  <label className={`flex items-center gap-3 cursor-pointer mt-3 p-2 rounded-lg ${
-                    darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
-                  }`}>
-                    <input
-                      type="checkbox"
-                      name="negotiable"
-                      checked={formData.negotiable}
-                      onChange={handleChange}
-                      className="w-4 h-4 text-emerald-600 rounded"
-                    />
-                    <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Price is negotiable
-                    </span>
-                  </label>
                 </div>
 
                 {/* ── Area of operation ── */}
@@ -673,11 +661,9 @@ const SellPage = () => {
                   <div className="flex justify-between">
                     <span className="text-gray-500">Price</span>
                     <span className="font-bold">
-                      {formData.negotiable
-                        ? 'Negotiable'
-                        : formData.price
-                          ? `KSh ${parseFloat(formData.price).toLocaleString()}`
-                          : '—'
+                      {formData.price
+                        ? `KSh ${parseFloat(formData.price).toLocaleString()}`
+                        : '—'
                       }
                     </span>
                   </div>

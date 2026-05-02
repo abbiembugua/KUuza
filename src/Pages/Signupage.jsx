@@ -5,8 +5,8 @@ import { resendVerification, signup } from '../api/authapi';
 import { Toaster, toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/Themecontext';
-import SharedButton from '../Components/shared/Button';
 import AuthCard from '../Components/shared/AuthCard';
+import PolicyModal from '../Components/shared/PolicyModal';
 import AuthPageShell from '../Components/shared/AuthPageShell';
 import BackButton from '../Components/shared/BackButton';
 
@@ -22,6 +22,7 @@ const SignUpPage = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [openPolicy, setOpenPolicy] = useState(null); // 'terms' | 'privacy' | null
   const navigate = useNavigate();
   const { setUser } = useAuth();
   const [emailSent, setEmailSent] = useState(false);
@@ -414,26 +415,32 @@ const SignUpPage = () => {
                 />
                 <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   I agree to the{' '}
-                  <button type="button" className="font-medium hover:underline">
+                  <button
+                    type="button"
+                    onClick={() => setOpenPolicy('terms')}
+                    className={`font-medium hover:underline ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}
+                  >
                     Terms of Service
                   </button>{' '}
                   and{' '}
-                  <button type="button" className="font-medium hover:underline">
+                  <button
+                    type="button"
+                    onClick={() => setOpenPolicy('privacy')}
+                    className={`font-medium hover:underline ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}
+                  >
                     Privacy Policy
                   </button>. I verify that I am a current KU student with a valid student email.
                 </span>
               </label>
             </div>
 
-            <SharedButton
+            <button
               type="submit"
               disabled={isLoading || !acceptedTerms}
-              fullWidth
-              className={`py-3.5 font-semibold text-lg duration-300 ${
-                isLoading || !acceptedTerms
-                  ? 'opacity-70 cursor-not-allowed'
-                  : 'hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]'
-              } bg-gradient-to-r from-emerald-500 to-sky-500 hover:from-emerald-600 hover:to-sky-600 shadow-lg shadow-emerald-500/30`}
+              className={`w-full inline-flex items-center justify-center gap-2 rounded-xl
+                py-3.5 font-semibold text-lg text-white bg-emerald-600 hover:bg-emerald-700
+                shadow-md shadow-emerald-600/30 transition-all duration-200
+                ${isLoading || !acceptedTerms ? 'opacity-70 cursor-not-allowed' : 'hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]'}`}
             >
               {isLoading ? (
                 <>
@@ -446,7 +453,7 @@ const SignUpPage = () => {
                   <span>Create KUuza Account</span>
                 </>
               )}
-            </SharedButton>
+            </button>
           </form>
 
           <div className="flex items-center my-8">
@@ -464,17 +471,17 @@ const SignUpPage = () => {
           </div>
 
           <div className="text-center">
-            <SharedButton
-              as={Link}
+            <Link
               to="/login"
-              className={`px-6 py-3 hover:scale-105 ${
+              className={`inline-flex items-center justify-center gap-2 rounded-xl
+                px-6 py-3 font-semibold transition-all duration-200 hover:scale-105 border-2 ${
                 darkMode
-                  ? 'bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700'
-                  : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200'
+                  ? 'bg-gray-800 hover:bg-gray-700 text-gray-100 border-gray-600'
+                  : 'bg-white hover:bg-emerald-50 text-emerald-700 border-emerald-500'
               }`}
             >
               Sign In to Existing Account
-            </SharedButton>
+            </Link>
           </div>
         </AuthCard>
 
@@ -486,6 +493,8 @@ const SignUpPage = () => {
           Access is restricted to valid KU student emails only.
         </p>
       </div>
+
+      <PolicyModal type={openPolicy} onClose={() => setOpenPolicy(null)} darkMode={darkMode} />
     </AuthPageShell>
   );
 };

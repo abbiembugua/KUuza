@@ -29,6 +29,7 @@ export default function ReportGenerator({
   dateRange,
   activeTab = "all",
   downloaderName,
+  statusFilter = "",
 }) {
   const [loading, setLoading] = useState(null);
 
@@ -77,12 +78,12 @@ export default function ReportGenerator({
 
   const fmtFull = (date) =>
     date.toLocaleDateString("en-KE", {
-      weekday: "short",
+      weekday: "long",
       day: "2-digit",
-      month: "short",
+      month: "long",
       year: "numeric",
     }) +
-    " " +
+    " at " +
     date.toLocaleTimeString("en-KE", {
       hour: "2-digit",
       minute: "2-digit",
@@ -127,15 +128,26 @@ export default function ReportGenerator({
   const purchaseRows = buildRows("buyer");
   const salesRows = buildRows("seller");
 
-  const reportTitle =
-    activeTab === "buyer"
-      ? "Purchase Report"
-      : activeTab === "seller"
-        ? "Sales Report"
-        : "Transaction Report";
+  const STATUS_TITLE_LABELS = {
+    pending:        "Pending",
+    completed:      "Completed",
+    auto_completed: "Completed",
+    cancelled:      "Cancelled",
+  };
+  const statusPrefix = statusFilter ? (STATUS_TITLE_LABELS[statusFilter] ?? formatStatus(statusFilter)) : "";
+  const baseTitle =
+    activeTab === "buyer"  ? "Purchases Report" :
+    activeTab === "seller" ? "Sales Report"      : "Transaction Report";
+  const reportTitle = statusPrefix ? `${statusPrefix} ${baseTitle}` : baseTitle;
 
-  const HEADERS = ["Date", "Delivery Date", "Listing", "Amount", "Status", "Reference"];
-  const KEYS = ["date", "delivery", "listing", "amount", "status", "reference"];
+  // Omit the Status column when filtered — it's already in the title
+  const showStatusCol = !statusFilter;
+  const HEADERS = showStatusCol
+    ? ["Date", "Delivery Date", "Listing", "Amount", "Status", "Reference"]
+    : ["Date", "Delivery Date", "Listing", "Amount", "Reference"];
+  const KEYS = showStatusCol
+    ? ["date", "delivery", "listing", "amount", "status", "reference"]
+    : ["date", "delivery", "listing", "amount", "reference"];
 
   const downloadPDF = async () => {
     setLoading("pdf");
@@ -155,76 +167,106 @@ export default function ReportGenerator({
     const now = new Date();
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
-    const headerHeight = 32;
+    const headerHeight = 30;
 
-    // Draw green header background
+    // Header background
     doc.setFillColor(...EMERALD);
     doc.rect(0, 0, pageWidth, headerHeight, "F");
 
-    // Left side: Platform name and description
+    // Left: brand name + tagline
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
     doc.setTextColor(...WHITE);
-    doc.text("KUuza", 14, 12);
+    doc.text("KUuza", 14, 16);
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
+    doc.setFontSize(7);
     doc.setTextColor(200, 245, 230);
-    doc.text("Kenyatta University Official Marketplace", 14, 18);
+    doc.text("Kenyatta University Official Marketplace", 14, 23);
 
-    // Right side: Report title and metadata (all fitting within 32mm height)
+    // Right: report title + recipient + issued date
     doc.setFont("helvetica", "bold");
     doc.setFontSize(13);
     doc.setTextColor(...WHITE);
     doc.text(reportTitle, pageWidth - 14, 10, { align: "right" });
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
+    doc.setFontSize(7);
     doc.setTextColor(200, 245, 230);
-    doc.text("For:", pageWidth - 14, 17, { align: "right" });
+    doc.text("FOR", pageWidth - 14, 16, { align: "right" });
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(15);
+    doc.setFontSize(11);
     doc.setTextColor(...WHITE);
     doc.text(String(downloaderName || "KU Student").toUpperCase(), pageWidth - 14, 22, { align: "right" });
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
+    doc.setFontSize(7);
     doc.setTextColor(200, 245, 230);
-    doc.text(fmtFull(now), pageWidth - 14, 28, { align: "right" });
+    doc.text(`Issued on: ${fmtFull(now)}`, pageWidth - 14, 28, { align: "right" });
 
-    // Line separator
-    doc.setDrawColor(255, 255, 255);
+    // Separator line — emerald tint (matches receipt)
+    doc.setDrawColor(16, 185, 129);
     doc.setLineWidth(0.3);
     doc.line(0, headerHeight, pageWidth, headerHeight);
 
     let currentY = headerHeight + 6;
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-    doc.text("Financial Summary", 14, currentY);
-    currentY += 6;
+    // ── Financial Summary — horizontal stat cards ─────────────────────────────
+    const hasPending = incompleteEarned > 0 || incompleteSpent > 0;
+    const statBoxes = [
+      { label: "Completed Sales",     value: fmtCurrency(totalEarned) },
+      { label: "Completed Purchases", value: fmtCurrency(totalSpent)  },
+      ...(hasPending ? [
+        { label: "Pending Sales",     value: fmtCurrency(incompleteEarned) },
+        { label: "Pending Purchases", value: fmtCurrency(incompleteSpent)  },
+      ] : []),
+    ];
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.text(`Completed sales: ${fmtCurrency(totalEarned)}`, 14, currentY);
-    currentY += 5;
-    doc.text(`Completed purchases: ${fmtCurrency(totalSpent)}`, 14, currentY);
-    currentY += 5;
+    const usableW  = pageWidth - 28;
+    const gap      = 5;
+    const boxCount = statBoxes.length;
+    const boxW     = (usableW - gap * (boxCount - 1)) / boxCount;
+    const boxH     = 20;
+    const bgH      = boxH + 18;   // label row + box area + period row
 
-    if (incompleteEarned > 0 || incompleteSpent > 0) {
-      doc.text(`Pending sales: ${fmtCurrency(incompleteEarned)}`, 14, currentY);
-      currentY += 5;
-      doc.text(`Pending purchases: ${fmtCurrency(incompleteSpent)}`, 14, currentY);
-      currentY += 5;
-    }
-
+    // Outer tinted background
     doc.setFillColor(240, 253, 250);
-    doc.roundedRect(14, currentY - 1, 138, 11, 2, 2, "F");
+    doc.roundedRect(14, currentY, usableW, bgH, 2, 2, "F");
+
+    // Section label
     doc.setFont("helvetica", "bold");
-    doc.text(`Period: ${rangeLabel()}`, 18, currentY + 4);
-    currentY += 16;
+    doc.setFontSize(8);
+    doc.setTextColor(...EMERALD);
+    doc.text("FINANCIAL SUMMARY", 18, currentY + 6);
+
+    // Stat boxes
+    const boxTop = currentY + 9;
+    statBoxes.forEach((box, i) => {
+      const bx = 14 + i * (boxW + gap);
+
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(bx, boxTop, boxW, boxH, 1.5, 1.5, "F");
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.5);
+      doc.setTextColor(107, 114, 128);
+      doc.text(box.label.toUpperCase(), bx + 4, boxTop + 6);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9.5);
+      doc.setTextColor(...EMERALD);
+      doc.text(box.value, bx + 4, boxTop + 15);
+    });
+
+    // Period row
+    const periodY = boxTop + boxH + 5;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(107, 114, 128);
+    doc.text(`Period: ${rangeLabel()}`, 18, periodY);
+
+    currentY += bgH + 8;
 
     const drawTable = (title, rows, startY) => {
       doc.setFont("helvetica", "bold");
@@ -248,14 +290,22 @@ export default function ReportGenerator({
           fontSize: 9,
         },
         alternateRowStyles: { fillColor: [240, 253, 250] },
-        columnStyles: {
-          0: { cellWidth: 28 },
-          1: { cellWidth: 30 },
-          2: { cellWidth: 85 },
-          3: { cellWidth: 34 },
-          4: { cellWidth: 34 },
-          5: { cellWidth: 62 },
-        },
+        columnStyles: showStatusCol
+          ? {
+              0: { cellWidth: 28 },
+              1: { cellWidth: 30 },
+              2: { cellWidth: 85 },
+              3: { cellWidth: 34 },
+              4: { cellWidth: 34 },
+              5: { cellWidth: 62 },
+            }
+          : {
+              0: { cellWidth: 28 },
+              1: { cellWidth: 30 },
+              2: { cellWidth: 115 },
+              3: { cellWidth: 34 },
+              4: { cellWidth: 62 },
+            },
       });
 
       return doc.lastAutoTable.finalY + 8;
@@ -281,7 +331,7 @@ export default function ReportGenerator({
 
       doc.setFontSize(6.5);
       doc.setTextColor(150, 150, 150);
-      doc.text("KUuza - Kenyatta University Official Marketplace", 14, footerY);
+      doc.text("KUuza · Kenyatta University Official Marketplace · hello.kuuza@gmail.com", 14, footerY);
       doc.text(`Page ${page} of ${pageCount}`, pageWidth - 14, footerY, { align: "right" });
     }
 

@@ -27,7 +27,6 @@ const EditListingModal = ({ listing, onClose, onSave, darkMode }) => {
     listing_type: listing.listing_type || (listing.category === 'services' ? 'service' : 'good'),
     description: listing.description || '',
     price: listing.price || '',
-    negotiable: Boolean(listing.negotiable),
     condition: listing.condition || '',
     quantity: listing.quantity || 1,
     area_of_operation: listing.area_of_operation || '',
@@ -81,8 +80,8 @@ const EditListingModal = ({ listing, onClose, onSave, darkMode }) => {
     if (!formData.title.trim()) nextErrors.title = 'Title is required';
     if (!formData.category) nextErrors.category = 'Category is required';
 
-    if (!formData.negotiable && !formData.price) {
-      nextErrors.price = 'Enter a price or mark as negotiable';
+    if (!formData.price) {
+      nextErrors.price = 'A price is required';
     }
 
     if (!isService && (!formData.quantity || Number(formData.quantity) < 1)) {
@@ -122,14 +121,13 @@ const EditListingModal = ({ listing, onClose, onSave, darkMode }) => {
         title: formData.title.trim(),
         category: formData.category,
         description: formData.description,
-        negotiable: formData.negotiable,
         condition: isService ? '' : formData.condition || '',
         area_of_operation: formData.area_of_operation,
         contact_preference: formData.contact_preference,
         contact_value: formData.contact_value || '',
       };
 
-      if (!formData.negotiable && formData.price) {
+      if (formData.price) {
         updateData.price = parseFloat(formData.price);
       }
 
@@ -223,15 +221,9 @@ const EditListingModal = ({ listing, onClose, onSave, darkMode }) => {
               name="price"
               value={formData.price}
               onChange={handleInputChange}
-              disabled={formData.negotiable}
-              className={`${controlClassName('price')} ${formData.negotiable ? 'cursor-not-allowed opacity-50' : ''}`}
+              className={controlClassName('price')}
             />
             {errors.price && <p className="mt-1 text-sm text-red-500">{errors.price}</p>}
-
-            <label className={`mt-2 flex cursor-pointer items-center gap-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-              <input type="checkbox" name="negotiable" checked={formData.negotiable} onChange={handleInputChange} className="h-4 w-4" />
-              <span className="font-medium">Price is negotiable</span>
-            </label>
           </div>
 
           <div>

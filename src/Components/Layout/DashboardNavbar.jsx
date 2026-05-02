@@ -1,4 +1,3 @@
-// Components/Layout/DashboardNavbar.jsx
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Home,
@@ -11,7 +10,11 @@ import {
   Package,
   ShoppingCart,
   LogOut,
-  Plus, Sun, Moon
+  Plus,
+  Sun,
+  Moon,
+  Menu,
+  X,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -42,34 +45,44 @@ const formatNotificationTime = (value) => {
 };
 
 const DashboardNavbar = ({ onSearch, searchQuery, setSearchQuery, cartItemsCount = 0 }) => {
-const { darkMode, toggleTheme } = useTheme();
+  const { darkMode, toggleTheme } = useTheme();
   const { logout, token, user } = useAuth();
   const navigate = useNavigate();
 
-  
-  const [searchFocused, setSearchFocused] = useState(false);
+  const [searchFocused, setSearchFocused]     = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications]     = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen]   = useState(false);
+
   const dropdownRef = useRef(null);
-  
+
+  const closeMobileMenu = () => setMobileMenuOpen(false);
+
   const handleSearch = (e) => {
     if (e.key === 'Enter' && onSearch) {
       onSearch(searchQuery);
     }
   };
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setUserDropdownOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Close mobile menu on route change / resize to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) setMobileMenuOpen(false);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const loadNotifications = useCallback(async () => {
@@ -77,9 +90,7 @@ const { darkMode, toggleTheme } = useTheme();
       setNotifications([]);
       return;
     }
-
     setNotificationsLoading(true);
-
     try {
       const items = await getNotifications();
       setNotifications(items.map((item) => ({
@@ -98,19 +109,19 @@ const { darkMode, toggleTheme } = useTheme();
       setNotifications([]);
       return;
     }
-
     loadNotifications();
   }, [token, loadNotifications]);
 
   const handleLogout = () => {
     setUserDropdownOpen(false);
+    closeMobileMenu();
     logout();
   };
 
   const dismissNotification = async (notificationId) => {
     try {
       await dismissNotificationApi(notificationId);
-      setNotifications((current) => current.filter((notification) => notification.id !== notificationId));
+      setNotifications((current) => current.filter((n) => n.id !== notificationId));
     } catch (error) {
       console.error('Unable to dismiss notification', error);
     }
@@ -120,13 +131,8 @@ const { darkMode, toggleTheme } = useTheme();
     const response = await fetch(`${API_BASE}/transactions/${notification.transaction_id}/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-
-    if (!response.ok) {
-      throw new Error('Unable to load receipt details');
-    }
-
+    if (!response.ok) throw new Error('Unable to load receipt details');
     const transaction = await response.json();
-
     generateReceipt({
       listing: {
         id: transaction.listing,
@@ -135,10 +141,7 @@ const { darkMode, toggleTheme } = useTheme();
         listing_type: transaction.listing_type,
         price: transaction.agreed_price,
       },
-      transaction: {
-        ...transaction,
-        downloaded_by_name: user?.full_name,
-      },
+      transaction: { ...transaction, downloaded_by_name: user?.full_name },
       scheduledDate: transaction.scheduled_date,
       paymentMethod: transaction.payment_method,
       contact: null,
@@ -155,7 +158,6 @@ const { darkMode, toggleTheme } = useTheme();
         navigate('/purchases?tab=buyer');
         return;
       }
-
       await dismissNotification(notification.id);
       setNotificationsOpen(false);
       navigate('/purchases?tab=seller');
@@ -170,241 +172,275 @@ const { darkMode, toggleTheme } = useTheme();
     await loadNotifications();
   };
 
+  const navLinkClass = `flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+    darkMode
+      ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+      : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+  }`;
+
   return (
     <>
       <nav className={`fixed top-0 w-full z-50 border-b ${
         darkMode ? 'bg-gray-900/95 border-gray-800' : 'bg-white/95 border-gray-200'
       } backdrop-blur-md`}>
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-3 md:px-4">
 
-          {/* Logo Section - Farthest Left */}
-          <Link to="/dashboard" className="flex items-center gap-3 flex-shrink-0">
-            <div className={`p-2 rounded-lg ${darkMode ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
-              <ShoppingBag className={`w-6 h-6 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
-            </div>
-            <div>
-              <h1 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                KU<span className="text-emerald-500">uza</span>
-              </h1>
-              <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                Kenyatta University Official Marketplace
-              </p>
-            </div>
-          </Link>
+          {/* ── Main row ── */}
+          <div className="h-16 flex items-center gap-2 md:gap-0 justify-between">
 
-          {/* Navigation Links - Moved after logo */}
-          <div className="hidden md:flex items-center gap-6 ml-8">
-            <Link
-              to="/dashboard"
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                darkMode
-                  ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                  : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
-              }`}
-            >
-              <Home size={18} />
-              Home
-            </Link>
-            
-            <Link
-              to="/browse"
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                darkMode
-                  ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                  : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
-              }`}
-            >
-              <Search size={18} />
-              Browse
-            </Link>
-          </div>
-
-          {/* Center Search Bar */}
-          <div className="flex-1 max-w-md mx-6">
-            <div className={`relative transition-all duration-200 ${
-              searchFocused ? 'transform scale-105' : ''
-            }`}>
-              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
-                darkMode ? 'text-gray-400' : 'text-gray-500'
-              }`} />
-              <input
-                type="text"
-                value={searchQuery || ''}
-                onChange={(e) => setSearchQuery && setSearchQuery(e.target.value)}
-                onKeyPress={handleSearch}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setSearchFocused(false)}
-                placeholder="Search items, books, services..."
-                className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-sm transition-all duration-200 ${
-                  darkMode
-                    ? 'bg-gray-800 text-white placeholder-gray-400 border-gray-700 focus:border-emerald-500'
-                    : 'bg-gray-50 text-gray-900 placeholder-gray-500 border-gray-200 focus:border-emerald-500'
-                } border focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${
-                  searchFocused ? 'shadow-lg' : 'shadow-sm'
-                }`}
-              />
-            </div>
-          </div>
-
-          {/* Right Actions */}
-          <div className="flex items-center gap-3 flex-shrink-0">
+            {/* Hamburger — mobile only */}
             <button
-    onClick={toggleTheme}
-    className={`p-2.5 rounded-xl transition-colors ${
-      darkMode
-        ? 'text-yellow-400 hover:bg-gray-800'
-        : 'text-gray-600 hover:bg-gray-100'
-    }`}
-  >
-    {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-  </button>
-            
-            {/* Sell Something Button */}
-            <Link
-              to="/sell"
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-xl text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-            >
-              <Plus size={16} />
-              <span className="hidden sm:inline">Sell Something</span>
-              <span className="sm:hidden">Sell</span>
-            </Link>
-
-            {/* Shopping Cart */}
-            <Link
-              to="/cart"
-              className={`relative p-2.5 rounded-xl transition-colors ${
-                darkMode
-                  ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
+              className={`md:hidden p-2 rounded-xl transition-colors flex-shrink-0 ${
+                darkMode ? 'text-gray-300 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'
               }`}
+              aria-label="Toggle menu"
             >
-              <ShoppingBag size={20} />
-              {cartItemsCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-emerald-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                  {cartItemsCount > 99 ? '99+' : cartItemsCount}
-                </span>
-              )}
-            </Link>
-
-            <button
-              type="button"
-              onClick={handleOpenNotifications}
-              className={`relative p-2.5 rounded-xl transition-colors ${
-                darkMode
-                  ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              }`}
-            >
-              <Bell size={20} />
-              {notifications.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-emerald-600 text-white text-[10px] font-bold rounded-full h-5 min-w-5 px-1 flex items-center justify-center">
-                  {notifications.length}
-                </span>
-              )}
+              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
 
-            {/* User Avatar Dropdown */}
-            <div className="relative" ref={dropdownRef}>
+            {/* Logo */}
+            <Link to="/dashboard" className="flex items-center gap-2 flex-shrink-0">
+              <div className={`p-2 rounded-lg ${darkMode ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
+                <ShoppingBag className={`w-5 h-5 md:w-6 md:h-6 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
+              </div>
+              <div>
+                <h1 className={`text-lg md:text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  KU<span className="text-emerald-500">uza</span>
+                </h1>
+                <p className={`hidden md:block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Kenyatta University Official Marketplace
+                </p>
+              </div>
+            </Link>
+
+            {/* Nav links — desktop only */}
+            <div className="hidden md:flex items-center gap-6 ml-8">
+              <Link to="/dashboard" className={navLinkClass}>
+                <Home size={18} />
+                Home
+              </Link>
+              <Link to="/browse" className={navLinkClass}>
+                <Search size={18} />
+                Browse
+              </Link>
+            </div>
+
+            {/* Search bar */}
+            <div className={`flex-1 mx-2 md:mx-6 md:max-w-md transition-all duration-200 ${
+              searchFocused ? 'scale-[1.02]' : ''
+            }`}>
+              <div className="relative">
+                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
+                  darkMode ? 'text-gray-400' : 'text-gray-500'
+                }`} />
+                <input
+                  type="text"
+                  value={searchQuery || ''}
+                  onChange={(e) => setSearchQuery && setSearchQuery(e.target.value)}
+                  onKeyPress={handleSearch}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setSearchFocused(false)}
+                  placeholder="Search..."
+                  className={`w-full pl-9 pr-3 py-2 md:py-2.5 rounded-xl text-sm transition-all duration-200 border focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${
+                    darkMode
+                      ? 'bg-gray-800 text-white placeholder-gray-400 border-gray-700 focus:border-emerald-500'
+                      : 'bg-gray-50 text-gray-900 placeholder-gray-500 border-gray-200 focus:border-emerald-500'
+                  } ${searchFocused ? 'shadow-lg' : 'shadow-sm'}`}
+                />
+              </div>
+            </div>
+
+            {/* Right actions */}
+            <div className="flex items-center gap-1 md:gap-3 flex-shrink-0">
+
+              {/* Theme toggle — desktop only (mobile: in hamburger menu) */}
               <button
-                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                className={`flex items-center gap-2 p-1 rounded-xl transition-colors ${
-                  userDropdownOpen
-                    ? darkMode ? 'bg-gray-800' : 'bg-gray-100'
-                    : darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
+                onClick={toggleTheme}
+                className={`hidden md:flex p-2.5 rounded-xl transition-colors ${
+                  darkMode ? 'text-yellow-400 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
-                <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-semibold">
-                    {user?.full_name?.charAt(0).toUpperCase() || 'U'}
-                  </span>
-                </div>
-                <ChevronDown size={16} className={`transition-transform ${
-                  userDropdownOpen ? 'rotate-180' : ''
-                } ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
               </button>
 
-              {/* Dropdown Menu */}
-              {userDropdownOpen && (
-                <div className={`absolute right-0 mt-2 w-48 rounded-xl shadow-lg border backdrop-blur-md ${
-                  darkMode
-                    ? 'bg-gray-900/95 border-gray-700'
-                    : 'bg-white/95 border-gray-200'
-                }`}>
-                  <div className="p-2">
-                    {/* User Info */}
-                    <div className={`px-3 py-2 border-b ${
-                      darkMode ? 'border-gray-700' : 'border-gray-200'
-                    }`}>
-                      <p className={`font-medium text-sm ${
-                        darkMode ? 'text-white' : 'text-gray-900'
-                      }`}>
-                        {user?.full_name || 'User'}
-                      </p>
-                      <p className={`text-xs ${
-                        darkMode ? 'text-gray-400' : 'text-gray-500'
-                      }`}>
-                        {user?.email}
-                      </p>
-                    </div>
+              {/* Sell — desktop only (mobile: in hamburger menu) */}
+              <Link
+                to="/sell"
+                className="hidden md:flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-xl text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+              >
+                <Plus size={16} />
+                Sell Something
+              </Link>
 
-                    {/* Menu Items */}
-                    <div className="py-1">
-                      <Link
-                        to="/profile"
-                        onClick={() => setUserDropdownOpen(false)}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                          darkMode
-                            ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                        }`}
-                      >
-                        <User size={16} />
-                        My Profile
-                      </Link>
+              {/* Cart */}
+              <Link
+                to="/cart"
+                className={`relative p-2 md:p-2.5 rounded-xl transition-colors ${
+                  darkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <ShoppingBag size={20} />
+                {cartItemsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-emerald-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartItemsCount > 99 ? '99+' : cartItemsCount}
+                  </span>
+                )}
+              </Link>
 
-                      <Link
-                        to="/my-listings"
-                        onClick={() => setUserDropdownOpen(false)}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                          darkMode
-                            ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                        }`}
-                      >
-                        <Package size={16} />
-                        My Listings
-                      </Link>
+              {/* Notifications */}
+              <button
+                type="button"
+                onClick={handleOpenNotifications}
+                className={`relative p-2 md:p-2.5 rounded-xl transition-colors ${
+                  darkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <Bell size={20} />
+                {notifications.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-emerald-600 text-white text-[10px] font-bold rounded-full h-5 min-w-5 px-1 flex items-center justify-center">
+                    {notifications.length}
+                  </span>
+                )}
+              </button>
 
-                      <Link
-                        to="/purchases"
-                        onClick={() => setUserDropdownOpen(false)}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                          darkMode
-                            ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                        }`}
-                      >
-                        <ShoppingCart size={16} />
-                        Purchases
-                      </Link>
+              {/* User avatar dropdown */}
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setUserDropdownOpen((prev) => !prev)}
+                  className={`flex items-center gap-1.5 p-1 rounded-xl transition-colors ${
+                    userDropdownOpen
+                      ? darkMode ? 'bg-gray-800' : 'bg-gray-100'
+                      : darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-sm font-semibold">
+                      {user?.full_name?.charAt(0).toUpperCase() || 'U'}
+                    </span>
+                  </div>
+                  <ChevronDown
+                    size={16}
+                    className={`hidden md:block transition-transform ${userDropdownOpen ? 'rotate-180' : ''} ${
+                      darkMode ? 'text-gray-400' : 'text-gray-500'
+                    }`}
+                  />
+                </button>
 
-                      <hr className={`my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
+                {userDropdownOpen && (
+                  <div className={`absolute right-0 mt-2 w-52 rounded-xl shadow-lg border backdrop-blur-md ${
+                    darkMode ? 'bg-gray-900/95 border-gray-700' : 'bg-white/95 border-gray-200'
+                  }`}>
+                    <div className="p-2">
+                      <div className={`px-3 py-2 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                        <p className={`font-medium text-sm truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          {user?.full_name || 'User'}
+                        </p>
+                        <p className={`text-xs truncate ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {user?.email}
+                        </p>
+                      </div>
 
-                      <button
-                        onClick={handleLogout}
-                        className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                      >
-                        <LogOut size={16} />
-                        Log Out
-                      </button>
+                      <div className="py-1">
+                        <Link
+                          to="/profile"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                            darkMode ? 'text-gray-300 hover:bg-gray-800 hover:text-white' : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          <User size={16} />
+                          My Profile
+                        </Link>
+
+                        <Link
+                          to="/my-listings"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                            darkMode ? 'text-gray-300 hover:bg-gray-800 hover:text-white' : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          <Package size={16} />
+                          My Listings
+                        </Link>
+
+                        <Link
+                          to="/purchases"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                            darkMode ? 'text-gray-300 hover:bg-gray-800 hover:text-white' : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          <ShoppingCart size={16} />
+                          Purchases
+                        </Link>
+
+                        <hr className={`my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
+
+                        <button
+                          onClick={handleLogout}
+                          className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        >
+                          <LogOut size={16} />
+                          Log Out
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
-          </div>
+
+          {/* ── Mobile menu ── */}
+          {mobileMenuOpen && (
+            <div className={`md:hidden border-t pb-3 pt-2 space-y-1 ${
+              darkMode ? 'border-gray-800' : 'border-gray-200'
+            }`}>
+              <Link to="/dashboard" onClick={closeMobileMenu} className={navLinkClass}>
+                <Home size={18} />
+                Home
+              </Link>
+
+              <Link to="/browse" onClick={closeMobileMenu} className={navLinkClass}>
+                <Search size={18} />
+                Browse
+              </Link>
+
+              <Link to="/my-listings" onClick={closeMobileMenu} className={navLinkClass}>
+                <Package size={18} />
+                My Listings
+              </Link>
+
+              <Link to="/purchases" onClick={closeMobileMenu} className={navLinkClass}>
+                <ShoppingCart size={18} />
+                Purchases
+              </Link>
+
+              <div className={`border-t pt-2 mt-1 space-y-1 ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+                {/* Sell CTA */}
+                <Link
+                  to="/sell"
+                  onClick={closeMobileMenu}
+                  className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-emerald-600 to-emerald-700"
+                >
+                  <Plus size={18} />
+                  Sell Something
+                </Link>
+
+                {/* Theme toggle */}
+                <button
+                  onClick={() => { toggleTheme(); closeMobileMenu(); }}
+                  className={`flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                    darkMode ? 'text-gray-300 hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+                  {darkMode ? 'Light mode' : 'Dark mode'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </nav>
 

@@ -1,30 +1,97 @@
-// components/landing/Features.jsx
-import React from 'react';
-import FeatureCard from './featurecard';
-import { Shield, Zap, Users } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Camera, BadgeCheck, MapPin, Smartphone, Sparkles } from 'lucide-react';
 import { useTheme } from '../../context/Themecontext';
+
+const pillars = [
+  {
+    Icon: Camera,
+    label: 'List in seconds',
+    copy: 'Snap a photo, write a title, and your listing is live. Done.',
+  },
+  {
+    Icon: BadgeCheck,
+    label: 'Students only',
+    copy: 'Your student ID is your key. Every buyer and seller is a verified KU student.',
+  },
+  {
+    Icon: MapPin,
+    label: 'Campus delivery',
+    copy: 'Meet on campus. No shipping, no strangers, no drama.',
+  },
+  {
+    Icon: Smartphone,
+    label: 'Pay with M-Pesa',
+    copy: "No cash, no stress. Pay instantly through M-Pesa the moment you find what you need.",
+  },
+  {
+    Icon: Sparkles,
+    label: 'AI-powered listings',
+    copy: "Not sure how to describe what you're selling? Let AI write your listing for you.",
+  },
+];
 
 const Features = () => {
   const { darkMode } = useTheme();
-  
-  const features = [
-    { icon: Shield, title: 'KU-Verified Security', description: 'Exclusive to verified KU students using university email authentication', color: 'emerald' },
-    { icon: Zap, title: 'AI-Powered Listings', description: 'Generate professional titles, descriptions & pricing with AI assistance', color: 'cyan' },
-    { icon: Users, title: 'Trusted Community', description: 'Rating system and campus-specific pickup locations for safe exchanges', color: 'emerald' },
-  ];
+  const ref = useRef(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setInView(true); },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <section className={`py-20 px-6 transition-colors duration-200 ${
-      darkMode ? 'bg-gray-900' : 'bg-gray-50'
-    }`}>
-      <div className="container mx-auto">
-        <h2 className={`text-4xl font-bold text-center mb-12 transition-colors duration-200 ${
-          darkMode ? 'text-white' : 'text-gray-900'
-        }`}>
-          Why Choose <span className="text-emerald-500">KU CampusTrade</span>?
-        </h2>
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {features.map((f, idx) => <FeatureCard key={idx} feature={f} />)}
+    <section
+      id="how-it-works"
+      ref={ref}
+      className={`py-24 px-6 transition-colors duration-300 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}
+    >
+      <div className="container mx-auto max-w-6xl">
+        {/* Section header */}
+        <div
+          className={`text-center mb-14 transition-all duration-700 ease-out ${
+            inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+          }`}
+        >
+          <h2 className={`text-3xl md:text-4xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            How it Works
+          </h2>
+          <p className={`mt-3 text-base max-w-md mx-auto ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            Everything you need to buy and sell on campus, in one place.
+          </p>
+        </div>
+
+        {/* Pillars grid — each has a visible card background */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+          {pillars.map(({ Icon, label, copy }, idx) => (
+            <div
+              key={idx}
+              className={`flex flex-col items-center text-center p-6 rounded-2xl border
+                transition-all duration-700 ease-out
+                ${darkMode
+                  ? 'bg-gray-700/60 border-gray-600/40 hover:bg-gray-700 hover:border-emerald-500/30'
+                  : 'bg-gray-50 border-gray-100 hover:bg-emerald-50/60 hover:border-emerald-200'}
+                hover:shadow-md
+                ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+              style={{ transitionDelay: `${idx * 120 + 150}ms` }}
+            >
+              <div className={`mb-5 p-3 rounded-2xl ${darkMode ? 'bg-emerald-500/10' : 'bg-emerald-100'}`}>
+                <Icon className="w-7 h-7 text-emerald-500" strokeWidth={1.5} />
+              </div>
+              <h3 className={`text-sm font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                {label}
+              </h3>
+              <p className={`text-xs leading-relaxed ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {copy}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
     </section>

@@ -15,14 +15,14 @@ import {
 import { showToast } from '../Services/toastService';
 
 const CATEGORY_OPTIONS = [
-  { id: 'all',            name: 'All Items',           shortLabel: 'All'         },
-  { id: 'books',          name: 'Books & Textbooks',   shortLabel: 'Books'       },
-  { id: 'electronics',    name: 'Electronics',         shortLabel: 'Electronics' },
-  { id: 'fashion',        name: 'Clothing & Fashion',  shortLabel: 'Fashion'     },
-  { id: 'furniture',      name: 'Furniture',           shortLabel: 'Furniture'   },
-  { id: 'food_beverages', name: 'Food & Beverages',    shortLabel: 'Food'        },
-  { id: 'beauty',         name: 'Beauty',              shortLabel: 'Beauty'      },
-  { id: 'other',          name: 'Other',               shortLabel: 'Other'       },
+  { id: 'all',            name: 'All Items',           shortLabel: 'All',         icon: '🛍️', color: 'from-gray-400 to-gray-500'     },
+  { id: 'books',          name: 'Books & Textbooks',   shortLabel: 'Books',       icon: '📚', color: 'from-amber-400 to-orange-500'  },
+  { id: 'electronics',    name: 'Electronics',         shortLabel: 'Electronics', icon: '💻', color: 'from-blue-400 to-blue-600'     },
+  { id: 'fashion',        name: 'Clothing & Fashion',  shortLabel: 'Fashion',     icon: '👕', color: 'from-pink-400 to-rose-500'     },
+  { id: 'furniture',      name: 'Furniture',           shortLabel: 'Furniture',   icon: '🪑', color: 'from-emerald-400 to-emerald-600'},
+  { id: 'food_beverages', name: 'Food & Beverages',    shortLabel: 'Food',        icon: '🍕', color: 'from-red-400 to-red-600'       },
+  { id: 'beauty',         name: 'Beauty',              shortLabel: 'Beauty',      icon: '💄', color: 'from-purple-400 to-pink-500'   },
+  { id: 'other',          name: 'Other',               shortLabel: 'Other',       icon: '📦', color: 'from-gray-400 to-gray-600'     },
 ];
 
 const CONDITION_OPTIONS = [
@@ -238,23 +238,37 @@ const IntegratedBrowsePage = () => {
 
       <div className="max-w-7xl mx-auto px-4 py-6">
 
-        {/* Category pills */}
-        <div className="flex gap-3 overflow-x-auto pb-2 mb-6" style={{ scrollbarWidth: 'none' }}>
-          {CATEGORY_OPTIONS.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => handleCategoryChange(cat.id)}
-              className={`flex-shrink-0 px-4 py-2.5 rounded-full text-sm font-medium transition-all hover:scale-105 ${
-                selectedCategory === cat.id
-                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg'
-                  : darkMode
-                    ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                    : 'bg-white text-gray-700 hover:bg-gray-100 shadow-sm border border-gray-200'
-              }`}
-            >
-              {cat.shortLabel}
-            </button>
-          ))}
+        {/* Category grid */}
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-3 mb-6">
+          {CATEGORY_OPTIONS.map(cat => {
+            const isSelected = selectedCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => handleCategoryChange(cat.id)}
+                className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all duration-200 transform hover:-translate-y-1 hover:shadow-lg ${
+                  isSelected
+                    ? darkMode
+                      ? 'bg-gray-700 border-2 border-emerald-500'
+                      : 'bg-emerald-50 border-2 border-emerald-500 shadow-md'
+                    : darkMode
+                      ? 'bg-gray-800 border border-gray-700'
+                      : 'bg-white border border-gray-100 shadow-sm'
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${cat.color} flex items-center justify-center text-lg shadow-md`}>
+                  {cat.icon}
+                </div>
+                <span className={`text-xs font-medium text-center leading-tight ${
+                  isSelected
+                    ? 'text-emerald-600'
+                    : darkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>
+                  {cat.shortLabel}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Toolbar */}
@@ -443,7 +457,7 @@ const IntegratedBrowsePage = () => {
                   viewMode === 'list' ? 'flex' : ''
                 } ${darkMode ? 'bg-gray-800' : 'bg-white'} ${
                   isUnavailable ? 'opacity-60 saturate-50' : ''
-                }`}
+                } ${isOwner(item.seller) ? 'border-2 border-green-600' : ''}`}
               >
                 {isUnavailable && (
                   <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold z-10 -rotate-12">
@@ -462,6 +476,11 @@ const IntegratedBrowsePage = () => {
                         : 'w-48 h-full rounded-l-xl'
                     }`}
                   />
+                  {isOwner(item.seller) && (
+                    <div className="absolute top-3 left-3 bg-green-700 text-white px-2 py-0.5 rounded-full text-xs font-bold tracking-wide shadow z-10">
+                      YOUR LISTING
+                    </div>
+                  )}
                   <div className="absolute top-3 right-3">
                     <span className={`px-2 py-1 rounded-lg text-xs font-medium backdrop-blur-sm ${
                       darkMode ? 'bg-gray-900/80 text-gray-200' : 'bg-white/90 text-gray-700'
@@ -491,11 +510,8 @@ const IntegratedBrowsePage = () => {
                     <span className="text-xl font-bold text-emerald-600">
                       {item.price
                         ? `KSh ${parseFloat(item.price).toLocaleString('en-KE')}`
-                        : 'Negotiable'}
+                        : 'Price on request'}
                     </span>
-                    {item.negotiable && (
-                      <span className={`ml-2 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>(Negotiable)</span>
-                    )}
                   </div>
 
                   {item.condition && (

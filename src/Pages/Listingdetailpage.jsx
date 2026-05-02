@@ -3,8 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, MapPin, Star, Eye, Users, Package,
   Wrench, ShoppingCart, Zap, ChevronLeft, ChevronRight,
-  Shield, Tag, AlertCircle, CheckCircle, Loader2, Minus, Plus
+  Shield, Tag, AlertCircle, CheckCircle, Loader2, Minus, Plus, Flag
 } from 'lucide-react';
+import ReportModal from '../Components/ReportModal';
 import DashboardNavbar from '../Components/Layout/DashboardNavbar';
 import BackButton from '../Components/shared/BackButton';
 import { useTheme } from '../context/Themecontext';
@@ -146,6 +147,7 @@ const ListingDetailPage = () => {
   const [error, setError] = useState(null);
   const [cartLoading, setCartLoading] = useState(false);
   const [selectedQuantity, setSelectedQuantity] = useState(1);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -323,9 +325,6 @@ const ListingDetailPage = () => {
                   <span className={`text-3xl font-bold ${listing.price ? 'text-emerald-600' : darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                     {listing.price ? `KSh ${parseFloat(listing.price).toLocaleString('en-KE')}` : 'Price on request'}
                   </span>
-                  {listing.negotiable && listing.price && (
-                    <span className="text-sm font-semibold text-amber-500 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">Negotiable</span>
-                  )}
                 </div>
 
                 {/* Condition */}
@@ -452,6 +451,15 @@ const ListingDetailPage = () => {
                   </p>
                 </div>
 
+                {/* Report link — hidden on own listings */}
+                {!isOwn && (
+                  <ReportModal
+                    listingId={listing.id}
+                    isOpen={reportOpen}
+                    onClose={() => setReportOpen(false)}
+                  />
+                )}
+
                 {/* Action buttons */}
                 {isOwn ? (
                   <div className={`rounded-xl border p-4 ${darkMode ? 'border-emerald-900/40 bg-emerald-900/10' : 'border-emerald-100 bg-emerald-50'}`}>
@@ -494,13 +502,25 @@ const ListingDetailPage = () => {
                   </div>
                 )}
 
-                <div className="mt-4">
-                  <button className={`text-xs transition-colors ${darkMode ? 'text-gray-600 hover:text-gray-400' : 'text-gray-300 hover:text-gray-500'}`}>
+
+              </div>
+
+              {/* Report link */}
+              {!isOwn && (
+                <div className="flex justify-end mt-1">
+                  <button
+                    onClick={() => setReportOpen(true)}
+                    className={`flex items-center gap-1 text-xs transition-colors ${
+                      darkMode
+                        ? 'text-gray-600 hover:text-red-400'
+                        : 'text-gray-400 hover:text-red-500'
+                    }`}
+                  >
+                    <Flag size={11} />
                     Report this listing
                   </button>
                 </div>
-
-              </div>
+              )}
 
               {/* Tips panel — identical to SellPage tips box */}
               <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700/50' : 'bg-gray-50'}`}>

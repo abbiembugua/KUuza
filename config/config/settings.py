@@ -56,7 +56,6 @@ INSTALLED_APPS = [
     'reviews',
     'transactions',
     'Cart',
-    'offers',
     'reports',
     'admin_api',
 ]

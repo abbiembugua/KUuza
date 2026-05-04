@@ -6,6 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from .models import User
@@ -95,8 +96,15 @@ class LoginView(APIView):
         
         if user is not None:
             if not user.is_email_verified and not user.is_staff:
+                try:
+                    send_verification_email(user)
+                except Exception:
+                    pass
                 return Response(
-                    {'error': 'Please verify your email before logging in.'},
+                    {
+                        'error': 'Your email is not verified. We just sent a 6-digit code to your email — enter it below or click the link in the email.',
+                        'requires_verification': True,
+                    },
                     status=status.HTTP_403_FORBIDDEN
                 )
 
@@ -163,14 +171,51 @@ class VerifyEmailView(APIView):
         if user.is_email_verified:
             return Response({"message": "Email already verified."}, status=status.HTTP_200_OK)
 
+        if user.email_verification_expiry and user.email_verification_expiry < timezone.now():
+            return Response({"error": "Verification link has expired. Please request a new one."}, status=status.HTTP_400_BAD_REQUEST)
+
         user.is_email_verified = True
-        user.email_verification_token = None  # one-time use
-        user.save(update_fields=['is_email_verified', 'email_verification_token'])
+        user.email_verification_token = None
+        user.email_verification_otp = None
+        user.email_verification_expiry = None
+        user.save(update_fields=['is_email_verified', 'email_verification_token', 'email_verification_otp', 'email_verification_expiry'])
 
         return Response({"message": "Email verified successfully!"}, status=status.HTTP_200_OK)
 
 
-# Optional: resend verification
+class VerifyEmailOTPView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = (request.data.get('email') or '').strip()
+        otp = (request.data.get('otp') or '').strip()
+
+        if not email or not otp:
+            return Response({"error": "Email and OTP are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({"error": "Invalid email or OTP."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if user.is_email_verified:
+            return Response({"message": "Email already verified."}, status=status.HTTP_200_OK)
+
+        if not user.email_verification_otp or user.email_verification_otp != otp:
+            return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if user.email_verification_expiry and user.email_verification_expiry < timezone.now():
+            return Response({"error": "OTP has expired. Please request a new one."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.is_email_verified = True
+        user.email_verification_token = None
+        user.email_verification_otp = None
+        user.email_verification_expiry = None
+        user.save(update_fields=['is_email_verified', 'email_verification_token', 'email_verification_otp', 'email_verification_expiry'])
+
+        return Response({"message": "Email verified successfully!"}, status=status.HTTP_200_OK)
+
+
 class ResendVerificationView(APIView):
     permission_classes = [permissions.AllowAny]
 

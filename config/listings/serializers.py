@@ -1,7 +1,11 @@
+import re
 from rest_framework import serializers
 from django.db.models import Avg
 from .models import Listing, ListingImage
 from reviews.models import Review
+
+_KE_PHONE_RE = re.compile(r'^(\+254|254|0)[17]\d{8}$')
+_EMAIL_RE    = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 
 
 class ListingImageSerializer(serializers.ModelSerializer):
@@ -130,11 +134,17 @@ class ListingSerializer(serializers.ModelSerializer):
                 {'contact_value': 'Please provide your email address or WhatsApp number.'}
             )
 
-        # ── WhatsApp number format ────────────────────────────────────────────
-        if contact_pref == 'whatsapp' and not contact_value.startswith(('07', '01', '+254')):
-            raise serializers.ValidationError(
-                {'contact_value': 'Enter a valid Kenyan number e.g. 0712345678 or +254712345678.'}
-            )
+        # ── Format validation based on contact preference ─────────────────────
+        if contact_pref == 'email':
+            if not _EMAIL_RE.match(contact_value):
+                raise serializers.ValidationError(
+                    {'contact_value': 'Enter a valid email address.'}
+                )
+        elif contact_pref == 'whatsapp':
+            if not _KE_PHONE_RE.match(contact_value):
+                raise serializers.ValidationError(
+                    {'contact_value': 'Enter a valid Kenyan number e.g. 0712345678 or +254712345678.'}
+                )
 
         return data
 

@@ -10,6 +10,7 @@ from .views import (
     ResetPasswordView,
     SellerVerifyView,
     VerifyEmailView,
+    VerifyEmailOTPView,
 )
 
 urlpatterns = [
@@ -18,6 +19,7 @@ urlpatterns = [
     path('me/', MeView.as_view()),
     path("logout/", LogoutView.as_view(), name="logout"),
     path('verify-email/', VerifyEmailView.as_view(), name='verify-email'),
+    path('verify-email-otp/', VerifyEmailOTPView.as_view(), name='verify-email-otp'),
     path('resend-verification/', ResendVerificationView.as_view(), name='resend-verification'),
     path('forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),
     path('reset-password/', ResetPasswordView.as_view(), name='reset-password'),

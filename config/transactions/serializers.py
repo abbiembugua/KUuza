@@ -1,7 +1,8 @@
 from rest_framework import serializers
-from django.db import connection
+from django.db import connection, transaction as db_transaction
 from .models import Notification, Transaction
 from listings.serializers import ListingSerializer
+from listings.models import Listing
 
 
 class TransactionSerializer(serializers.ModelSerializer):
@@ -106,36 +107,57 @@ class TransactionSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        listing = validated_data['listing']
-        request = self.context['request']
+        request          = self.context['request']
+        listing_from_req = validated_data['listing']
+        quantity_req     = validated_data.get('quantity', 1)
 
-        # Auto-fill seller from the listing
-        validated_data['buyer']            = request.user
-        validated_data['seller']           = listing.seller
-        validated_data['agreed_price']     = validated_data.get('agreed_price') or listing.price
-        validated_data['interaction_type'] = (
-            'service_use' if listing.listing_type == 'service' else 'purchase'
-        )
+        with db_transaction.atomic():
+            # Lock the listing row — any concurrent request blocks here until
+            # this transaction commits, eliminating the read-then-write race.
+            locked = Listing.objects.select_for_update().get(pk=listing_from_req.pk)
 
-        transaction = super().create(validated_data)
+            # Re-validate under the lock with the freshest DB values
+            if locked.status != 'active':
+                raise serializers.ValidationError(
+                    f'This listing is no longer available (status: {locked.status}).'
+                )
+            if locked.is_draft:
+                raise serializers.ValidationError('This listing is not published yet.')
+            if locked.listing_type == 'good' and quantity_req > locked.quantity:
+                raise serializers.ValidationError({
+                    'quantity': (
+                        f'Only {locked.quantity} unit(s) left. '
+                        f'You requested {quantity_req}.'
+                    )
+                })
 
-        if 'transactions_notification' in connection.introspection.table_names():
-            Notification.objects.create(
-                recipient=transaction.seller,
-                actor=transaction.buyer,
-                transaction=transaction,
-                notification_type='purchase_created',
-                title='New purchase request',
-                body=f'{transaction.buyer.full_name} placed an order for {listing.title}.',
+            validated_data['listing']           = locked
+            validated_data['buyer']             = request.user
+            validated_data['seller']            = locked.seller
+            validated_data['agreed_price']      = validated_data.get('agreed_price') or locked.price
+            validated_data['interaction_type']  = (
+                'service_use' if locked.listing_type == 'service' else 'purchase'
             )
-            Notification.objects.create(
-                recipient=transaction.buyer,
-                actor=transaction.seller,
-                transaction=transaction,
-                notification_type='receipt_ready',
-                title='Receipt ready',
-                body=f'Your receipt for {listing.title} is ready to download.',
-            )
+
+            transaction = super().create(validated_data)
+
+            if 'transactions_notification' in connection.introspection.table_names():
+                Notification.objects.create(
+                    recipient=transaction.seller,
+                    actor=transaction.buyer,
+                    transaction=transaction,
+                    notification_type='purchase_created',
+                    title='New purchase request',
+                    body=f'{transaction.buyer.full_name} placed an order for {locked.title}.',
+                )
+                Notification.objects.create(
+                    recipient=transaction.buyer,
+                    actor=transaction.seller,
+                    transaction=transaction,
+                    notification_type='receipt_ready',
+                    title='Receipt ready',
+                    body=f'Your receipt for {locked.title} is ready to download.',
+                )
 
         return transaction
 

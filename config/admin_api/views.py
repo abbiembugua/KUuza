@@ -157,6 +157,20 @@ class AdminReportActionView(APIView):
         return Response({'error': 'Invalid action'}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class AdminSellerRevokeView(APIView):
+    permission_classes = [IsStaffUser]
+
+    def post(self, request, pk):
+        try:
+            user = User.objects.get(pk=pk, is_staff=False, is_verified_seller=True)
+        except User.DoesNotExist:
+            return Response({'error': 'Verified seller not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        user.is_verified_seller = False
+        user.save(update_fields=['is_verified_seller'])
+        return Response({'message': 'Seller verification revoked'})
+
+
 class AdminSellersView(APIView):
     permission_classes = [IsStaffUser]
 

@@ -8,6 +8,7 @@ from .views import (
     AdminReportsView,
     AdminReportActionView,
     AdminSellersView,
+    AdminSellerRevokeView,
 )
 
 urlpatterns = [
@@ -19,4 +20,5 @@ urlpatterns = [
     path('reports/', AdminReportsView.as_view(), name='admin-reports'),
     path('reports/<uuid:pk>/<str:action>/', AdminReportActionView.as_view(), name='admin-report-action'),
     path('sellers/', AdminSellersView.as_view(), name='admin-sellers'),
+    path('sellers/<uuid:pk>/revoke/', AdminSellerRevokeView.as_view(), name='admin-seller-revoke'),
 ]

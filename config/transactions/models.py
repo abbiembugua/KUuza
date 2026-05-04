@@ -98,10 +98,9 @@ class Transaction(models.Model):
 
         super().save(*args, **kwargs)
 
-        # If this is a completed purchase of a good, mark the listing as sold
-        # AFTER
+        # If this is a completed (or auto-completed) purchase, mark the listing sold
         if (
-            self.status == 'completed'
+            self.status in ('completed', 'auto_completed')
             and self.interaction_type == 'purchase'
             and self.listing
             and self.listing.status == 'active'

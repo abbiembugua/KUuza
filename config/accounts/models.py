@@ -53,6 +53,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     created_at = models.DateTimeField(auto_now_add=True)
     is_email_verified = models.BooleanField(default=False)
     email_verification_token = models.CharField(max_length=64, blank=True, null=True)
+    email_verification_otp = models.CharField(max_length=6, blank=True, null=True)
+    email_verification_expiry = models.DateTimeField(blank=True, null=True)
 
     # Seller verification fields
     student_id = models.CharField(max_length=50, blank=True, null=True)

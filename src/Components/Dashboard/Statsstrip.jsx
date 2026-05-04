@@ -49,18 +49,18 @@ const StatsStrip = ({ darkMode, isLoading, cartCount, myListingsCount, soldCount
             key={stat.label}
             onClick={() => navigate(stat.link)}
             className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}
-              border rounded-2xl p-5 cursor-pointer hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5`}
+              border rounded-xl p-4 cursor-pointer hover:shadow-md transition-all duration-200 hover:-translate-y-0.5`}
           >
-            <div className="flex items-center justify-between mb-3">
-              <div className={`p-2.5 rounded-xl ${stat.bg}`}>
-                <Icon className={`w-5 h-5 ${stat.text}`} />
+            <div className="flex items-center justify-between mb-2.5">
+              <div className={`p-2 rounded-lg ${stat.bg}`}>
+                <Icon className={`w-4 h-4 ${stat.text}`} />
               </div>
-              <ChevronRight className={`w-4 h-4 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`} />
+              <ChevronRight className={`w-3.5 h-3.5 ${darkMode ? 'text-gray-600' : 'text-gray-500'}`} />
             </div>
-            <p className={`text-3xl font-bold mb-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              {isLoading ? '...' : stat.value}
+            <p className={`text-2xl font-bold mb-0.5 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              {isLoading ? '—' : stat.value}
             </p>
-            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{stat.label}</p>
+            <p className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-700'}`}>{stat.label}</p>
           </div>
         );
       })}

@@ -4,6 +4,7 @@
  */
 
 import { jsPDF } from 'jspdf';
+import { fetchLogoBase64, drawLogo } from '../../utils/pdfLogo';
 
 const EMERALD = [5, 150, 105];
 const WHITE   = [255, 255, 255];
@@ -55,19 +56,21 @@ const formatCategory = (value) =>
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
-function drawHeader(doc, { pageWidth, headerHeight, recipientName, receiptNo, now }) {
+function drawHeader(doc, { pageWidth, headerHeight, recipientName, receiptNo, now, logoBase64 }) {
   doc.setFillColor(...EMERALD);
   doc.rect(0, 0, pageWidth, headerHeight, 'F');
+
+  const textX = drawLogo(doc, logoBase64, headerHeight);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
   doc.setTextColor(...WHITE);
-  doc.text('KUuza', 14, 16);
+  doc.text('KUuza', textX, 16);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(200, 245, 230);
-  doc.text('Kenyatta University Official Marketplace', 14, 23);
+  doc.text('Kenyatta University Official Marketplace', textX, 23);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
@@ -122,7 +125,7 @@ function drawFooter(doc, pageWidth, pageHeight) {
 
 // ── Single-item receipt ───────────────────────────────────────────────────────
 
-function generateSingleReceipt({ listing, transaction, scheduledDate, scheduledTime, paymentMethod, contact }) {
+function generateSingleReceipt({ listing, transaction, scheduledDate, scheduledTime, paymentMethod, contact, logoBase64 }) {
   const doc        = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageWidth  = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -145,7 +148,7 @@ function generateSingleReceipt({ listing, transaction, scheduledDate, scheduledT
     ? unitPrice * quantity
     : transaction?.agreed_price || listing?.price;
 
-  drawHeader(doc, { pageWidth, headerHeight, recipientName, receiptNo, now });
+  drawHeader(doc, { pageWidth, headerHeight, recipientName, receiptNo, now, logoBase64 });
 
   doc.setFillColor(...SOFT);
   doc.roundedRect(14, 40, pageWidth - 28, 24, 2, 2, 'F');
@@ -190,7 +193,7 @@ function generateSingleReceipt({ listing, transaction, scheduledDate, scheduledT
 
 // ── Bulk receipt ──────────────────────────────────────────────────────────────
 
-function generateBulkReceipt({ bulkItems, bulkTotal, bulkTxns, scheduledDate, scheduledTime, paymentMethod }) {
+function generateBulkReceipt({ bulkItems, bulkTotal, bulkTxns, scheduledDate, scheduledTime, paymentMethod, logoBase64 }) {
   const doc        = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageWidth  = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -206,7 +209,7 @@ function generateBulkReceipt({ bulkItems, bulkTotal, bulkTxns, scheduledDate, sc
   const scheduleValue = scheduledDate ? formatShortDate(scheduledDate) : '-';
   const scheduleDetail = scheduledTime ? `${scheduleValue} at ${scheduledTime}` : scheduleValue;
 
-  drawHeader(doc, { pageWidth, headerHeight, recipientName, receiptNo, now });
+  drawHeader(doc, { pageWidth, headerHeight, recipientName, receiptNo, now, logoBase64 });
 
   // Summary banner
   doc.setFillColor(...SOFT);
@@ -317,13 +320,14 @@ function generateBulkReceipt({ bulkItems, bulkTotal, bulkTxns, scheduledDate, sc
 
 // ── Public export ─────────────────────────────────────────────────────────────
 
-export function generateReceipt({
+export async function generateReceipt({
   listing, transaction, scheduledDate, scheduledTime, paymentMethod, contact,
   isBulk = false, bulkItems = [], bulkTotal = 0, bulkTxns = [],
 }) {
+  const logoBase64 = await fetchLogoBase64();
   if (isBulk) {
-    generateBulkReceipt({ bulkItems, bulkTotal, bulkTxns, scheduledDate, scheduledTime, paymentMethod });
+    generateBulkReceipt({ bulkItems, bulkTotal, bulkTxns, scheduledDate, scheduledTime, paymentMethod, logoBase64 });
   } else {
-    generateSingleReceipt({ listing, transaction, scheduledDate, scheduledTime, paymentMethod, contact });
+    generateSingleReceipt({ listing, transaction, scheduledDate, scheduledTime, paymentMethod, contact, logoBase64 });
   }
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader2, ShieldCheck } from 'lucide-react';
 import { toast, Toaster } from 'react-hot-toast';
@@ -8,7 +8,7 @@ import { useTheme } from '../../context/Themecontext';
 
 const AdminLoginPage = () => {
   const { darkMode } = useTheme();
-  const { adminUser, setAdminUser } = useAdminAuth();
+  const { adminUser, adminLoading, setAdminUser } = useAdminAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
@@ -17,11 +17,10 @@ const AdminLoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Already logged in
-  if (adminUser) {
-    navigate('/kuuza-control/dashboard');
-    return null;
-  }
+  // Redirect after auth check completes — never call navigate() during render
+  useEffect(() => {
+    if (!adminLoading && adminUser) navigate('/kuuza-control/dashboard');
+  }, [adminUser, adminLoading, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

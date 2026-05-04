@@ -1,23 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { Eye, EyeOff, Loader2, LogIn, Mail, Shield } from 'lucide-react';
+import { Eye, EyeOff, LogIn, Mail, Shield } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
-import { clearAuthStorage, getCurrentUser, login, resendVerification } from '../api/authapi';
+import { clearAuthStorage, getCurrentUser, login, verifyEmailOTP } from '../api/authapi';
 import AuthCard from '../Components/shared/AuthCard';
 import AuthPageShell from '../Components/shared/AuthPageShell';
 import BackButton from '../Components/shared/BackButton';
 import PolicyModal from '../Components/shared/PolicyModal';
 import { useTheme } from '../context/Themecontext';
+import { useAuth } from '../context/AuthContext';
 
 const LoginPage = () => {
   const { darkMode } = useTheme();
+  const { setUser } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isResendingVerification, setIsResendingVerification] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [showOtpForm, setShowOtpForm] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [otpError, setOtpError] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
   const [openPolicy, setOpenPolicy] = useState(null); // 'terms' | 'privacy' | null
   const navigate = useNavigate();
 
@@ -51,36 +56,24 @@ const LoginPage = () => {
     return kuEmailPattern.test(value);
   };
 
-  const isVerificationError = /verify|verification|unverified/i.test(error);
-
-  const handleResendVerification = async () => {
-    if (!validateKUEmail(email)) {
-      setError('Enter your KU student email first so we know where to resend the verification link.');
+  const handleOtpVerify = async (e) => {
+    e.preventDefault();
+    if (otp.length !== 6) {
+      setOtpError('Please enter the 6-digit code.');
       return;
     }
-
-    setIsResendingVerification(true);
-
+    setOtpError('');
+    setOtpLoading(true);
     try {
-      await resendVerification(email);
-      toast.success(`Verification email sent to ${email}.`, {
-        duration: 4000,
-        position: 'top-center',
-      });
-    } catch (resendError) {
-      const resendMessage = resendError.message || 'Could not resend verification email.';
-      setError(resendMessage);
-      toast.error(resendMessage, {
-        duration: 4000,
-        position: 'top-center',
-        style: {
-          background: '#fee2e2',
-          color: '#dc2626',
-          border: '1px solid #fecaca',
-        },
-      });
+      await verifyEmailOTP(email, otp);
+      const result = await login({ email, password });
+      setUser(result.user);
+      toast.success('Email verified! Logging you in…', { duration: 2500, position: 'top-center' });
+      setTimeout(() => navigate('/dashboard'), 2500);
+    } catch (err) {
+      setOtpError(err.message || 'Invalid or expired code.');
     } finally {
-      setIsResendingVerification(false);
+      setOtpLoading(false);
     }
   };
 
@@ -114,7 +107,8 @@ const LoginPage = () => {
     }
 
     try {
-      await login({ email, password });
+      const result = await login({ email, password });
+      setUser(result.user);
 
       toast.success('Login successful! Redirecting to dashboard...', {
         duration: 4000,
@@ -130,18 +124,18 @@ const LoginPage = () => {
         navigate('/dashboard');
       }, 1500);
     } catch (err) {
-      const errorMessage = err.message || 'Login failed. Please check your credentials.';
-      setError(errorMessage);
-
-      toast.error(errorMessage, {
-        duration: 4000,
-        position: 'top-center',
-        style: {
-          background: '#fee2e2',
-          color: '#dc2626',
-          border: '1px solid #fecaca',
-        },
-      });
+      if (err.requiresVerification) {
+        setShowOtpForm(true);
+        setError('');
+      } else {
+        const errorMessage = err.message || 'Login failed. Please check your credentials.';
+        setError(errorMessage);
+        toast.error(errorMessage, {
+          duration: 4000,
+          position: 'top-center',
+          style: { background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca' },
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -198,22 +192,6 @@ const LoginPage = () => {
               <div className="w-2 h-2 bg-red-500 rounded-full"></div>
               <p className="text-sm font-medium">{error}</p>
             </div>
-          )}
-
-          {isVerificationError && (
-            <button
-              type="button"
-              onClick={handleResendVerification}
-              disabled={isResendingVerification}
-              className={`mb-6 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${
-                darkMode
-                  ? 'bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
-                  : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
-              } disabled:cursor-not-allowed disabled:opacity-60`}
-            >
-              {isResendingVerification ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
-              {isResendingVerification ? 'Resending verification...' : 'Resend verification email'}
-            </button>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -308,6 +286,39 @@ const LoginPage = () => {
               )}
             </button>
           </form>
+
+          {showOtpForm && (
+            <div className={`mt-6 p-5 rounded-xl border ${darkMode ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200'}`}>
+              <p className={`text-sm font-medium mb-3 ${darkMode ? 'text-amber-300' : 'text-amber-800'}`}>
+                We sent a 6-digit code to <strong>{email}</strong>. Enter it below to verify and continue.
+              </p>
+              <form onSubmit={handleOtpVerify} className="space-y-3">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  placeholder="123456"
+                  className={`w-full px-4 py-3 rounded-xl border text-center text-2xl tracking-widest font-mono focus:outline-none transition-all ${
+                    darkMode
+                      ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500 focus:border-emerald-500'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-emerald-500'
+                  } ${otpError ? 'border-red-500' : ''}`}
+                />
+                {otpError && <p className="text-sm text-red-500">{otpError}</p>}
+                <button
+                  type="submit"
+                  disabled={otpLoading || otp.length !== 6}
+                  className={`w-full py-3 rounded-xl font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-all ${
+                    otpLoading || otp.length !== 6 ? 'opacity-60 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {otpLoading ? 'Verifying…' : 'Verify Code'}
+                </button>
+              </form>
+            </div>
+          )}
 
           <div className="flex items-center my-8">
             <div className={`flex-1 h-px ${darkMode ? 'bg-gray-700' : 'bg-gray-300'}`}></div>

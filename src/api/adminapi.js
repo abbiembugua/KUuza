@@ -110,3 +110,11 @@ export const fetchAdminSellers = async () => {
   const res = await fetch(`${ADMIN_API}/sellers/`, { headers: adminHeaders() });
   return handleResponse(res);
 };
+
+export const revokeSellerVerification = async (id) => {
+  const res = await fetch(`${ADMIN_API}/sellers/${id}/revoke/`, {
+    method: 'POST',
+    headers: adminHeaders(),
+  });
+  return handleResponse(res);
+};

@@ -46,4 +46,8 @@
 .ku-tag-4 { animation: kuTagFloat  6s 0.5s ease-in-out infinite; }
 .ku-tag-5 { animation: kuTagFloat 10s 1.5s ease-in-out infinite; }
 
+/* Hide scrollbar while keeping scroll functionality */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
   

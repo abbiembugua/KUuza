@@ -31,7 +31,9 @@ export const login = async (data) => {
       else if (result.email) errorMessage = result.email[0];
       else if (result.password) errorMessage = result.password[0];
 
-      throw new Error(errorMessage);
+      const err = new Error(errorMessage);
+      if (result.requires_verification) err.requiresVerification = true;
+      throw err;
     }
 
     const accessToken = result.access || result.tokens?.access;
@@ -180,6 +182,19 @@ export const verifyEmail = async (token) => {
     throw new Error(result.error || result.detail || "Unable to verify email.");
   }
 
+  return result;
+};
+
+export const verifyEmailOTP = async (email, otp) => {
+  const response = await fetch(`${API_URL}/verify-email-otp/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, otp }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(result.error || result.detail || 'Unable to verify OTP.');
+  }
   return result;
 };
 

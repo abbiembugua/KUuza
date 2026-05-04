@@ -65,7 +65,10 @@ const App = () => {
                   <Routes>
                     <Route index element={<AdminLoginPage />} />
                     <Route path="dashboard" element={<AdminDashboardPage />} />
-                    <Route path="manage" element={<AdminManagePage />} />
+                    <Route path="listings"  element={<AdminManagePage section="listings" />} />
+                    <Route path="users"     element={<AdminManagePage section="users" />} />
+                    <Route path="reports"   element={<AdminManagePage section="reports" />} />
+                    <Route path="sellers"   element={<AdminManagePage section="sellers" />} />
                   </Routes>
                 </AdminAuthProvider>
               }

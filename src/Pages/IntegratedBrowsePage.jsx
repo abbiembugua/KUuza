@@ -238,394 +238,432 @@ const IntegratedBrowsePage = () => {
 
       <div className="max-w-7xl mx-auto px-4 py-6">
 
-        {/* Category grid */}
-        <div className="grid grid-cols-4 sm:grid-cols-8 gap-3 mb-6">
+        {/* Category pills — full width above the sidebar layout */}
+        <div className="flex flex-wrap gap-2.5 mb-6">
           {CATEGORY_OPTIONS.map(cat => {
             const isSelected = selectedCategory === cat.id;
             return (
               <button
                 key={cat.id}
                 onClick={() => handleCategoryChange(cat.id)}
-                className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all duration-200 transform hover:-translate-y-1 hover:shadow-lg ${
+                className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors duration-150 ${
                   isSelected
-                    ? darkMode
-                      ? 'bg-gray-700 border-2 border-emerald-500'
-                      : 'bg-emerald-50 border-2 border-emerald-500 shadow-md'
+                    ? 'bg-emerald-500 border-emerald-500 text-white'
                     : darkMode
-                      ? 'bg-gray-800 border border-gray-700'
-                      : 'bg-white border border-gray-100 shadow-sm'
+                      ? 'bg-transparent border-gray-600 text-gray-300 hover:border-emerald-500 hover:text-emerald-400'
+                      : 'bg-transparent border-gray-300 text-gray-600 hover:border-emerald-500 hover:text-emerald-600'
                 }`}
               >
-                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${cat.color} flex items-center justify-center text-lg shadow-md`}>
-                  {cat.icon}
-                </div>
-                <span className={`text-xs font-medium text-center leading-tight ${
-                  isSelected
-                    ? 'text-emerald-600'
-                    : darkMode ? 'text-gray-300' : 'text-gray-700'
-                }`}>
-                  {cat.shortLabel}
-                </span>
+                {cat.shortLabel}
               </button>
             );
           })}
         </div>
 
-        {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            {isLoading ? 'Loading...' : `Showing ${listings.length} of ${totalCount} results`}
-          </p>
-          <div className="flex items-center gap-3">
-            <select
-              value={sortBy}
-              onChange={e => handleSortChange(e.target.value)}
-              className={`px-4 py-2 rounded-lg border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                darkMode ? 'bg-gray-800 border-gray-700 text-gray-300' : 'bg-white border-gray-200 text-gray-700'
-              }`}
-            >
-              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+      <div className="flex gap-6">
 
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all hover:shadow-md ${
-                showFilters
-                  ? 'bg-emerald-600 text-white border-emerald-600'
-                  : darkMode
-                    ? 'bg-gray-800 text-gray-300 border-gray-700'
-                    : 'bg-white text-gray-700 border-gray-200'
-              }`}
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-              Filters
-            </button>
+        {/* ── FILTER SIDEBAR (desktop: always visible, mobile: slide-in drawer) ── */}
 
-            <div className={`flex rounded-lg overflow-hidden border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-              {['grid', 'list'].map(mode => (
-                <button
-                  key={mode}
-                  onClick={() => setViewMode(mode)}
-                  className={`p-2 transition-colors ${
-                    viewMode === mode
-                      ? 'bg-emerald-600 text-white'
-                      : darkMode ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-600'
-                  }`}
-                >
-                  {mode === 'grid' ? <Grid className="w-4 h-4" /> : <List className="w-4 h-4" />}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Filters panel */}
+        {/* Mobile overlay */}
         {showFilters && (
-          <div className={`mb-6 p-6 rounded-xl border backdrop-blur-md ${
-            darkMode ? 'bg-gray-800/80 border-gray-700' : 'bg-white/90 border-gray-200'
+          <div
+            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+            onClick={() => setShowFilters(false)}
+          />
+        )}
+
+        {/* Sidebar panel */}
+        <aside className={`
+          fixed top-0 left-0 h-full z-50 w-72 overflow-y-auto transition-transform duration-300
+          lg:static lg:z-auto lg:h-auto lg:w-64 lg:flex-shrink-0 lg:translate-x-0 lg:overflow-visible
+          ${showFilters ? 'translate-x-0' : '-translate-x-full'}
+          ${darkMode ? 'bg-gray-900 lg:bg-transparent' : 'bg-white lg:bg-transparent'}
+        `}>
+          {/* Mobile close button */}
+          <div className="flex items-center justify-between p-4 lg:hidden">
+            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Filters</span>
+            <button onClick={() => setShowFilters(false)}>
+              <X className={`w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`} />
+            </button>
+          </div>
+
+          <div className={`rounded-xl border p-3 sticky top-24 ${
+            darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
           }`}>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Listing Type</label>
-                <select
-                  value={selectedListingType}
-                  onChange={e => handleListingTypeChange(e.target.value)}
-                  className={`w-full px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-emerald-500 ${
-                    darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-200'
-                  }`}
-                >
-                  <option value="all">All Types</option>
-                  <option value="good">Goods</option>
-                  <option value="service">Services</option>
-                </select>
-              </div>
 
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Condition</label>
-                <select
-                  value={selectedCondition}
-                  onChange={e => handleConditionChange(e.target.value)}
-                  disabled={selectedListingType === 'service'}
-                  className={`w-full px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 ${
-                    darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-200'
-                  }`}
-                >
-                  {CONDITION_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Price Range (KSh)</label>
-                <div className="flex gap-2">
-                  <input
-                    type="number" placeholder="Min"
-                    value={priceRange[0] || ''}
-                    onChange={e => handlePriceChange([Number(e.target.value) || 0, priceRange[1]])}
-                    className={`flex-1 px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-emerald-500 ${
-                      darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-200'
-                    }`}
-                  />
-                  <input
-                    type="number" placeholder="Max"
-                    value={priceRange[1] === 100000 ? '' : priceRange[1]}
-                    onChange={e => handlePriceChange([priceRange[0], Number(e.target.value) || 100000])}
-                    className={`flex-1 px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-emerald-500 ${
-                      darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-200'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-end">
+            {/* Sidebar header */}
+            <div className="flex items-center justify-between mb-3">
+              <h3 className={`font-semibold flex items-center gap-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                <SlidersHorizontal className="w-4 h-4 text-emerald-500" />
+                Filters
+              </h3>
+              {hasActiveFilters && (
                 <button
-                  onClick={() => setShowFilters(false)}
-                  className="w-full py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-lg font-medium text-sm transition-colors"
+                  onClick={resetFilters}
+                  className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
                 >
-                  Apply Filters
+                  Reset all
                 </button>
+              )}
+            </div>
+
+            {/* Listing Type */}
+            <div className="mb-3">
+              <p className={`text-xs font-semibold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Type</p>
+              <div className="space-y-0.5">
+                {[{ value: 'all', label: 'All Types' }, { value: 'good', label: 'Goods' }, { value: 'service', label: 'Services' }].map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => handleListingTypeChange(opt.value)}
+                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-colors text-left ${
+                      selectedListingType === opt.value
+                        ? 'bg-emerald-500 text-white'
+                        : darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${selectedListingType === opt.value ? 'bg-white' : darkMode ? 'bg-gray-600' : 'bg-gray-300'}`} />
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className={`border-t mb-3 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
+
+            {/* Condition */}
+            <div className={`mb-3 ${selectedListingType === 'service' ? 'opacity-40 pointer-events-none' : ''}`}>
+              <p className={`text-xs font-semibold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Condition</p>
+              <select
+                value={selectedCondition}
+                onChange={e => handleConditionChange(e.target.value)}
+                className={`w-full px-2 py-1.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                  darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-200'
+                }`}
+              >
+                {CONDITION_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+
+            <div className={`border-t mb-3 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
+
+            {/* Price Range */}
+            <div>
+              <p className={`text-xs font-semibold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Price Range (KSh)</p>
+              <div className="space-y-1.5">
+                <input
+                  type="number" placeholder="Min"
+                  value={priceRange[0] || ''}
+                  onChange={e => handlePriceChange([Number(e.target.value) || 0, priceRange[1]])}
+                  className={`w-full px-2 py-1.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                    darkMode ? 'bg-gray-700 text-white border-gray-600 placeholder-gray-500' : 'bg-white text-gray-900 border-gray-200 placeholder-gray-400'
+                  }`}
+                />
+                <input
+                  type="number" placeholder="Max"
+                  value={priceRange[1] === 100000 ? '' : priceRange[1]}
+                  onChange={e => handlePriceChange([priceRange[0], Number(e.target.value) || 100000])}
+                  className={`w-full px-2 py-1.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                    darkMode ? 'bg-gray-700 text-white border-gray-600 placeholder-gray-500' : 'bg-white text-gray-900 border-gray-200 placeholder-gray-400'
+                  }`}
+                />
+              </div>
+            </div>
+
+          </div>
+        </aside>
+
+        {/* ── MAIN CONTENT ── */}
+        <div className="flex-1 min-w-0">
+
+          {/* Toolbar */}
+          <div className="flex items-center justify-between gap-3 mb-5">
+            <div className="flex items-center gap-3">
+              {/* Mobile filters toggle */}
+              <button
+                onClick={() => setShowFilters(true)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium lg:hidden ${
+                  hasActiveFilters
+                    ? 'bg-emerald-500 border-emerald-500 text-white'
+                    : darkMode ? 'bg-gray-800 text-gray-300 border-gray-700' : 'bg-white text-gray-700 border-gray-200'
+                }`}
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                Filters {hasActiveFilters && '•'}
+              </button>
+
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                {isLoading ? 'Loading…' : `${totalCount} result${totalCount !== 1 ? 's' : ''}`}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <select
+                value={sortBy}
+                onChange={e => handleSortChange(e.target.value)}
+                className={`px-3 py-2 rounded-lg border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                  darkMode ? 'bg-gray-800 border-gray-700 text-gray-300' : 'bg-white border-gray-200 text-gray-700'
+                }`}
+              >
+                {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+
+              <div className={`flex rounded-lg overflow-hidden border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                {['grid', 'list'].map(mode => (
+                  <button
+                    key={mode}
+                    onClick={() => setViewMode(mode)}
+                    className={`p-2 transition-colors ${
+                      viewMode === mode
+                        ? 'bg-emerald-600 text-white'
+                        : darkMode ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-600'
+                    }`}
+                  >
+                    {mode === 'grid' ? <Grid className="w-4 h-4" /> : <List className="w-4 h-4" />}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
-        )}
 
-        {/* Active filter chips */}
-        {hasActiveFilters && (
-          <div className="flex flex-wrap gap-2 mb-6">
-            {selectedCategory !== 'all' && (
-              <span className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${darkMode ? 'bg-gray-800 text-gray-300' : 'bg-emerald-100 text-emerald-700'}`}>
-                {CATEGORY_OPTIONS.find(c => c.id === selectedCategory)?.name}
-                <button onClick={() => handleCategoryChange('all')} className="hover:text-red-500"><X className="w-3 h-3" /></button>
-              </span>
-            )}
-            {selectedListingType !== 'all' && (
-              <span className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${darkMode ? 'bg-gray-800 text-gray-300' : 'bg-emerald-100 text-emerald-700'}`}>
-                {selectedListingType === 'service' ? 'Services' : 'Goods'}
-                <button onClick={() => handleListingTypeChange('all')} className="hover:text-red-500"><X className="w-3 h-3" /></button>
-              </span>
-            )}
-            {selectedCondition !== 'all' && selectedListingType !== 'service' && (
-              <span className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${darkMode ? 'bg-gray-800 text-gray-300' : 'bg-emerald-100 text-emerald-700'}`}>
-                {CONDITION_OPTIONS.find(c => c.value === selectedCondition)?.label}
-                <button onClick={() => handleConditionChange('all')} className="hover:text-red-500"><X className="w-3 h-3" /></button>
-              </span>
-            )}
-            {priceRange[0] > 0 && (
-              <span className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${darkMode ? 'bg-gray-800 text-gray-300' : 'bg-emerald-100 text-emerald-700'}`}>
-                Min KSh {priceRange[0].toLocaleString()}
-                <button onClick={() => handlePriceChange([0, priceRange[1]])} className="hover:text-red-500"><X className="w-3 h-3" /></button>
-              </span>
-            )}
-            {priceRange[1] < 100000 && (
-              <span className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${darkMode ? 'bg-gray-800 text-gray-300' : 'bg-emerald-100 text-emerald-700'}`}>
-                Max KSh {priceRange[1].toLocaleString()}
-                <button onClick={() => handlePriceChange([priceRange[0], 100000])} className="hover:text-red-500"><X className="w-3 h-3" /></button>
-              </span>
-            )}
-            <button onClick={resetFilters} className="text-emerald-600 hover:text-emerald-700 text-sm font-medium">Clear all</button>
-          </div>
-        )}
+          {/* Active filter chips */}
+          {hasActiveFilters && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {selectedCategory !== 'all' && (
+                <span className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${darkMode ? 'bg-gray-800 text-gray-300' : 'bg-emerald-100 text-emerald-700'}`}>
+                  {CATEGORY_OPTIONS.find(c => c.id === selectedCategory)?.name}
+                  <button onClick={() => handleCategoryChange('all')} className="hover:text-red-500"><X className="w-3 h-3" /></button>
+                </span>
+              )}
+              {selectedListingType !== 'all' && (
+                <span className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${darkMode ? 'bg-gray-800 text-gray-300' : 'bg-emerald-100 text-emerald-700'}`}>
+                  {selectedListingType === 'service' ? 'Services' : 'Goods'}
+                  <button onClick={() => handleListingTypeChange('all')} className="hover:text-red-500"><X className="w-3 h-3" /></button>
+                </span>
+              )}
+              {selectedCondition !== 'all' && selectedListingType !== 'service' && (
+                <span className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${darkMode ? 'bg-gray-800 text-gray-300' : 'bg-emerald-100 text-emerald-700'}`}>
+                  {CONDITION_OPTIONS.find(c => c.value === selectedCondition)?.label}
+                  <button onClick={() => handleConditionChange('all')} className="hover:text-red-500"><X className="w-3 h-3" /></button>
+                </span>
+              )}
+              {priceRange[0] > 0 && (
+                <span className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${darkMode ? 'bg-gray-800 text-gray-300' : 'bg-emerald-100 text-emerald-700'}`}>
+                  Min KSh {priceRange[0].toLocaleString()}
+                  <button onClick={() => handlePriceChange([0, priceRange[1]])} className="hover:text-red-500"><X className="w-3 h-3" /></button>
+                </span>
+              )}
+              {priceRange[1] < 100000 && (
+                <span className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${darkMode ? 'bg-gray-800 text-gray-300' : 'bg-emerald-100 text-emerald-700'}`}>
+                  Max KSh {priceRange[1].toLocaleString()}
+                  <button onClick={() => handlePriceChange([priceRange[0], 100000])} className="hover:text-red-500"><X className="w-3 h-3" /></button>
+                </span>
+              )}
+              <button onClick={resetFilters} className="text-emerald-600 hover:text-emerald-700 text-sm font-medium">Clear all</button>
+            </div>
+          )}
 
-        {/* Header */}
-        <h2 className={`text-xl font-bold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-          {getContextualHeader()}
-        </h2>
+          {/* Header */}
+          <h2 className={`text-xl font-bold mb-5 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            {getContextualHeader()}
+          </h2>
 
-        {/* Loading spinner (initial load) */}
-        {isLoading && listings.length === 0 && (
-          <div className="flex justify-center items-center h-32">
-            <Loader className="w-8 h-8 animate-spin text-emerald-500" />
-          </div>
-        )}
+          {/* Loading spinner */}
+          {isLoading && listings.length === 0 && (
+            <div className="flex justify-center items-center h-32">
+              <Loader className="w-8 h-8 animate-spin text-emerald-500" />
+            </div>
+          )}
 
-        {/* Listings grid/list */}
-        {listings.length > 0 && (
-          <div className={
-            viewMode === 'grid'
-              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
-              : 'space-y-4'
-          }>
-            {listings.map(item => {
-              const isOutOfStock = item.listing_type !== 'service' && getAvailableQuantity(item) <= 0;
-              const isMarkedSold = item.status === 'sold';
-              const isUnavailable = item.listing_type === 'service' ? isMarkedSold : isOutOfStock;
+          {/* Listings grid/list */}
+          {listings.length > 0 && (
+            <div className={
+              viewMode === 'grid'
+                ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5'
+                : 'space-y-4'
+            }>
+              {listings.map(item => {
+                const isOutOfStock = item.listing_type !== 'service' && getAvailableQuantity(item) <= 0;
+                const isMarkedSold = item.status === 'sold';
+                const isUnavailable = item.listing_type === 'service' ? isMarkedSold : isOutOfStock;
 
-              return (
-              <div
-                key={item.id}
-                onClick={() => handleViewListing(item.id)}
-                className={`relative rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer hover:scale-105 ${
-                  viewMode === 'list' ? 'flex' : ''
-                } ${darkMode ? 'bg-gray-800' : 'bg-white'} ${
-                  isUnavailable ? 'opacity-60 saturate-50' : ''
-                } ${isOwner(item.seller) ? 'border-2 border-green-600' : ''}`}
-              >
-                {isUnavailable && (
-                  <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold z-10 -rotate-12">
-                    {item.listing_type === 'service' ? 'UNAVAILABLE' : 'OUT'}
-                  </div>
-                )}
-
-                {/* Image */}
-                <div className={`relative ${viewMode === 'list' ? 'w-48 flex-shrink-0' : ''}`}>
-                  <img
-                    src={item.images?.[0]?.image || '/placeholder.jpg'}
-                    alt={item.title}
-                    className={`object-cover ${
-                      viewMode === 'grid'
-                        ? 'w-full h-48 rounded-t-xl'
-                        : 'w-48 h-full rounded-l-xl'
-                    }`}
-                  />
-                  {isOwner(item.seller) && (
-                    <div className="absolute top-3 left-3 bg-green-700 text-white px-2 py-0.5 rounded-full text-xs font-bold tracking-wide shadow z-10">
-                      YOUR LISTING
+                return (
+                <div
+                  key={item.id}
+                  onClick={() => handleViewListing(item.id)}
+                  className={`relative rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer hover:scale-105 ${
+                    viewMode === 'list' ? 'flex' : ''
+                  } ${darkMode ? 'bg-gray-800' : 'bg-white'} ${
+                    isUnavailable ? 'opacity-60 saturate-50' : ''
+                  } ${isOwner(item.seller) ? 'border-2 border-green-600' : ''}`}
+                >
+                  {isUnavailable && (
+                    <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold z-10 -rotate-12">
+                      {item.listing_type === 'service' ? 'UNAVAILABLE' : 'OUT'}
                     </div>
                   )}
-                  <div className="absolute top-3 right-3">
-                    <span className={`px-2 py-1 rounded-lg text-xs font-medium backdrop-blur-sm ${
-                      darkMode ? 'bg-gray-900/80 text-gray-200' : 'bg-white/90 text-gray-700'
-                    }`}>
-                      {CATEGORY_OPTIONS.find(c => c.id === item.category)?.shortLabel || item.category}
-                    </span>
-                  </div>
-                </div>
 
-                {/* Content */}
-                <div className={`p-4 ${viewMode === 'list' ? 'flex-1' : ''}`}>
-                  <p className={`text-xs mb-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {new Date(item.created_at).toLocaleDateString()}
-                  </p>
-
-                  <h3 className={`font-semibold mb-2 line-clamp-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {item.title}
-                  </h3>
-
-                  {viewMode === 'list' && (
-                    <p className={`text-sm mb-3 line-clamp-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {item.description}
-                    </p>
-                  )}
-
-                  <div className="mb-3">
-                    <span className="text-xl font-bold text-emerald-600">
-                      {item.price
-                        ? `KSh ${parseFloat(item.price).toLocaleString('en-KE')}`
-                        : 'Price on request'}
-                    </span>
-                  </div>
-
-                  {item.condition && (
-                    <div className="mb-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getConditionBadgeColor(item.condition)}`}>
-                        {item.condition}
+                  {/* Image */}
+                  <div className={`relative ${viewMode === 'list' ? 'w-48 flex-shrink-0' : ''}`}>
+                    <img
+                      src={item.images?.[0]?.image || '/placeholder.jpg'}
+                      alt={item.title}
+                      className={`object-cover ${
+                        viewMode === 'grid'
+                          ? 'w-full h-48 rounded-t-xl'
+                          : 'w-48 h-full rounded-l-xl'
+                      }`}
+                    />
+                    {isOwner(item.seller) && (
+                      <div className="absolute top-3 left-3 bg-green-700 text-white px-2 py-0.5 rounded-full text-xs font-bold tracking-wide shadow z-10">
+                        YOUR LISTING
+                      </div>
+                    )}
+                    <div className="absolute top-3 right-3">
+                      <span className={`px-2 py-1 rounded-lg text-xs font-medium backdrop-blur-sm ${
+                        darkMode ? 'bg-gray-900/80 text-gray-200' : 'bg-white/90 text-gray-700'
+                      }`}>
+                        {CATEGORY_OPTIONS.find(c => c.id === item.category)?.shortLabel || item.category}
                       </span>
                     </div>
-                  )}
-
-                  {/* Seller row — shared component */}
-                  <div className={`mb-3 pb-3 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <SellerRow
-                      sellerName={item.seller_name}
-                      averageRating={item.average_rating}
-                      totalReviews={item.total_reviews}
-                      darkMode={darkMode}
-                    />
                   </div>
 
-                  <div className={`flex items-center justify-between mb-3 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {item.area_of_operation || 'Campus'}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Eye className="w-3 h-3" />
-                      {item.views_count || 0}
-                    </span>
-                  </div>
-
-                  {item.listing_type !== 'service' && (
-                    <p className={`mb-3 text-xs font-medium ${isOutOfStock ? 'text-red-500' : darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {isOutOfStock ? 'Out of stock' : `${getAvailableQuantity(item)} available`}
+                  {/* Content */}
+                  <div className={`p-4 ${viewMode === 'list' ? 'flex-1' : ''}`}>
+                    <p className={`text-xs mb-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {new Date(item.created_at).toLocaleDateString()}
                     </p>
-                  )}
 
-                  {!isOwner(item.seller) && !isUnavailable && (
-                    <button
-                      onClick={e => { e.stopPropagation(); handleAddToCart(item); }}
-                      className="w-full px-3 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-lg font-medium text-sm transition-colors"
-                    >
-                      Add to Cart
-                    </button>
-                  )}
+                    <h3 className={`font-semibold mb-2 line-clamp-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {item.title}
+                    </h3>
+
+                    {viewMode === 'list' && (
+                      <p className={`text-sm mb-3 line-clamp-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {item.description}
+                      </p>
+                    )}
+
+                    <div className="mb-3">
+                      <span className="text-xl font-bold text-emerald-600">
+                        {item.price
+                          ? `KSh ${parseFloat(item.price).toLocaleString('en-KE')}`
+                          : 'Price on request'}
+                      </span>
+                    </div>
+
+                    {item.condition && (
+                      <div className="mb-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getConditionBadgeColor(item.condition)}`}>
+                          {item.condition}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className={`mb-3 pb-3 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                      <SellerRow
+                        sellerName={item.seller_name}
+                        averageRating={item.average_rating}
+                        totalReviews={item.total_reviews}
+                        darkMode={darkMode}
+                      />
+                    </div>
+
+                    <div className={`flex items-center justify-between mb-3 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {item.area_of_operation || 'Campus'}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Eye className="w-3 h-3" />
+                        {item.views_count || 0}
+                      </span>
+                    </div>
+
+                    {item.listing_type !== 'service' && (
+                      <p className={`mb-3 text-xs font-medium ${isOutOfStock ? 'text-red-500' : darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {isOutOfStock ? 'Out of stock' : `${getAvailableQuantity(item)} available`}
+                      </p>
+                    )}
+
+                    {!isOwner(item.seller) && !isUnavailable && (
+                      <button
+                        onClick={e => { e.stopPropagation(); handleAddToCart(item); }}
+                        className="w-full px-3 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-lg font-medium text-sm transition-colors"
+                      >
+                        Add to Cart
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )})}
-          </div>
-        )}
+              )})}
+            </div>
+          )}
 
-        {/* Empty state */}
-        {!isLoading && listings.length === 0 && (
-          <div className="text-center py-12">
-            <Package className={`w-24 h-24 mx-auto mb-4 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`} />
-            <h3 className={`text-xl font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>No listings found</h3>
-            <p className={`mb-4 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>Try adjusting your filters or search query</p>
-            <button
-              onClick={resetFilters}
-              className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-lg transition-colors"
-            >
-              Clear All Filters
-            </button>
-          </div>
-        )}
+          {/* Empty state */}
+          {!isLoading && listings.length === 0 && (
+            <div className="text-center py-12">
+              <Package className={`w-24 h-24 mx-auto mb-4 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`} />
+              <h3 className={`text-xl font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>No listings found</h3>
+              <p className={`mb-4 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>Try adjusting your filters or search query</p>
+              <button
+                onClick={resetFilters}
+                className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-lg transition-colors"
+              >
+                Clear All Filters
+              </button>
+            </div>
+          )}
 
-        {/* Pagination */}
-        {!isLoading && listings.length > 0 && totalPages > 1 && (
-          <div className="mt-8 flex justify-center items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
-              className={`p-2 rounded-lg transition-colors ${
-                currentPage === 1
-                  ? darkMode ? 'bg-gray-800 text-gray-600 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
+          {/* Pagination */}
+          {!isLoading && listings.length > 0 && totalPages > 1 && (
+            <div className="mt-8 flex justify-center items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                disabled={currentPage === 1}
+                className={`p-2 rounded-lg transition-colors ${
+                  currentPage === 1
+                    ? darkMode ? 'bg-gray-800 text-gray-600 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
 
-            {[...Array(Math.min(totalPages, 5))].map((_, i) => {
-              const page = currentPage <= 3 ? i + 1 : currentPage - 2 + i;
-              if (page > totalPages) return null;
-              return (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
-                    currentPage === page
-                      ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white'
-                      : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  {page}
-                </button>
-              );
-            })}
+              {[...Array(Math.min(totalPages, 5))].map((_, i) => {
+                const page = currentPage <= 3 ? i + 1 : currentPage - 2 + i;
+                if (page > totalPages) return null;
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      currentPage === page
+                        ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white'
+                        : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
 
-            <button
-              onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className={`p-2 rounded-lg transition-colors ${
-                currentPage === totalPages
-                  ? darkMode ? 'bg-gray-800 text-gray-600 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-        )}
+              <button
+                onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className={`p-2 rounded-lg transition-colors ${
+                  currentPage === totalPages
+                    ? darkMode ? 'bg-gray-800 text-gray-600 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
 
-      </div>
+        </div>{/* end main content */}
+      </div>{/* end flex gap-6 */}
+      </div>{/* end outer px-4 py-6 */}
     </div>
   );
 };

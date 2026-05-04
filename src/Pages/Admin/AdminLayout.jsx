@@ -27,10 +27,8 @@ const AdminLayout = ({ children, title }) => {
       <aside className={`w-56 shrink-0 flex flex-col border-r sticky top-0 h-screen ${sidebar}`}>
 
         {/* Brand */}
-        <div className="px-5 pt-6 pb-5 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-sky-500 flex items-center justify-center shrink-0">
-            <ShieldCheck size={18} className="text-white" />
-          </div>
+        <div className="px-5 pt-6 pb-5 flex items-center gap-2.5">
+          <img src="/kuuza-logo.png" alt="KUuza" className="h-11 w-auto object-contain shrink-0" />
           <div className="leading-none">
             <p className="font-bold text-sm">KUuza</p>
             <p className={`text-xs mt-0.5 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Admin Panel</p>

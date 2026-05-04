@@ -34,18 +34,19 @@ const StatCard = ({ icon: Icon, label, value, color, to }) => {
 };
 
 const AdminDashboardPage = () => {
-  const { adminUser } = useAdminAuth();
+  const { adminUser, adminLoading } = useAdminAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (adminLoading) return;
     if (!adminUser) { navigate('/kuuza-control/'); return; }
     fetchDashboardStats()
       .then(setStats)
       .catch((e) => toast.error(e.message || 'Failed to load stats'))
       .finally(() => setLoading(false));
-  }, [adminUser, navigate]);
+  }, [adminUser, adminLoading, navigate]);
 
   const cards = [
     { icon: LayoutGrid, label: 'Active Listings',  value: stats?.total_listings   ?? null, color: 'bg-emerald-500', to: '/kuuza-control/listings' },
@@ -53,6 +54,14 @@ const AdminDashboardPage = () => {
     { icon: Flag,       label: 'Pending Reports',  value: stats?.pending_reports  ?? null, color: 'bg-amber-500',   to: '/kuuza-control/reports' },
     { icon: BadgeCheck, label: 'Verified Sellers', value: stats?.verified_sellers ?? null, color: 'bg-violet-500',  to: '/kuuza-control/sellers' },
   ];
+
+  if (adminLoading) return (
+    <AdminLayout title="Overview">
+      <div className="flex items-center justify-center py-24">
+        <Loader2 size={28} className="animate-spin text-emerald-500" />
+      </div>
+    </AdminLayout>
+  );
 
   return (
     <AdminLayout title="Overview">

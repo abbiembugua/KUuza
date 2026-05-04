@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { FileText, Loader2 } from "lucide-react";
+import { fetchLogoBase64, drawLogo } from "../../utils/pdfLogo";
 
 const EMERALD = [5, 150, 105];
 const WHITE = [255, 255, 255];
@@ -169,20 +170,23 @@ export default function ReportGenerator({
     const pageWidth = doc.internal.pageSize.getWidth();
     const headerHeight = 30;
 
+    const logoBase64 = await fetchLogoBase64();
+
     // Header background
     doc.setFillColor(...EMERALD);
     doc.rect(0, 0, pageWidth, headerHeight, "F");
 
-    // Left: brand name + tagline
+    // Logo + brand text
+    const textX = drawLogo(doc, logoBase64, headerHeight);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
     doc.setTextColor(...WHITE);
-    doc.text("KUuza", 14, 16);
+    doc.text("KUuza", textX, 16);
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
     doc.setTextColor(200, 245, 230);
-    doc.text("Kenyatta University Official Marketplace", 14, 23);
+    doc.text("Kenyatta University Official Marketplace", textX, 23);
 
     // Right: report title + recipient + issued date
     doc.setFont("helvetica", "bold");

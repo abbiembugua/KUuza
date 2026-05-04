@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/Themecontext';
@@ -6,7 +6,6 @@ import DashboardNavbar from '../Components/Layout/DashboardNavbar';
 import {
   DashboardHero,
   StatsStrip,
-  CategoryGrid,
   HorizontalScrollSection,
   MyListingsPreview,
 } from '../Components/Dashboard';
@@ -25,6 +24,7 @@ const IntegratedDashboard = () => {
   const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [exploreOpen, setExploreOpen] = useState(false);
   const [cartItems, setCartItems] = useState([]);
   const [trendingListings, setTrendingListings] = useState([]);
   const [recentListings, setRecentListings] = useState([]);
@@ -91,48 +91,104 @@ const IntegratedDashboard = () => {
 
       <div className="h-16" />
 
-      <DashboardHero darkMode={darkMode} user={user} />
+      <DashboardHero darkMode={darkMode} user={user} cartCount={cartItems.length} />
 
-      <div className="max-w-7xl mx-auto px-4 py-8 space-y-10">
+      <div className="max-w-7xl mx-auto px-4 pt-6 pb-12 space-y-6">
 
-        <StatsStrip
-          darkMode={darkMode}
-          isLoading={isLoading}
-          cartCount={cartItems.length}
-          myListingsCount={myListings.length}
-          soldCount={soldItems.length}
-          purchasesCount={purchases.length}
-        />
+        {/* At a glance tag + stats */}
+        <div>
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider mb-3 ${
+            darkMode
+              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+              : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+          }`}>
+            At a glance
+          </span>
+          <StatsStrip
+            darkMode={darkMode}
+            isLoading={isLoading}
+            cartCount={cartItems.length}
+            myListingsCount={myListings.length}
+            soldCount={soldItems.length}
+            purchasesCount={purchases.length}
+          />
+        </div>
 
-        <CategoryGrid darkMode={darkMode} />
+        {/* Explore KUuza */}
+        <div>
+          <button
+            onClick={() => setExploreOpen(o => !o)}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold border transition-all duration-200 ${
+              exploreOpen
+                ? 'bg-emerald-500 border-emerald-500 text-white'
+                : darkMode
+                  ? 'bg-gray-800 border-gray-600 text-gray-200 hover:border-emerald-500 hover:text-emerald-400'
+                  : 'bg-white border-gray-300 text-gray-700 hover:border-emerald-500 hover:text-emerald-600'
+            }`}
+          >
+            Explore KUuza
+            <span className={`text-base leading-none transition-transform duration-200 ${exploreOpen ? 'rotate-180 inline-block' : ''}`}>
+              ↓
+            </span>
+          </button>
 
-        <HorizontalScrollSection
-          title="🔥 Trending on Campus"
-          listings={trendingListings}
-          isLoading={isLoading}
-          darkMode={darkMode}
-          onView={handleViewListing}
-          onViewAll={() => navigate('/browse?ordering=most_viewed')}
-          emptyMessage="No trending listings yet"
-        />
+          {exploreOpen && (
+            <div className="flex flex-wrap gap-2.5 mt-3">
+              {[
+                { id: 'all',            label: 'All listings'   },
+                { id: 'books',          label: 'Books'          },
+                { id: 'electronics',    label: 'Electronics'    },
+                { id: 'fashion',        label: 'Fashion'        },
+                { id: 'furniture',      label: 'Furniture'      },
+                { id: 'food_beverages', label: 'Food'           },
+                { id: 'beauty',         label: 'Beauty'         },
+                { id: 'other',          label: 'Other'          },
+              ].map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => navigate(cat.id === 'all' ? '/browse' : `/browse?category=${cat.id}`)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors duration-150 ${
+                    darkMode
+                      ? 'bg-transparent border-gray-600 text-gray-300 hover:border-emerald-500 hover:text-emerald-400'
+                      : 'bg-transparent border-gray-300 text-gray-700 hover:border-emerald-500 hover:text-emerald-600'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
-        <HorizontalScrollSection
-          title="🆕 Just Listed"
-          listings={recentListings}
-          isLoading={isLoading}
-          darkMode={darkMode}
-          onView={handleViewListing}
-          onViewAll={() => navigate('/browse?ordering=newest')}
-          emptyMessage="No recent listings yet"
-        />
-
-        {!isLoading && (
-          <MyListingsPreview
-            listings={myListings}
+        <div className="space-y-8">
+          <HorizontalScrollSection
+            title="Trending on Campus"
+            listings={trendingListings}
+            isLoading={isLoading}
             darkMode={darkMode}
             onView={handleViewListing}
+            onViewAll={() => navigate('/browse?ordering=most_viewed')}
+            emptyMessage="No trending listings yet"
           />
-        )}
+
+          <HorizontalScrollSection
+            title="Just Listed"
+            listings={recentListings}
+            isLoading={isLoading}
+            darkMode={darkMode}
+            onView={handleViewListing}
+            onViewAll={() => navigate('/browse?ordering=newest')}
+            emptyMessage="No recent listings yet"
+          />
+
+          {!isLoading && (
+            <MyListingsPreview
+              listings={myListings}
+              darkMode={darkMode}
+              onView={handleViewListing}
+            />
+          )}
+        </div>
 
       </div>
     </div>

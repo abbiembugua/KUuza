@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { fetchLogoBase64, drawLogo } from '../../utils/pdfLogo';
 import {
   Trash2, UserX, UserCheck, BadgeCheck,
   ChevronDown, ChevronUp, Loader2, CheckCircle,
@@ -10,7 +11,7 @@ import {
   fetchAdminListings, removeListing,
   fetchAdminUsers, suspendUser, reactivateUser,
   fetchAdminReports, dismissReport, reportRemoveListing, reportSuspendUser,
-  fetchAdminSellers,
+  fetchAdminSellers, revokeSellerVerification,
 } from '../../api/adminapi';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useTheme } from '../../context/Themecontext';
@@ -132,10 +133,13 @@ async function buildBase(title) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const W = doc.internal.pageSize.getWidth();
 
+  const logoBase64 = await fetchLogoBase64();
+
   doc.setFillColor(...EMERALD); doc.rect(0, 0, W, 30, 'F');
-  doc.setFont('helvetica', 'bold');   doc.setFontSize(16); doc.setTextColor(...WHITE); doc.text('KUuza', 14, 16);
+  const textX = drawLogo(doc, logoBase64, 30);
+  doc.setFont('helvetica', 'bold');   doc.setFontSize(16); doc.setTextColor(...WHITE); doc.text('KUuza', textX, 16);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(7);  doc.setTextColor(200, 245, 230);
-  doc.text('Kenyatta University Official Marketplace', 14, 23);
+  doc.text('Kenyatta University Official Marketplace', textX, 23);
   doc.setFont('helvetica', 'bold');   doc.setFontSize(13); doc.setTextColor(...WHITE);
   doc.text(title, W - 14, 10, { align: 'right' });
   doc.setFont('helvetica', 'normal'); doc.setFontSize(7);  doc.setTextColor(200, 245, 230);
@@ -224,32 +228,73 @@ const ListingsSection = ({ darkMode }) => {
   const downloadPDF = async () => {
     setPdfLoading(true);
     try {
-      const { doc, autoTable, W, Y: sy } = await buildBase('Listings Report');
+      // Build a descriptive title from active filters so redundant columns can be dropped
+      const STATUS_LABEL = { active: 'Active', sold: 'Sold', deactivated: 'Deactivated' };
+      const TYPE_LABEL   = { good: 'Goods', service: 'Services' };
+      const CAT_LABEL    = { books: 'Books', electronics: 'Electronics', fashion: 'Fashion', furniture: 'Furniture', food_beverages: 'Food & Beverages', beauty: 'Beauty', other: 'Other' };
+
+      const reportTitle = [
+        status   && STATUS_LABEL[status],
+        category && CAT_LABEL[category],
+        type     && TYPE_LABEL[type],
+        'Listings Report',
+      ].filter(Boolean).join(' ');
+
+      const { doc, autoTable, W, Y: sy } = await buildBase(reportTitle);
       const afterBoxes = statBoxes(doc, sy, W, 'LISTING SUMMARY', [
         { label: 'Total Listings', value: filtered.length },
         { label: 'Active',  value: filtered.filter(l => l.status === 'active' && !l.is_draft).length },
         { label: 'Sold',    value: filtered.filter(l => l.status === 'sold').length },
         { label: 'Drafts',  value: filtered.filter(l => l.is_draft).length },
       ]);
-      const parts = [status && `Status: ${status}`, category && `Category: ${category}`, type && `Type: ${type}`, search && `Search: "${search}"`].filter(Boolean);
+
+      // Search filter note only — status/category/type are already in the title
       doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(107, 114, 128);
-      doc.text(parts.length ? `Filters: ${parts.join(' · ')}` : 'Showing all listings', 18, afterBoxes + 5);
+      doc.text(search ? `Search: "${search}"` : 'Showing all matching listings', 18, afterBoxes + 5);
+
       let cy = afterBoxes + 13;
       doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...EMERALD);
-      doc.text(`All Listings (${filtered.length})`, 14, cy);
+      doc.text(`${reportTitle} (${filtered.length})`, 14, cy);
+
+      // Omit columns whose values are already expressed in the report title
+      const showCategory = !category;
+      const showType     = !type;
+      const showStatus   = !status;
+
+      // Redistribute freed-up width to the Title column
+      const titleWidth = 72 + (!showCategory ? 36 : 0) + (!showType ? 22 : 0) + (!showStatus ? 27 : 0);
+
+      const cols = [
+        'Title', 'Seller', 'Price',
+        ...(showCategory ? ['Category'] : []),
+        ...(showType     ? ['Type']     : []),
+        ...(showStatus   ? ['Status']   : []),
+        'Date Posted',
+      ];
+
+      const colStyles = { 0: { cellWidth: titleWidth }, 1: { cellWidth: 45 }, 2: { cellWidth: 33 } };
+      let ci = 3;
+      if (showCategory) { colStyles[ci] = { cellWidth: 36 }; ci++; }
+      if (showType)     { colStyles[ci] = { cellWidth: 22 }; ci++; }
+      if (showStatus)   { colStyles[ci] = { cellWidth: 27 }; ci++; }
+      colStyles[ci] = { cellWidth: 32 };
+
       autoTable(doc, {
         startY: cy + 3,
-        head: [['Title', 'Seller', 'Price', 'Category', 'Type', 'Status', 'Date Posted']],
+        head: [cols],
         body: filtered.map(l => [
-          l.is_draft ? `[Draft] ${l.title}` : l.title, l.seller_name,
+          l.is_draft ? `[Draft] ${l.title}` : l.title,
+          l.seller_name,
           l.price ? `KSh ${Number(l.price).toLocaleString('en-KE', { minimumFractionDigits: 2 })}` : '—',
-          l.category, l.listing_type === 'good' ? 'Good' : 'Service',
-          l.status.charAt(0).toUpperCase() + l.status.slice(1), fmtDate(l.created_at),
+          ...(showCategory ? [l.category]                                                       : []),
+          ...(showType     ? [l.listing_type === 'good' ? 'Good' : 'Service']                  : []),
+          ...(showStatus   ? [l.status.charAt(0).toUpperCase() + l.status.slice(1)]            : []),
+          fmtDate(l.created_at),
         ]),
         styles: { fontSize: 8.5, cellPadding: 3, overflow: 'ellipsize' },
         headStyles: { fillColor: EMERALD, textColor: WHITE, fontStyle: 'bold', fontSize: 9 },
         alternateRowStyles: { fillColor: [240, 253, 250] },
-        columnStyles: { 0: { cellWidth: 72 }, 1: { cellWidth: 45 }, 2: { cellWidth: 33 }, 3: { cellWidth: 36 }, 4: { cellWidth: 22 }, 5: { cellWidth: 27 }, 6: { cellWidth: 32 } },
+        columnStyles: colStyles,
       });
       footers(doc, W);
       doc.save(`KUuza_Listings_Report_${Date.now()}.pdf`);
@@ -341,27 +386,59 @@ const UsersSection = ({ darkMode }) => {
   const downloadPDF = async () => {
     setPdfLoading(true);
     try {
-      const { doc, autoTable, W, Y: sy } = await buildBase('Members Report');
+      // Build title from active filters
+      const statusLabel = { active: 'Active', suspended: 'Suspended' }[status] || '';
+      const sellerLabel = seller === 'yes' ? 'Verified Sellers' : seller === 'no' ? 'Unverified Members' : 'Members';
+      const reportTitle = [statusLabel, sellerLabel, 'Report'].filter(Boolean).join(' ');
+
+      const { doc, autoTable, W, Y: sy } = await buildBase(reportTitle);
       const afterBoxes = statBoxes(doc, sy, W, 'MEMBER SUMMARY', [
         { label: 'Total Members',    value: filtered.length },
         { label: 'Active',           value: filtered.filter(u =>  u.is_active).length },
         { label: 'Suspended',        value: filtered.filter(u => !u.is_active).length },
         { label: 'Verified Sellers', value: filtered.filter(u =>  u.is_verified_seller).length },
       ]);
-      const parts = [status && `Status: ${status}`, seller && `Seller: ${seller === 'yes' ? 'Verified' : 'Not verified'}`, search && `Search: "${search}"`].filter(Boolean);
+
       doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(107, 114, 128);
-      doc.text(parts.length ? `Filters: ${parts.join(' · ')}` : 'Showing all members', 18, afterBoxes + 5);
+      doc.text(search ? `Search: "${search}"` : 'Showing all matching members', 18, afterBoxes + 5);
+
       let cy = afterBoxes + 13;
       doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...EMERALD);
-      doc.text(`Members (${filtered.length})`, 14, cy);
+      doc.text(`${reportTitle} (${filtered.length})`, 14, cy);
+
+      // Drop columns already expressed in the title
+      const showStatus = !status;
+      const showSeller = !seller;
+
+      const nameWidth = 65 + (!showStatus ? 30 : 0) + (!showSeller ? 35 : 0);
+
+      const cols = [
+        'Full Name', 'Email',
+        ...(showStatus ? ['Status']          : []),
+        ...(showSeller ? ['Verified Seller'] : []),
+        'Date Joined',
+      ];
+
+      const colStyles = { 0: { cellWidth: nameWidth }, 1: { cellWidth: 95 } };
+      let ci = 2;
+      if (showStatus) { colStyles[ci] = { cellWidth: 30 }; ci++; }
+      if (showSeller) { colStyles[ci] = { cellWidth: 35 }; ci++; }
+      colStyles[ci] = { cellWidth: 35 };
+
       autoTable(doc, {
         startY: cy + 3,
-        head: [['Full Name', 'Email', 'Status', 'Verified Seller', 'Date Joined']],
-        body: filtered.map(u => [u.full_name, u.email, u.is_active ? 'Active' : 'Suspended', u.is_verified_seller ? 'Yes' : 'No', fmtDate(u.created_at)]),
+        head: [cols],
+        body: filtered.map(u => [
+          u.full_name,
+          u.email,
+          ...(showStatus ? [u.is_active ? 'Active' : 'Suspended'] : []),
+          ...(showSeller ? [u.is_verified_seller ? 'Yes' : 'No']  : []),
+          fmtDate(u.created_at),
+        ]),
         styles: { fontSize: 8.5, cellPadding: 3, overflow: 'ellipsize' },
         headStyles: { fillColor: EMERALD, textColor: WHITE, fontStyle: 'bold', fontSize: 9 },
         alternateRowStyles: { fillColor: [240, 253, 250] },
-        columnStyles: { 0: { cellWidth: 65 }, 1: { cellWidth: 95 }, 2: { cellWidth: 30 }, 3: { cellWidth: 35 }, 4: { cellWidth: 35 } },
+        columnStyles: colStyles,
       });
       footers(doc, W);
       doc.save(`KUuza_Members_Report_${Date.now()}.pdf`);
@@ -489,12 +566,23 @@ const SellersSection = ({ darkMode }) => {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
+  const [busy, setBusy] = useState({});
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('newest');
 
   useEffect(() => {
     fetchAdminSellers().then(setRows).catch((e) => toast.error(e.message)).finally(() => setLoading(false));
   }, []);
+
+  const revoke = async (id, name) => {
+    setBusy(b => ({ ...b, [id]: true }));
+    try {
+      await revokeSellerVerification(id);
+      setRows(r => r.filter(s => s.id !== id));
+      toast.success(`${name}'s seller verification revoked.`);
+    } catch (e) { toast.error(e.message); }
+    finally { setBusy(b => ({ ...b, [id]: false })); }
+  };
 
   const filtered = useMemo(() => {
     let d = [...rows];
@@ -528,13 +616,24 @@ const SellersSection = ({ darkMode }) => {
                 {expanded === s.id ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
               </button>
               {expanded === s.id && (
-                <div className={`px-5 pb-5 border-t grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-                  {[['Full Name', s.full_name], ['Student ID', s.student_id || '—'], ['National ID', s.national_id || '—'], ['Course', s.course || '—'], ['Department', s.department || '—'], ['School', s.school || '—'], ['Year of Study', s.year_of_study || '—'], ['M-Pesa Number', s.mpesa_phone || '—'], ['Joined', fmtDate(s.created_at)]].map(([label, value]) => (
-                    <div key={label} className="pt-3">
-                      <p className={`text-xs mb-0.5 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{label}</p>
-                      <p className={`font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{value}</p>
-                    </div>
-                  ))}
+                <div className={`px-5 pb-5 border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+                    {[['Full Name', s.full_name], ['Student ID', s.student_id || '—'], ['National ID', s.national_id || '—'], ['Course', s.course || '—'], ['Department', s.department || '—'], ['School', s.school || '—'], ['Year of Study', s.year_of_study || '—'], ['M-Pesa Number', s.mpesa_phone || '—'], ['Joined', fmtDate(s.created_at)]].map(([label, value]) => (
+                      <div key={label} className="pt-3">
+                        <p className={`text-xs mb-0.5 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{label}</p>
+                        <p className={`font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="pt-4">
+                    <ConfirmButton
+                      onConfirm={() => revoke(s.id, s.full_name)}
+                      label="Revoke seller verification"
+                      icon={Flag}
+                      variant="danger"
+                      loading={busy[s.id]}
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -556,10 +655,21 @@ const TITLES = {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 const AdminManagePage = ({ section }) => {
   const { darkMode } = useTheme();
-  const { adminUser } = useAdminAuth();
+  const { adminUser, adminLoading } = useAdminAuth();
   const navigate = useNavigate();
 
-  useEffect(() => { if (!adminUser) navigate('/kuuza-control/'); }, [adminUser, navigate]);
+  useEffect(() => {
+    if (adminLoading) return;
+    if (!adminUser) navigate('/kuuza-control/');
+  }, [adminUser, adminLoading, navigate]);
+
+  if (adminLoading) return (
+    <AdminLayout title={TITLES[section] ?? 'Management'}>
+      <div className="flex items-center justify-center py-24">
+        <Loader2 size={28} className="animate-spin text-emerald-500" />
+      </div>
+    </AdminLayout>
+  );
 
   return (
     <AdminLayout title={TITLES[section] ?? 'Management'}>

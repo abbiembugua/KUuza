@@ -16,11 +16,9 @@ const Navbar = ({ scrolled }) => {
         : 'bg-transparent'
     }`}>
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <div className={`p-2 rounded-lg ${darkMode ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
-            <ShoppingBag className={`w-6 h-6 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
-          </div>
-          <div>
+        <div className="flex items-center gap-2.5">
+          <img src="/kuuza-logo.png" alt="KUuza" className="h-14 w-auto object-contain" />
+          <div className="leading-none">
             <h1 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
               KU<span className="text-emerald-500">uza</span>
             </h1>

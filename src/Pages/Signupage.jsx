@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, UserPlus, User, Mail, Lock, Check } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { resendVerification, signup } from '../api/authapi';
+import { resendVerification, signup, verifyEmailOTP } from '../api/authapi';
 import { Toaster, toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/Themecontext';
@@ -26,6 +26,10 @@ const SignUpPage = () => {
   const navigate = useNavigate();
   const { setUser } = useAuth();
   const [emailSent, setEmailSent] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [otpError, setOtpError] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpSuccess, setOtpSuccess] = useState(false);
 
   const [passwordStrength, setPasswordStrength] = useState({
     length: false,
@@ -58,6 +62,25 @@ const SignUpPage = () => {
   const handleResendVerification = async (emailAddress) => {
     await resendVerification(emailAddress);
     toast.success('Verification email resent!');
+  };
+
+  const handleOtpVerify = async (e) => {
+    e.preventDefault();
+    if (otp.length !== 6) {
+      setOtpError('Please enter the 6-digit code.');
+      return;
+    }
+    setOtpError('');
+    setOtpLoading(true);
+    try {
+      await verifyEmailOTP(email, otp);
+      setOtpSuccess(true);
+      setTimeout(() => navigate('/login'), 2500);
+    } catch (err) {
+      setOtpError(err.message || 'Invalid or expired code.');
+    } finally {
+      setOtpLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -168,22 +191,67 @@ const SignUpPage = () => {
         <div className={`p-10 rounded-3xl shadow-xl text-center max-w-md w-full ${
           darkMode ? 'bg-gray-800' : 'bg-white'
         }`}>
-          <div className="text-6xl mb-4">📬</div>
-          <h2 className="text-2xl font-bold mb-2">Check your KU email</h2>
-          <p className={`mb-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            We sent a verification link to <strong>{email}</strong>
-          </p>
-          <button
-            onClick={() => handleResendVerification(email)}
-            className="text-emerald-500 underline text-sm hover:text-emerald-600"
-          >
-            Didn't receive it? Resend email
-          </button>
-          <div className="mt-4">
-            <Link to="/login" className="text-sm font-medium text-sky-500 hover:underline">
-              Back to login
-            </Link>
-          </div>
+          {otpSuccess ? (
+            <>
+              <div className="text-6xl mb-4">✅</div>
+              <h2 className="text-2xl font-bold mb-2">Email verified!</h2>
+              <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Redirecting you to login…
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="text-6xl mb-4">📬</div>
+              <h2 className="text-2xl font-bold mb-2">Check your KU email</h2>
+              <p className={`mb-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                We sent a verification link and a 6-digit code to{' '}
+                <strong>{email}</strong>. Use whichever is easier.
+              </p>
+
+              <form onSubmit={handleOtpVerify} className="mb-4">
+                <label className={`block text-sm font-medium mb-2 text-left ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Enter 6-digit code
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  placeholder="123456"
+                  className={`w-full px-4 py-3 rounded-xl border text-center text-2xl tracking-widest font-mono focus:outline-none transition-all ${
+                    darkMode
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:border-emerald-500'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-emerald-500'
+                  } ${otpError ? 'border-red-500' : ''}`}
+                />
+                {otpError && (
+                  <p className="mt-1 text-sm text-red-500 text-left">{otpError}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={otpLoading || otp.length !== 6}
+                  className={`mt-3 w-full py-3 rounded-xl font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-all ${
+                    otpLoading || otp.length !== 6 ? 'opacity-60 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {otpLoading ? 'Verifying…' : 'Verify Code'}
+                </button>
+              </form>
+
+              <button
+                onClick={() => handleResendVerification(email)}
+                className="text-emerald-500 underline text-sm hover:text-emerald-600"
+              >
+                Didn't receive it? Resend email
+              </button>
+              <div className="mt-4">
+                <Link to="/login" className="text-sm font-medium text-sky-500 hover:underline">
+                  Back to login
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </div>
     );

@@ -46,7 +46,7 @@ const HorizontalScrollSection = ({
     ) : listings.length === 0 ? (
       <div
         className={`text-center py-8 rounded-2xl border-2 border-dashed ${
-          darkMode ? 'border-gray-700 text-gray-500' : 'border-gray-200 text-gray-400'
+          darkMode ? 'border-gray-700 text-gray-500' : 'border-gray-200 text-gray-600'
         }`}
       >
         <p className="text-sm">{emptyMessage}</p>

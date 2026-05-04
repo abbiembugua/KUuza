@@ -200,11 +200,9 @@ const DashboardNavbar = ({ onSearch, searchQuery, setSearchQuery, cartItemsCount
             </button>
 
             {/* Logo */}
-            <Link to="/dashboard" className="flex items-center gap-2 flex-shrink-0">
-              <div className={`p-2 rounded-lg ${darkMode ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
-                <ShoppingBag className={`w-5 h-5 md:w-6 md:h-6 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
-              </div>
-              <div>
+            <Link to="/dashboard" className="flex items-center gap-2.5 flex-shrink-0">
+              <img src="/kuuza-logo.png" alt="KUuza" className="h-12 w-auto object-contain" />
+              <div className="leading-none">
                 <h1 className={`text-lg md:text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                   KU<span className="text-emerald-500">uza</span>
                 </h1>

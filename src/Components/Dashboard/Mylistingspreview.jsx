@@ -11,7 +11,7 @@ const MyListingsPreview = ({ listings, darkMode, onView }) => {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-          📦 Your Active Listings
+          Your Active Listings
         </h2>
         <button
           onClick={() => navigate('/my-listings')}
@@ -62,12 +62,12 @@ const MyListingsPreview = ({ listings, darkMode, onView }) => {
                 KSh {item.price?.toLocaleString()}
               </p>
               {item.listing_type !== 'service' && (
-                <p className={`mt-1 text-xs ${isOutOfStock ? 'text-red-500' : darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                <p className={`mt-1 text-xs ${isOutOfStock ? 'text-red-500' : darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   {isOutOfStock ? 'Out of stock' : `${quantityAvailable} available`}
                 </p>
               )}
               <div className={`flex items-center gap-1 mt-1 text-xs ${
-                darkMode ? 'text-gray-400' : 'text-gray-500'
+                darkMode ? 'text-gray-400' : 'text-gray-600'
               }`}>
                 <Eye className="w-3 h-3" />
                 {item.view_count || 0} views

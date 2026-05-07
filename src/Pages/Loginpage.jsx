@@ -12,7 +12,7 @@ import { useAuth } from '../context/AuthContext';
 
 const LoginPage = () => {
   const { darkMode } = useTheme();
-  const { setUser } = useAuth();
+  const { setUser, setToken } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -68,6 +68,7 @@ const LoginPage = () => {
       await verifyEmailOTP(email, otp);
       const result = await login({ email, password });
       setUser(result.user);
+      setToken(result.tokens?.access || localStorage.getItem('access'));
       toast.success('Email verified! Logging you in…', { duration: 2500, position: 'top-center' });
       setTimeout(() => navigate('/dashboard'), 2500);
     } catch (err) {
@@ -109,6 +110,7 @@ const LoginPage = () => {
     try {
       const result = await login({ email, password });
       setUser(result.user);
+      setToken(result.tokens?.access || localStorage.getItem('access'));
 
       toast.success('Login successful! Redirecting to dashboard...', {
         duration: 4000,

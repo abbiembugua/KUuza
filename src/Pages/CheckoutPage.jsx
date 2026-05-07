@@ -155,7 +155,7 @@ const CheckoutPage = () => {
       const mpesaRes = await fetch(`${API_BASE}/transactions/${txn.id}/initiate_mpesa/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ phone_number: mpesaPhone }),
+        body: JSON.stringify({ phone_number: mpesaPhone, amount: singleTotal }),
       });
       if (!mpesaRes.ok) {
         const errData = await mpesaRes.json();

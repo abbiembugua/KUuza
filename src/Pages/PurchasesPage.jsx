@@ -174,10 +174,15 @@ const PurchasesPage = () => {
   });
 
   const handleComplete = (id) => {
-    setTransactions((prev) => prev.map((transaction) => (
-      transaction.id === id ? { ...transaction, status: 'completed' } : transaction
-    )));
+    setTransactions((prev) => prev.map((t) =>
+      t.id === id ? { ...t, seller_confirmed: true } : t
+    ));
+  };
 
+  // Called when buyer confirms receipt or disputes — replaces the transaction
+  // object in local state with the freshest data from the API response
+  const handleTransactionUpdate = (updated) => {
+    setTransactions((prev) => prev.map((t) => t.id === updated.id ? updated : t));
     fetchPendingReviews(token)
       .then((data) => {
         const arr = Array.isArray(data) ? data : data?.results || [];
@@ -186,11 +191,10 @@ const PurchasesPage = () => {
       .catch(() => {});
   };
 
-  // ── optimistically flip status to cancelled in local state ────────────────
   const handleCancel = (id) => {
-    setTransactions((prev) => prev.map((transaction) => (
-      transaction.id === id ? { ...transaction, status: 'cancelled' } : transaction
-    )));
+    setTransactions((prev) => prev.map((t) =>
+      t.id === id ? { ...t, status: 'cancelled' } : t
+    ));
   };
 
   const handleReviewSubmitted = () => {
@@ -580,6 +584,7 @@ const PurchasesPage = () => {
                   downloaderName={user?.full_name}
                   onComplete={handleComplete}
                   onCancel={handleCancel}
+                  onTransactionUpdate={handleTransactionUpdate}
                   onReview={(txn, target) => setReviewModal({ isOpen: true, transaction: txn, reviewTarget: target })}
                   pendingReviewIds={pendingReviewIds}
                 />

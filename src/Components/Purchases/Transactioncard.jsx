@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Package, Wrench, Calendar, CheckCircle, Clock, AlertCircle,
+  Package, Wrench, CheckCircle, Clock, AlertCircle, Flag,
   Star, ChevronDown, ChevronUp, Phone, Mail, Shield, Loader2, MapPin, Download, X, ExternalLink,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -96,6 +96,184 @@ async function cancelTransaction(transactionId, token) {
     throw new Error(err.error || 'Could not cancel transaction');
   }
   return res.json();
+}
+
+
+async function confirmReceipt(transactionId, token) {
+  const res = await fetch(`${API_BASE}/transactions/${transactionId}/confirm_receipt/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Could not confirm receipt'); }
+  return res.json();
+}
+
+async function disputeTransaction(transactionId, token) {
+  const res = await fetch(`${API_BASE}/transactions/${transactionId}/dispute/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Could not raise dispute'); }
+  return res.json();
+}
+
+// ── ReceiptConfirmBanner ──────────────────────────────────────────
+
+function ReceiptConfirmBanner({ transaction, darkMode, token, onConfirmed, onDisputed }) {
+  const [confirming, setConfirming] = useState(false);
+  const [showDisputeSheet, setShowDisputeSheet] = useState(false);
+  const [disputing, setDisputing] = useState(false);
+
+  const hoursLeft = transaction.confirmation_deadline
+    ? Math.max(0, Math.ceil((new Date(transaction.confirmation_deadline) - Date.now()) / 3_600_000))
+    : 48;
+
+  const handleConfirm = async () => {
+    setConfirming(true);
+    try {
+      const updated = await confirmReceipt(transaction.id, token);
+      toast.success('Receipt confirmed!');
+      onConfirmed(updated);
+    } catch (err) { toast.error(err.message); }
+    finally { setConfirming(false); }
+  };
+
+  const handleDispute = async () => {
+    setDisputing(true);
+    try {
+      const updated = await disputeTransaction(transaction.id, token);
+      toast.success('Dispute raised. The seller has been notified.');
+      onDisputed(updated);
+      setShowDisputeSheet(false);
+    } catch (err) { toast.error(err.message); }
+    finally { setDisputing(false); }
+  };
+
+  return (
+    <>
+      <div className={`mt-3 rounded-xl border p-3.5 ${
+        darkMode ? 'bg-violet-950/30 border-violet-800/40' : 'bg-violet-50 border-violet-200'
+      }`}>
+        <div className="flex items-start gap-2.5">
+          <Package size={14} className={`mt-0.5 flex-shrink-0 ${darkMode ? 'text-violet-400' : 'text-violet-600'}`} />
+          <div className="flex-1 min-w-0">
+            <p className={`text-xs font-semibold ${darkMode ? 'text-violet-300' : 'text-violet-800'}`}>
+              {transaction.seller_name} marked this as delivered
+            </p>
+            <p className={`text-xs mt-0.5 ${darkMode ? 'text-violet-400/70' : 'text-violet-600'}`}>
+              Confirm receipt to unlock your review.
+            </p>
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
+              <button
+                onClick={handleConfirm}
+                disabled={confirming}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
+              >
+                {confirming ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                {confirming ? 'Confirming…' : 'Yes, I received it'}
+              </button>
+              <button
+                onClick={() => setShowDisputeSheet(true)}
+                className={`text-xs underline underline-offset-2 transition-colors ${
+                  darkMode ? 'text-violet-500 hover:text-violet-300' : 'text-violet-500 hover:text-violet-700'
+                }`}
+              >
+                Didn’t get it?
+              </button>
+            </div>
+            <p className={`text-xs mt-2 ${darkMode ? 'text-violet-600' : 'text-violet-400'}`}>
+              Auto-confirms in {hoursLeft}h if no action taken
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {showDisputeSheet && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+            onClick={() => !disputing && setShowDisputeSheet(false)}
+          />
+          <div className="fixed inset-x-0 bottom-0 z-50 px-4 pb-6">
+            <div className={`w-full max-w-md mx-auto rounded-2xl p-5 shadow-2xl ${
+              darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-stone-200'
+            }`}>
+              <div className="flex items-center justify-between mb-4">
+                <p className={`font-semibold text-sm ${darkMode ? 'text-white' : 'text-stone-900'}`}>
+                  What’s going on?
+                </p>
+                <button
+                  onClick={() => setShowDisputeSheet(false)}
+                  disabled={disputing}
+                  className={`p-1 rounded-lg ${darkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-stone-100 text-stone-500'}`}
+                >
+                  <X size={15} />
+                </button>
+              </div>
+              <div className="space-y-2.5">
+                <div className={`flex items-center gap-3 w-full rounded-xl p-3.5 ${
+                  darkMode ? 'bg-gray-800' : 'bg-stone-50'
+                }`}>
+                  <Phone size={15} className="text-emerald-500 flex-shrink-0" />
+                  <div>
+                    <p className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-stone-900'}`}>
+                      Contact {transaction.seller_name} directly
+                    </p>
+                    <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-stone-400'}`}>
+                      Expand the card details below to get their contact info
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleDispute}
+                  disabled={disputing}
+                  className={`flex items-center gap-3 w-full rounded-xl p-3.5 text-left transition-colors disabled:opacity-50 ${
+                    darkMode
+                      ? 'bg-red-950/30 hover:bg-red-950/50 border border-red-900/40'
+                      : 'bg-red-50 hover:bg-red-100 border border-red-200'
+                  }`}
+                >
+                  {disputing
+                    ? <Loader2 size={15} className="text-red-500 flex-shrink-0 animate-spin" />
+                    : <Flag size={15} className="text-red-500 flex-shrink-0" />}
+                  <div>
+                    <p className={`text-sm font-medium ${darkMode ? 'text-red-300' : 'text-red-700'}`}>
+                      {disputing ? 'Raising dispute…' : 'Report to KUuza'}
+                    </p>
+                    <p className={`text-xs ${darkMode ? 'text-red-500/70' : 'text-red-500'}`}>
+                      A flag is raised and auto-confirm is paused.
+                    </p>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+// ── DisputedBanner ────────────────────────────────────────────
+
+function DisputedBanner({ transaction, darkMode }) {
+  return (
+    <div className={`mt-3 rounded-xl border p-3.5 ${
+      darkMode ? 'bg-red-950/30 border-red-900/40' : 'bg-red-50 border-red-200'
+    }`}>
+      <div className="flex items-start gap-2.5">
+        <Flag size={14} className={`mt-0.5 flex-shrink-0 ${darkMode ? 'text-red-400' : 'text-red-600'}`} />
+        <div className="flex-1 min-w-0">
+          <p className={`text-xs font-semibold ${darkMode ? 'text-red-300' : 'text-red-700'}`}>
+            Dispute raised
+          </p>
+          <p className={`text-xs mt-0.5 ${darkMode ? 'text-red-400/70' : 'text-red-500'}`}>
+            You reported not receiving this item. KUuza has been notified. Expand the card to contact {transaction.seller_name}.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ── ContactDetails (internal sub-component) ───────────────────────────────────
@@ -238,6 +416,7 @@ export default function TransactionCard({
   onComplete,
   onCancel,
   onReview,
+  onTransactionUpdate,
   pendingReviewIds,
 }) {
   const navigate = useNavigate();
@@ -256,10 +435,12 @@ export default function TransactionCard({
   const statusConf = STATUS_CONFIG[transaction.status] || STATUS_CONFIG.pending;
   const StatusIcon = statusConf.icon;
 
-  const isComplete  = ['completed', 'auto_completed'].includes(transaction.status);
-  const canComplete = isSeller && transaction.status === 'pending';
-  const canCancel   = transaction.status === 'pending'; // both buyer and seller
-  const needsReview = isComplete && pendingReviewIds.includes(transaction.id);
+  const isComplete      = ['completed', 'auto_completed'].includes(transaction.status);
+  const canComplete     = isSeller && transaction.status === 'pending' && !transaction.seller_confirmed;
+  const canCancel       = transaction.status === 'pending' && !transaction.seller_confirmed;
+  const needsReview     = isComplete && pendingReviewIds.includes(transaction.id);
+  const awaitingReceipt = isBuyer && transaction.status === 'pending' && transaction.seller_confirmed && !transaction.is_disputed;
+  const isDisputed      = isBuyer && transaction.is_disputed && transaction.status === 'pending';
 
   const reviewTarget = isBuyer
     ? { id: transaction.seller, full_name: transaction.seller_name }
@@ -274,7 +455,7 @@ export default function TransactionCard({
     setCompleting(true);
     try {
       await markComplete(transaction.id, token);
-      toast.success('Transaction marked as complete.');
+      toast.success('Marked as delivered. Waiting for buyer confirmation.');
       onComplete(transaction.id);
     } catch (err) {
       toast.error(err.message);
@@ -457,6 +638,22 @@ export default function TransactionCard({
           </div>
           <ExternalLink size={13} className={`flex-shrink-0 ${darkMode ? 'text-gray-600 group-hover:text-emerald-400' : 'text-gray-300 group-hover:text-emerald-500'}`} />
         </button>
+
+        {/* ── Receipt confirmation banner (buyer only) ── */}
+        {awaitingReceipt && (
+          <ReceiptConfirmBanner
+            transaction={transaction}
+            darkMode={darkMode}
+            token={token}
+            onConfirmed={onTransactionUpdate}
+            onDisputed={onTransactionUpdate}
+          />
+        )}
+
+        {/* ── Dispute banner (buyer only, after dispute raised) ── */}
+        {isDisputed && (
+          <DisputedBanner transaction={transaction} darkMode={darkMode} />
+        )}
 
         {/* ── Action buttons ── */}
         <div className="flex items-center gap-2 mt-3 flex-wrap">

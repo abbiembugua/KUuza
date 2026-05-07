@@ -217,14 +217,16 @@ export default function ReportGenerator({
     let currentY = headerHeight + 6;
 
     // ── Financial Summary — horizontal stat cards ─────────────────────────────
-    const hasPending = incompleteEarned > 0 || incompleteSpent > 0;
+    const showSales     = activeTab === "all" || activeTab === "seller";
+    const showPurchases = activeTab === "all" || activeTab === "buyer";
+    const hasPending =
+      (showSales     && incompleteEarned > 0) ||
+      (showPurchases && incompleteSpent  > 0);
     const statBoxes = [
-      { label: "Completed Sales",     value: fmtCurrency(totalEarned) },
-      { label: "Completed Purchases", value: fmtCurrency(totalSpent)  },
-      ...(hasPending ? [
-        { label: "Pending Sales",     value: fmtCurrency(incompleteEarned) },
-        { label: "Pending Purchases", value: fmtCurrency(incompleteSpent)  },
-      ] : []),
+      ...(showSales     ? [{ label: "Completed Sales",     value: fmtCurrency(totalEarned)      }] : []),
+      ...(showPurchases ? [{ label: "Completed Purchases", value: fmtCurrency(totalSpent)        }] : []),
+      ...(hasPending && showSales     ? [{ label: "Pending Sales",     value: fmtCurrency(incompleteEarned) }] : []),
+      ...(hasPending && showPurchases ? [{ label: "Pending Purchases", value: fmtCurrency(incompleteSpent)  }] : []),
     ];
 
     const usableW  = pageWidth - 28;

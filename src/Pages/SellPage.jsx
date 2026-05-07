@@ -387,7 +387,8 @@ const SellPage = () => {
                       </h3>
                     </div>
                     <p className={`text-sm mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                      AI will generate a description,refine your title and suggest a fair price based on what you have entered so far.
+                      AI will generate a description,refine your title and suggest a fair price based on what you have entered so far. 
+                      If you want to add more context, type a brief description of your product and AI will refine it.
                     </p>
                     <button
                       type="button"

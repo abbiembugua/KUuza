@@ -19,6 +19,17 @@ class TransactionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        now  = timezone.now()
+
+        # Lazy auto-confirm: seller marked delivered, buyer didn't act within 48h
+        Transaction.objects.filter(
+            Q(buyer=user) | Q(seller=user),
+            status='pending',
+            seller_confirmed=True,
+            is_disputed=False,
+            confirmation_deadline__lt=now,
+        ).update(status='completed', buyer_confirmed=True)
+
         queryset = Transaction.objects.filter(
             Q(buyer=user) | Q(seller=user)
         ).select_related(
@@ -31,12 +42,16 @@ class TransactionViewSet(viewsets.ModelViewSet):
         transaction_status = self.request.query_params.get('status')
 
         if role == 'buyer':
-          queryset = queryset.filter(buyer=user)
+            queryset = queryset.filter(buyer=user)
         elif role == 'seller':
-          queryset = queryset.filter(seller=user)
+            queryset = queryset.filter(seller=user)
 
         if transaction_status:
-          queryset = queryset.filter(status=transaction_status)
+            queryset = queryset.filter(status=transaction_status)
+
+        category = self.request.query_params.get('category')
+        if category:
+            queryset = queryset.filter(listing__category=category)
 
         return queryset
 
@@ -45,6 +60,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['patch'])
     def mark_complete(self, request, pk=None):
+        from datetime import timedelta
         transaction = self.get_object()
 
         if transaction.seller != request.user:
@@ -53,21 +69,147 @@ class TransactionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        if transaction.status in ('completed', 'auto_completed'):
+        if transaction.status in ('completed', 'auto_completed') or transaction.seller_confirmed:
             return Response(
                 {'error': 'This transaction is already complete.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        transaction.status = 'completed'
-        transaction.completed_at = timezone.now()
+        now = timezone.now()
+        transaction.seller_confirmed      = True
+        transaction.completed_at          = now
+        transaction.confirmation_deadline = now + timedelta(hours=48)
+        transaction.save(update_fields=[
+            'seller_confirmed', 'completed_at', 'confirmation_deadline', 'updated_at'
+        ])
+
+        # Notify buyer
+        try:
+            Notification.objects.create(
+                recipient=transaction.buyer,
+                actor=transaction.seller,
+                transaction=transaction,
+                notification_type='delivery_marked',
+                title='Your order has been marked as delivered',
+                body=(
+                    f'{transaction.seller.full_name} has marked your order '
+                    f'"{transaction.listing.title if transaction.listing else "item"}" '
+                    f'as delivered. Confirm receipt to leave a review.'
+                ),
+            )
+        except Exception:
+            pass
+
+        return Response(
+            TransactionSerializer(transaction, context={'request': request}).data
+        )
+
+    @action(detail=True, methods=['patch'])
+    def confirm_receipt(self, request, pk=None):
+        transaction = self.get_object()
+
+        if transaction.buyer != request.user:
+            return Response(
+                {'error': 'Only the buyer can confirm receipt.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if not transaction.seller_confirmed or transaction.status != 'pending':
+            return Response(
+                {'error': 'This transaction is not awaiting confirmation.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        transaction.status          = 'completed'
+        transaction.buyer_confirmed = True
         transaction.save()
+
+        # Notify seller
+        try:
+            Notification.objects.create(
+                recipient=transaction.seller,
+                actor=transaction.buyer,
+                transaction=transaction,
+                notification_type='receipt_confirmed',
+                title='Buyer confirmed delivery',
+                body=(
+                    f'{transaction.buyer.full_name} confirmed they received '
+                    f'"{transaction.listing.title if transaction.listing else "the item"}". '
+                    f'They can now leave you a review.'
+                ),
+            )
+        except Exception:
+            pass
+
+        return Response(
+            TransactionSerializer(transaction, context={'request': request}).data
+        )
+
+    @action(detail=True, methods=['patch'])
+    def dispute(self, request, pk=None):
+        transaction = self.get_object()
+
+        if transaction.buyer != request.user:
+            return Response(
+                {'error': 'Only the buyer can raise a dispute.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if not transaction.seller_confirmed or transaction.status != 'pending':
+            return Response(
+                {'error': 'This transaction is not awaiting confirmation.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        transaction.is_disputed = True
+        transaction.disputed_at = timezone.now()
+        transaction.save(update_fields=['is_disputed', 'disputed_at', 'updated_at'])
+
+        # Create a report record so admin can review it
+        try:
+            from reports.models import Report
+            listing_title = transaction.listing.title if transaction.listing else 'Unknown listing'
+            Report.objects.create(
+                transaction=transaction,
+                listing=transaction.listing,
+                reported_user=transaction.seller,
+                reporter=transaction.buyer,
+                reason='delivery_dispute',
+                details=(
+                    f'Buyer {transaction.buyer.full_name} reported not receiving '
+                    f'"{listing_title}" (KSh {transaction.agreed_price}) '
+                    f'from seller {transaction.seller.full_name}. '
+                    f'Scheduled date: {transaction.scheduled_date}.'
+                ),
+            )
+        except Exception:
+            pass
+
+        # Notify seller
+        try:
+            Notification.objects.create(
+                recipient=transaction.seller,
+                actor=transaction.buyer,
+                transaction=transaction,
+                notification_type='delivery_disputed',
+                title='Buyer raised a dispute',
+                body=(
+                    f'{transaction.buyer.full_name} reported they did not receive '
+                    f'"{transaction.listing.title if transaction.listing else "the item"}". '
+                    f'Please contact them to resolve this.'
+                ),
+            )
+        except Exception:
+            pass
 
         return Response(
             TransactionSerializer(transaction, context={'request': request}).data
         )
     @action(detail=True, methods=['patch'])
     def cancel(self, request, pk=None):
+        from django.db.models import F
+        from listings.models import Listing
+
         transaction = self.get_object()
 
         if transaction.status != 'pending':
@@ -84,6 +226,14 @@ class TransactionViewSet(viewsets.ModelViewSet):
 
         transaction.status = 'cancelled'
         transaction.save(update_fields=['status'])
+
+        if transaction.interaction_type == 'purchase' and transaction.listing_id:
+            Listing.objects.filter(pk=transaction.listing_id).update(
+                quantity=F('quantity') + transaction.quantity
+            )
+            released = Listing.objects.filter(pk=transaction.listing_id).first()
+            if released and released.status == 'sold' and released.quantity > 0:
+                Listing.objects.filter(pk=transaction.listing_id).update(status='active')
 
         return Response(
             TransactionSerializer(transaction, context={'request': request}).data
@@ -140,7 +290,20 @@ class TransactionViewSet(viewsets.ModelViewSet):
             )
 
         phone = transaction.mpesa_phone or request.data.get('phone_number', '')
-        amount = request.data.get('amount') or transaction.agreed_price or 1
+
+        bulk_ids = request.data.get('bulk_transaction_ids', [])
+        if bulk_ids:
+            bulk_txns = Transaction.objects.filter(id__in=bulk_ids, buyer=request.user)
+            amount = sum(
+                float(t.agreed_price or 0) * int(t.quantity or 1)
+                for t in bulk_txns
+            ) or request.data.get('amount') or float(transaction.agreed_price or 0) * int(transaction.quantity or 1) or 1
+        else:
+            amount = (
+                request.data.get('amount')
+                or float(transaction.agreed_price or 0) * int(transaction.quantity or 1)
+                or 1
+            )
 
         if not phone:
             return Response(
@@ -159,15 +322,29 @@ class TransactionViewSet(viewsets.ModelViewSet):
             transaction.mpesa_receipt = result.get('CheckoutRequestID', '')
             transaction.save(update_fields=['mpesa_receipt'])
 
+            try:
+                Notification.objects.create(
+                    recipient=transaction.buyer,
+                    actor=transaction.seller,
+                    transaction=transaction,
+                    notification_type='receipt_ready',
+                    title='Receipt ready',
+                    body=f'Your receipt for {transaction.listing.title if transaction.listing else "your purchase"} is ready to download.',
+                )
+            except Exception:
+                pass
+
             return Response({
                 'message': 'STK push sent. Check your phone to complete payment.',
                 'checkout_request_id': result.get('CheckoutRequestID'),
             })
         except Exception as exc:
-            return Response(
-                {'error': f'M-Pesa error: {str(exc)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            import requests as req_lib
+            if isinstance(exc, (req_lib.exceptions.ConnectionError, req_lib.exceptions.Timeout)):
+                msg = 'M-Pesa is temporarily unavailable. Please try again in a moment.'
+            else:
+                msg = 'Could not initiate M-Pesa payment. Please try again.'
+            return Response({'error': msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(
         detail=False,
@@ -199,9 +376,6 @@ class TransactionViewSet(viewsets.ModelViewSet):
                 transaction.status = 'completed'
                 transaction.completed_at = timezone.now()
                 transaction.save(update_fields=['mpesa_receipt', 'status', 'completed_at', 'updated_at'])
-
-                if transaction.listing:
-                    transaction.listing.mark_sold(quantity_sold=transaction.quantity or 1)
 
             else:
                 transaction.mpesa_receipt = ''

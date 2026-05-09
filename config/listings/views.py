@@ -374,37 +374,50 @@ Format your response as JSON only, no additional text, no markdown:
 }}
 """
 
-        content = ''
-        try:
-            client = genai.Client(api_key=gemini_api_key)
-            response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-            )
-            # Strip markdown code blocks if Gemini wraps the JSON
-            content = response.text.strip()
-            content = content.replace('```json', '').replace('```', '').strip()
+        import time
 
-            data = json.loads(content)
-            print(f"✅ Gemini response parsed: {data}")
+        # Try primary model twice, then fall back to a lighter model
+        attempts = [
+            ('gemini-2.5-flash',     0),
+            ('gemini-2.5-flash',     2),
+            ('gemini-2.0-flash-lite', 4),
+        ]
 
-        except json.JSONDecodeError as e:
-            print(f"❌ JSON parsing error: {e}. Raw response: {content}")
-            # Graceful fallback — return original input so frontend does not break
-            data = {
-                'refinedTitle':       title,
-                'suggestedPrice':     '',
-                'refinedDescription': description,
-                'note':               'AI could not parse a structured response. Original input returned.'
-            }
+        data = None
+        for model_name, delay in attempts:
+            if delay:
+                time.sleep(delay)
+            try:
+                client = genai.Client(api_key=gemini_api_key)
+                response = client.models.generate_content(model=model_name, contents=prompt)
+                content = response.text.strip().replace('```json', '').replace('```', '').strip()
+                data = json.loads(content)
+                print(f"✅ Gemini ({model_name}) parsed: {data}")
+                break
+            except json.JSONDecodeError:
+                # Model responded but JSON was malformed — return original input
+                data = {
+                    'refinedTitle':       title,
+                    'suggestedPrice':     '',
+                    'refinedDescription': description,
+                }
+                break
+            except Exception as e:
+                err_str = str(e)
+                is_overloaded = any(k in err_str for k in ('503', 'UNAVAILABLE', 'high demand', 'overloaded'))
+                print(f"⚠️  Gemini ({model_name}) error: {err_str}")
+                if not is_overloaded:
+                    # Non-transient error — no point retrying
+                    return Response(
+                        {'error': 'AI refinement failed. Please try again.'},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+                # Transient — loop to next attempt
 
-        except Exception as e:
-            print(f"❌ Gemini error: {str(e)}")
-            import traceback
-            traceback.print_exc()
+        if data is None:
             return Response(
-                {'error': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'error': 'The AI assistant is currently busy. Please wait a moment and try again.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
 
         return Response(data)

@@ -71,9 +71,14 @@ class Transaction(models.Model):
     mpesa_phone   = models.CharField(max_length=20, blank=True)
     mpesa_receipt = models.CharField(max_length=50, blank=True)
 
-    completed_at = models.DateTimeField(null=True, blank=True)
-    created_at   = models.DateTimeField(auto_now_add=True)
-    updated_at   = models.DateTimeField(auto_now=True)
+    seller_confirmed      = models.BooleanField(default=False)
+    buyer_confirmed       = models.BooleanField(default=False)
+    is_disputed           = models.BooleanField(default=False)
+    completed_at          = models.DateTimeField(null=True, blank=True)
+    confirmation_deadline = models.DateTimeField(null=True, blank=True)
+    disputed_at           = models.DateTimeField(null=True, blank=True)
+    created_at            = models.DateTimeField(auto_now_add=True)
+    updated_at            = models.DateTimeField(auto_now=True)
 
     quantity = models.PositiveIntegerField(default=1)
 
@@ -98,16 +103,7 @@ class Transaction(models.Model):
 
         super().save(*args, **kwargs)
 
-        # If this is a completed (or auto-completed) purchase, mark the listing sold
-        if (
-            self.status in ('completed', 'auto_completed')
-            and self.interaction_type == 'purchase'
-            and self.listing
-            and self.listing.status == 'active'
-        ):
-            self.listing.mark_sold(quantity_sold=self.quantity)
-
-        # If this is a completed service use, increment usage count
+        # Increment service usage count on completion
         if (
             self.status in ('completed', 'auto_completed')
             and self.interaction_type == 'service_use'
@@ -115,13 +111,9 @@ class Transaction(models.Model):
         ):
             self.listing.increment_usage()
 
-        if (
-            self.status in ('completed', 'auto_completed')
-            and self.buyer_id
-            and self.listing_id
-        ):
+        # Clear cart on completion
+        if self.status in ('completed', 'auto_completed') and self.buyer_id and self.listing_id:
             from Cart.models import CartItem
-
             CartItem.objects.filter(
                 cart__user=self.buyer,
                 listing_id=self.listing_id,
@@ -130,8 +122,11 @@ class Transaction(models.Model):
 
 class Notification(models.Model):
     TYPE_CHOICES = [
-        ('purchase_created', 'Purchase Created'),
-        ('receipt_ready', 'Receipt Ready'),
+        ('purchase_created',   'Purchase Created'),
+        ('receipt_ready',      'Receipt Ready'),
+        ('delivery_marked',    'Delivery Marked'),
+        ('receipt_confirmed',  'Receipt Confirmed'),
+        ('delivery_disputed',  'Delivery Disputed'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

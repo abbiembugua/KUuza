@@ -10,15 +10,21 @@ class TransactionSerializer(serializers.ModelSerializer):
     seller_name = serializers.CharField(source='seller.full_name', read_only=True)
 
     # Listing snapshot fields for display
-    listing_title = serializers.CharField(source='listing.title',        read_only=True)
-    listing_image = serializers.SerializerMethodField()
-    listing_type  = serializers.CharField(source='listing.listing_type', read_only=True)
+    listing_title    = serializers.CharField(source='listing.title',        read_only=True)
+    listing_image    = serializers.SerializerMethodField()
+    listing_type     = serializers.CharField(source='listing.listing_type', read_only=True)
+    listing_category = serializers.CharField(source='listing.category',     read_only=True)
+
+    # Counterparty profile pictures
+    buyer_profile_picture  = serializers.SerializerMethodField()
+    seller_profile_picture = serializers.SerializerMethodField()
 
     class Meta:
         model  = Transaction
         fields = [
             'id',
-            'listing', 'listing_title', 'listing_image', 'listing_type',
+            'listing', 'listing_title', 'listing_image', 'listing_type', 'listing_category',
+            'buyer_profile_picture', 'seller_profile_picture',
             'buyer',  'buyer_name',
             'seller', 'seller_name',
             'interaction_type',
@@ -31,17 +37,28 @@ class TransactionSerializer(serializers.ModelSerializer):
             'inquiry_note',
             'mpesa_phone',
             'mpesa_receipt',
+            'seller_confirmed',
+            'buyer_confirmed',
+            'is_disputed',
             'completed_at',
+            'confirmation_deadline',
+            'disputed_at',
             'created_at',
             'updated_at',
         ]
         read_only_fields = [
             'buyer', 'buyer_name',
             'seller', 'seller_name',
-            'listing_title', 'listing_image', 'listing_type',
+            'listing_title', 'listing_image', 'listing_type', 'listing_category',
+            'buyer_profile_picture', 'seller_profile_picture',
             'auto_complete_date',
             'mpesa_receipt',
+            'seller_confirmed',
+            'buyer_confirmed',
+            'is_disputed',
             'completed_at',
+            'confirmation_deadline',
+            'disputed_at',
             'created_at', 'updated_at',
         ]
 
@@ -53,6 +70,19 @@ class TransactionSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(image.image.url)
             return image.image.url
         return None
+
+    def _picture_url(self, user):
+        if not (user and user.profile_picture):
+            return None
+        request = self.context.get('request')
+        url = user.profile_picture.url
+        return request.build_absolute_uri(url) if request else url
+
+    def get_buyer_profile_picture(self, obj):
+        return self._picture_url(obj.buyer)
+
+    def get_seller_profile_picture(self, obj):
+        return self._picture_url(obj.seller)
 
     def validate(self, data):
         listing = data.get('listing')
@@ -141,6 +171,19 @@ class TransactionSerializer(serializers.ModelSerializer):
 
             transaction = super().create(validated_data)
 
+            from Cart.models import CartItem
+            CartItem.objects.filter(
+                cart__user=request.user,
+                listing=locked,
+            ).delete()
+
+            if locked.listing_type == 'good':
+                new_qty = locked.quantity - transaction.quantity
+                if new_qty <= 0:
+                    Listing.objects.filter(pk=locked.pk).update(quantity=0, status='sold')
+                else:
+                    Listing.objects.filter(pk=locked.pk).update(quantity=new_qty)
+
             if 'transactions_notification' in connection.introspection.table_names():
                 Notification.objects.create(
                     recipient=transaction.seller,
@@ -150,14 +193,17 @@ class TransactionSerializer(serializers.ModelSerializer):
                     title='New purchase request',
                     body=f'{transaction.buyer.full_name} placed an order for {locked.title}.',
                 )
-                Notification.objects.create(
-                    recipient=transaction.buyer,
-                    actor=transaction.seller,
-                    transaction=transaction,
-                    notification_type='receipt_ready',
-                    title='Receipt ready',
-                    body=f'Your receipt for {locked.title} is ready to download.',
-                )
+                # For M-Pesa, the receipt notification fires only after the STK push
+                # succeeds (in initiate_mpesa), not here at transaction creation.
+                if transaction.payment_method != 'mpesa':
+                    Notification.objects.create(
+                        recipient=transaction.buyer,
+                        actor=transaction.seller,
+                        transaction=transaction,
+                        notification_type='receipt_ready',
+                        title='Receipt ready',
+                        body=f'Your receipt for {locked.title} is ready to download.',
+                    )
 
         return transaction
 

@@ -1,7 +1,9 @@
 # accounts/views.py
+import os
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
@@ -17,10 +19,19 @@ from .emails import send_password_reset_email, send_verification_email
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def _user_data(self, user):
+    def _user_data(self, user, request=None):
+        picture_url = None
+        if user.profile_picture:
+            picture_url = (
+                request.build_absolute_uri(user.profile_picture.url)
+                if request else user.profile_picture.url
+            )
+        parts = user.full_name.split(' ', 1)
         return {
             "id": user.id,
             "full_name": user.full_name,
+            "first_name": parts[0],
+            "last_name": parts[1] if len(parts) > 1 else '',
             "email": user.email,
             "is_email_verified": user.is_email_verified,
             "is_verified_seller": user.is_verified_seller,
@@ -32,20 +43,79 @@ class MeView(APIView):
             "school": user.school,
             "department": user.department,
             "year_of_study": user.year_of_study,
+            "profile_picture": picture_url,
         }
 
     def get(self, request):
-        return Response(self._user_data(request.user))
+        return Response(self._user_data(request.user, request))
 
     def patch(self, request):
         serializer = ProfileUpdateSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(self._user_data(request.user))
+        return Response(self._user_data(request.user, request))
 
     def delete(self, request):
         request.user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ProfilePictureView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        file = request.FILES.get('profile_picture')
+        if not file:
+            return Response({"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+        if user.profile_picture:
+            try:
+                if os.path.isfile(user.profile_picture.path):
+                    os.remove(user.profile_picture.path)
+            except Exception:
+                pass
+
+        user.profile_picture = file
+        user.save(update_fields=['profile_picture'])
+        return Response({"profile_picture": request.build_absolute_uri(user.profile_picture.url)})
+
+    def delete(self, request):
+        user = request.user
+        if user.profile_picture:
+            try:
+                if os.path.isfile(user.profile_picture.path):
+                    os.remove(user.profile_picture.path)
+            except Exception:
+                pass
+            user.profile_picture = None
+            user.save(update_fields=['profile_picture'])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SellerOptOutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if not user.is_verified_seller:
+            return Response({"error": "You are not a verified seller."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.is_verified_seller = False
+        user.seller_terms_accepted = False
+        user.student_id = None
+        user.national_id = None
+        user.mpesa_phone = None
+        user.course = None
+        user.school = None
+        user.department = None
+        user.year_of_study = None
+        user.save(update_fields=[
+            'is_verified_seller', 'seller_terms_accepted', 'student_id', 'national_id',
+            'mpesa_phone', 'course', 'school', 'department', 'year_of_study',
+        ])
+        return Response({"message": "You have opted out as a seller.", "is_verified_seller": False})
 
 
 class RegisterView(generics.CreateAPIView):

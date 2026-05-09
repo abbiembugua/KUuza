@@ -3,26 +3,33 @@ from .models import Review
 
 
 class ReviewSerializer(serializers.ModelSerializer):
-    reviewer_name = serializers.CharField(
-        source='reviewer.full_name', read_only=True
-    )
-    reviewee_name = serializers.CharField(
-        source='reviewee.full_name', read_only=True
-    )
+    reviewer_name            = serializers.CharField(source='reviewer.full_name', read_only=True)
+    reviewee_name            = serializers.CharField(source='reviewee.full_name', read_only=True)
+    reviewer_profile_picture = serializers.SerializerMethodField()
 
     class Meta:
         model  = Review
         fields = [
             'id',
             'transaction_id',
-            'reviewer', 'reviewer_name',
+            'reviewer', 'reviewer_name', 'reviewer_profile_picture',
             'reviewee', 'reviewee_name',
             'listing_title',
             'score',
             'comment',
             'created_at',
         ]
-        read_only_fields = ['reviewer', 'reviewer_name', 'reviewee_name', 'created_at']
+        read_only_fields = [
+            'reviewer', 'reviewer_name', 'reviewer_profile_picture',
+            'reviewee_name', 'created_at',
+        ]
+
+    def get_reviewer_profile_picture(self, obj):
+        if not (obj.reviewer and obj.reviewer.profile_picture):
+            return None
+        request = self.context.get('request')
+        url = obj.reviewer.profile_picture.url
+        return request.build_absolute_uri(url) if request else url
 
     def validate_score(self, value):
         if not 1 <= value <= 5:

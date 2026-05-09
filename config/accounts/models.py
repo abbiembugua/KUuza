@@ -56,6 +56,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     email_verification_otp = models.CharField(max_length=6, blank=True, null=True)
     email_verification_expiry = models.DateTimeField(blank=True, null=True)
 
+    profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
+
     # Seller verification fields
     student_id = models.CharField(max_length=50, blank=True, null=True)
     national_id = models.CharField(max_length=50, blank=True, null=True)

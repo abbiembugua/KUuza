@@ -5,11 +5,12 @@ from django.conf import settings
 
 class Report(models.Model):
     REASON_CHOICES = [
-        ('fake_misleading', 'Fake or misleading listing'),
-        ('prohibited_item', 'Prohibited item'),
-        ('suspected_scam', 'Suspected scam'),
+        ('fake_misleading',  'Fake or misleading listing'),
+        ('prohibited_item',  'Prohibited item'),
+        ('suspected_scam',   'Suspected scam'),
         ('inappropriate_content', 'Inappropriate content'),
-        ('other', 'Other'),
+        ('delivery_dispute', 'Delivery dispute'),
+        ('other',            'Other'),
     ]
 
     STATUS_CHOICES = [
@@ -19,6 +20,13 @@ class Report(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    transaction = models.ForeignKey(
+        'transactions.Transaction',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reports'
+    )
     listing = models.ForeignKey(
         'listings.Listing',
         on_delete=models.SET_NULL,

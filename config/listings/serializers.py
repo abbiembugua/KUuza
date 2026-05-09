@@ -15,8 +15,9 @@ class ListingImageSerializer(serializers.ModelSerializer):
 
 
 class ListingSerializer(serializers.ModelSerializer):
-    images      = ListingImageSerializer(many=True, read_only=True)
-    seller_name = serializers.CharField(source='seller.full_name', read_only=True)
+    images                 = ListingImageSerializer(many=True, read_only=True)
+    seller_name            = serializers.CharField(source='seller.full_name', read_only=True)
+    seller_profile_picture = serializers.SerializerMethodField()
     contact_value = serializers.CharField(
         required=False,
         allow_blank=True,
@@ -32,7 +33,7 @@ class ListingSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Listing
         fields = [
-            'id', 'seller', 'seller_name',
+            'id', 'seller', 'seller_name', 'seller_profile_picture',
             'listing_type', 'status',
             'title', 'category', 'description',
             'price',
@@ -49,11 +50,18 @@ class ListingSerializer(serializers.ModelSerializer):
             'is_out_of_stock',
         ]
         read_only_fields = [
-            'seller', 'seller_name', 'usage_count',
+            'seller', 'seller_name', 'seller_profile_picture', 'usage_count',
             'views_count', 'created_at', 'updated_at',
             'average_rating', 'total_reviews',
             'quantity_remaining', 'is_out_of_stock',
         ]
+
+    def get_seller_profile_picture(self, obj):
+        if not (obj.seller and obj.seller.profile_picture):
+            return None
+        request = self.context.get('request')
+        url = obj.seller.profile_picture.url
+        return request.build_absolute_uri(url) if request else url
 
     def get_average_rating(self, obj):
         result = Review.objects.filter(reviewee=obj.seller).aggregate(avg=Avg('score'))

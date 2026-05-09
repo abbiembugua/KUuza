@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Heart, CheckCircle, MapPin, User } from 'lucide-react';
+import { Heart, CheckCircle, MapPin } from 'lucide-react';
+import Avatar from '../shared/Avatar';
 
 const ProductCard = ({ listing, darkMode }) => {
   const [isFavorite, setIsFavorite] = useState(false);
@@ -74,11 +75,14 @@ const ProductCard = ({ listing, darkMode }) => {
           darkMode ? 'border-gray-800' : 'border-gray-200'
         }`}>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-full flex items-center justify-center">
-              <User className="w-4 h-4 text-white" />
-            </div>
-            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              {listing.seller}
+            <Avatar
+              src={listing.seller_profile_picture}
+              name={listing.seller_name}
+              size="w-8 h-8"
+              textSize="text-sm"
+            />
+            <span className={`text-sm truncate ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              {listing.seller_name?.split(' ')[0] || 'KU Student'}
             </span>
           </div>
           

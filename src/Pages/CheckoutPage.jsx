@@ -299,14 +299,13 @@ const CheckoutPage = () => {
       <Toaster toastOptions={{ style: { borderRadius: '10px', padding: '14px' } }} />
       <DashboardNavbar />
 
-      <div className="pt-20 pb-16">
-        <div className="max-w-2xl mx-auto px-4 pt-6">
+      <div className="pt-20 pb-12">
+        <div className="max-w-2xl mx-auto px-4">
 
           <BackButton
             darkMode={darkMode}
-            label={backLabel}
             onClick={handleBack}
-            className="mb-6"
+            className="mb-4"
           />
 
           {step === 1 && (

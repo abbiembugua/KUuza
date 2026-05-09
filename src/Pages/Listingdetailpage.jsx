@@ -268,10 +268,10 @@ const ListingDetailPage = () => {
       <DashboardNavbar />
 
       <div className="pt-20 pb-16">
-        <div className="max-w-7xl mx-auto px-4">
+        <div className="max-w-7xl mx-auto px-4 pt-4">
 
           {/* Back */}
-          <div className="pt-6 mb-6 flex items-center gap-2">
+          <div className="mb-4 flex items-center gap-2">
             <BackButton darkMode={darkMode} onClick={() => navigate(-1)} />
             <span className={darkMode ? 'text-gray-600' : 'text-gray-300'}>/</span>
             <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{CATEGORY_LABELS[listing.category] || listing.category}</span>

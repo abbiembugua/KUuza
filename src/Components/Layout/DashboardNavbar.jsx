@@ -278,7 +278,7 @@ const DashboardNavbar = ({ onSearch, searchQuery, setSearchQuery, cartItemsCount
                   darkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
-                <ShoppingBag size={20} />
+                <ShoppingCart size={20} />
                 {cartItemsCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-emerald-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                     {cartItemsCount > 99 ? '99+' : cartItemsCount}
@@ -312,11 +312,19 @@ const DashboardNavbar = ({ onSearch, searchQuery, setSearchQuery, cartItemsCount
                       : darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
                   }`}
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-sm font-semibold">
-                      {user?.full_name?.charAt(0).toUpperCase() || 'U'}
-                    </span>
-                  </div>
+                  {user?.profile_picture ? (
+                    <img
+                      src={user.profile_picture}
+                      alt="avatar"
+                      className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-sm font-semibold">
+                        {user?.full_name?.charAt(0).toUpperCase() || 'U'}
+                      </span>
+                    </div>
+                  )}
                   <ChevronDown
                     size={16}
                     className={`hidden md:block transition-transform ${userDropdownOpen ? 'rotate-180' : ''} ${

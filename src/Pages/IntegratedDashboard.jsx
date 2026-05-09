@@ -31,13 +31,11 @@ const IntegratedDashboard = () => {
   const [myListings, setMyListings] = useState([]);
   const [purchases, setPurchases] = useState([]);
   const [soldItems, setSoldItems] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!user?.id) return;
 
     const loadData = async () => {
-      setIsLoading(true);
       try {
         const [cartData, trendingData, recentData, transactionsData, myAllListingsData] =
           await Promise.all([
@@ -67,8 +65,6 @@ const IntegratedDashboard = () => {
         setMyListings(toArray(myAllListingsData));
       } catch (error) {
         console.error('Error loading dashboard data:', error);
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -106,7 +102,6 @@ const IntegratedDashboard = () => {
           </span>
           <StatsStrip
             darkMode={darkMode}
-            isLoading={isLoading}
             cartCount={cartItems.length}
             myListingsCount={myListings.length}
             soldCount={soldItems.length}
@@ -164,7 +159,6 @@ const IntegratedDashboard = () => {
           <HorizontalScrollSection
             title="Trending on Campus"
             listings={trendingListings}
-            isLoading={isLoading}
             darkMode={darkMode}
             onView={handleViewListing}
             onViewAll={() => navigate('/browse?ordering=most_viewed')}
@@ -174,20 +168,17 @@ const IntegratedDashboard = () => {
           <HorizontalScrollSection
             title="Just Listed"
             listings={recentListings}
-            isLoading={isLoading}
             darkMode={darkMode}
             onView={handleViewListing}
             onViewAll={() => navigate('/browse?ordering=newest')}
             emptyMessage="No recent listings yet"
           />
 
-          {!isLoading && (
-            <MyListingsPreview
-              listings={myListings}
-              darkMode={darkMode}
-              onView={handleViewListing}
-            />
-          )}
+          <MyListingsPreview
+            listings={myListings}
+            darkMode={darkMode}
+            onView={handleViewListing}
+          />
         </div>
 
       </div>

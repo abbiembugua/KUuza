@@ -275,12 +275,11 @@ const SellerVerificationSection = ({ user, darkMode, onVerified }) => {
   const emailLocal = user?.email?.split('@')[0] || '';
   const [emailAdmNumber, emailYear] = emailLocal.includes('.') ? emailLocal.split('.') : ['', ''];
 
-  const [editing,        setEditing]        = useState(false);
-  const [submitting,     setSubmitting]     = useState(false);
-  const [termsOpen,      setTermsOpen]      = useState(false);
-  const [termsRead,      setTermsRead]      = useState(false);
-  const [studentIdError, setStudentIdError] = useState('');
-
+  const [editing,          setEditing]          = useState(false);
+  const [submitting,       setSubmitting]       = useState(false);
+  const [termsOpen,        setTermsOpen]        = useState(!isVerified);
+  const [termsRead,        setTermsRead]        = useState(!isVerified);
+  const [studentIdError,   setStudentIdError]   = useState('');
   const [studentId,     setStudentId]     = useState(user?.student_id || '');
   const [nationalId,    setNationalId]    = useState(user?.national_id || '');
   const [mpesaPhone,    setMpesaPhone]    = useState(user?.mpesa_phone || '');
@@ -700,6 +699,7 @@ const SellerVerificationSection = ({ user, darkMode, onVerified }) => {
           </button>
         </div>
       )}
+
     </section>
   );
 };

@@ -6,6 +6,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { generateReceipt } from '../Checkout/generateReceipt';
+import Avatar from '../shared/Avatar';
 
 const API_BASE = 'http://127.0.0.1:8000/api';
 
@@ -446,9 +447,10 @@ export default function TransactionCard({
     ? { id: transaction.seller, full_name: transaction.seller_name }
     : { id: transaction.buyer,  full_name: transaction.buyer_name  };
 
-  const counterpartyName = isBuyer ? transaction.seller_name : transaction.buyer_name;
-  const counterpartyRole = isBuyer ? 'Seller' : 'Buyer';
-  const counterpartyId   = isBuyer ? transaction.seller : transaction.buyer;
+  const counterpartyName    = isBuyer ? transaction.seller_name            : transaction.buyer_name;
+  const counterpartyRole    = isBuyer ? 'Seller'                           : 'Buyer';
+  const counterpartyId      = isBuyer ? transaction.seller                 : transaction.buyer;
+  const counterpartyPicture = isBuyer ? transaction.seller_profile_picture : transaction.buyer_profile_picture;
   const transactionQuantity = getTransactionQuantity(transaction);
 
   const handleComplete = async () => {
@@ -625,9 +627,7 @@ export default function TransactionCard({
               : 'bg-gray-50 hover:bg-emerald-50'
           }`}
         >
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-600 to-cyan-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
-            {counterpartyName?.charAt(0)?.toUpperCase() || 'K'}
-          </div>
+          <Avatar src={counterpartyPicture} name={counterpartyName} size="w-7 h-7" textSize="text-xs" />
           <div className="flex-1 min-w-0">
             <p className={`text-xs font-semibold truncate ${darkMode ? 'text-gray-300 group-hover:text-white' : 'text-gray-700 group-hover:text-emerald-700'}`}>
               {counterpartyName}

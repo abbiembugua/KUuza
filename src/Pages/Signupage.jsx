@@ -13,7 +13,8 @@ import BackButton from '../Components/shared/BackButton';
 const SignUpPage = () => {
   const { darkMode } = useTheme();
 
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -88,8 +89,14 @@ const SignUpPage = () => {
     setError('');
     setIsLoading(true);
 
-    if (!fullName.trim()) {
-      setError('Full name is required.');
+    if (!firstName.trim()) {
+      setError('First name is required.');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!lastName.trim()) {
+      setError('Last name is required.');
       setIsLoading(false);
       return;
     }
@@ -120,7 +127,8 @@ const SignUpPage = () => {
 
     try {
       const response = await signup({
-        full_name: fullName,
+        first_name: firstName,
+        last_name: lastName,
         email,
         password,
         confirm_password: confirmPassword,
@@ -312,23 +320,43 @@ const SignUpPage = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="flex items-center gap-2 mb-2 font-medium">
-                <User size={16} className={darkMode ? 'text-emerald-400' : 'text-emerald-500'} />
-                Full Name
-              </label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="John Doe"
-                className={`w-full px-4 py-3.5 rounded-xl border focus:outline-none transition-all duration-200 ${
-                  darkMode
-                    ? 'bg-gray-800/50 border-gray-700 text-gray-100 placeholder-gray-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30'
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
-                }`}
-                required
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="flex items-center gap-2 mb-2 font-medium">
+                  <User size={16} className={darkMode ? 'text-emerald-400' : 'text-emerald-500'} />
+                  First Name
+                </label>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="John"
+                  className={`w-full px-4 py-3.5 rounded-xl border focus:outline-none transition-all duration-200 ${
+                    darkMode
+                      ? 'bg-gray-800/50 border-gray-700 text-gray-100 placeholder-gray-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
+                  }`}
+                  required
+                />
+              </div>
+              <div>
+                <label className="flex items-center gap-2 mb-2 font-medium">
+                  <User size={16} className={darkMode ? 'text-emerald-400' : 'text-emerald-500'} />
+                  Last Name
+                </label>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Doe"
+                  className={`w-full px-4 py-3.5 rounded-xl border focus:outline-none transition-all duration-200 ${
+                    darkMode
+                      ? 'bg-gray-800/50 border-gray-700 text-gray-100 placeholder-gray-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
+                  }`}
+                  required
+                />
+              </div>
             </div>
 
             <div>

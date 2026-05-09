@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, TrendingUp, Package, ShoppingBag, ChevronRight } from 'lucide-react';
 
-const StatsStrip = ({ darkMode, isLoading, cartCount, myListingsCount, soldCount, purchasesCount }) => {
+const StatsStrip = ({ darkMode, cartCount, myListingsCount, soldCount, purchasesCount }) => {
   const navigate = useNavigate();
 
   const stats = [
@@ -58,7 +58,7 @@ const StatsStrip = ({ darkMode, isLoading, cartCount, myListingsCount, soldCount
               <ChevronRight className={`w-3.5 h-3.5 ${darkMode ? 'text-gray-600' : 'text-gray-500'}`} />
             </div>
             <p className={`text-2xl font-bold mb-0.5 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              {isLoading ? '—' : stat.value}
+              {stat.value}
             </p>
             <p className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-700'}`}>{stat.label}</p>
           </div>

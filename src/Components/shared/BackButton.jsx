@@ -1,21 +1,18 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 
-const BackButton = ({ darkMode, label = 'Back', onClick, className = '' }) => {
-  return (
-    <button
-      type="button"
-      onClick={onClick || (() => window.history.back())}
-      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 ${
-        darkMode
-          ? 'bg-gray-800/80 hover:bg-gray-700 text-gray-200'
-          : 'bg-white/80 hover:bg-white text-gray-700 shadow-md'
-      } backdrop-blur-sm ${className}`.trim()}
-    >
-      <ArrowLeft size={20} />
-      <span className="font-medium">{label}</span>
-    </button>
-  );
-};
+const BackButton = ({ darkMode, onClick, className = '' }) => (
+  <button
+    type="button"
+    onClick={onClick || (() => window.history.back())}
+    className={`p-2 rounded-xl transition-colors ${
+      darkMode
+        ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+        : 'bg-white hover:bg-gray-100 text-gray-600 border border-gray-200'
+    } ${className}`.trim()}
+  >
+    <ArrowLeft size={18} />
+  </button>
+);
 
 export default BackButton;

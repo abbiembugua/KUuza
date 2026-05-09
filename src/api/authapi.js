@@ -55,7 +55,8 @@ export const login = async (data) => {
 
 export const signup = async (data) => {
   const payload = {
-    full_name: data.full_name,
+    first_name: data.first_name,
+    last_name: data.last_name,
     email: data.email,
     password: data.password,
     confirm_password: data.confirm_password,
@@ -257,6 +258,57 @@ export const submitSellerVerification = async (data) => {
     throw new Error(msg);
   }
 
+  return result;
+};
+
+export const uploadProfilePicture = async (file) => {
+  const token = localStorage.getItem("access");
+  if (!token) throw new Error("No token found");
+
+  const formData = new FormData();
+  formData.append("profile_picture", file);
+
+  const response = await fetch(`${API_URL}/me/profile-picture/`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(result.error || result.detail || "Unable to upload picture");
+  }
+  return result;
+};
+
+export const deleteProfilePicture = async () => {
+  const token = localStorage.getItem("access");
+  if (!token) throw new Error("No token found");
+
+  const response = await fetch(`${API_URL}/me/profile-picture/`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const result = await response.json().catch(() => ({}));
+    throw new Error(result.error || result.detail || "Unable to delete picture");
+  }
+};
+
+export const optOutAsSeller = async () => {
+  const token = localStorage.getItem("access");
+  if (!token) throw new Error("No token found");
+
+  const response = await fetch(`${API_URL}/seller/opt-out/`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(result.error || result.detail || "Unable to opt out");
+  }
   return result;
 };
 

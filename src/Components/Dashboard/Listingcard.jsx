@@ -75,6 +75,7 @@ const ListingCard = ({ item, darkMode, onView }) => {
 
         <SellerRow
           sellerName={item.seller_name}
+          sellerProfilePicture={item.seller_profile_picture}
           averageRating={item.average_rating}
           totalReviews={item.total_reviews}
           darkMode={darkMode}

@@ -217,49 +217,39 @@ const IntegratedBrowsePage = () => {
         setSearchQuery={setSearchQuery}
         cartItemsCount={cartItems.length}
       />
+      {/* Spacer to push below fixed navbar */}
       <div className="h-16" />
 
-      {/* Sticky sub-header */}
-      <div className={`sticky top-16 z-30 border-b ${
+      {/* ── Sticky category + back button bar ── */}
+      <div className={`sticky top-16 z-20 border-b ${
         darkMode ? 'bg-gray-900/95 border-gray-800' : 'bg-white/95 border-gray-200'
       } backdrop-blur-md`}>
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <BackButton darkMode={darkMode} label="Back" onClick={() => navigate(-1)} className="px-3 py-1.5 shadow-none" />
-          <div
-            className={`px-3 py-1.5 rounded-lg cursor-pointer transition-colors text-sm font-medium ${
-              darkMode ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
-            onClick={() => navigate('/cart')}
-          >
-            Cart: {cartItems.length}
+        <div className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-3">
+          <BackButton darkMode={darkMode} onClick={() => navigate(-1)} />
+          <div className="flex gap-2 overflow-x-auto flex-nowrap pb-0.5 scrollbar-none">
+            {CATEGORY_OPTIONS.map(cat => {
+              const isSelected = selectedCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => handleCategoryChange(cat.id)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors duration-150 ${
+                    isSelected
+                      ? 'bg-emerald-500 border-emerald-500 text-white'
+                      : darkMode
+                        ? 'bg-transparent border-gray-600 text-gray-300 hover:border-emerald-500 hover:text-emerald-400'
+                        : 'bg-transparent border-gray-300 text-gray-600 hover:border-emerald-500 hover:text-emerald-600'
+                  }`}
+                >
+                  {cat.shortLabel}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-
-        {/* Category pills — full width above the sidebar layout */}
-        <div className="flex flex-wrap gap-2.5 mb-6">
-          {CATEGORY_OPTIONS.map(cat => {
-            const isSelected = selectedCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => handleCategoryChange(cat.id)}
-                className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors duration-150 ${
-                  isSelected
-                    ? 'bg-emerald-500 border-emerald-500 text-white'
-                    : darkMode
-                      ? 'bg-transparent border-gray-600 text-gray-300 hover:border-emerald-500 hover:text-emerald-400'
-                      : 'bg-transparent border-gray-300 text-gray-600 hover:border-emerald-500 hover:text-emerald-600'
-                }`}
-              >
-                {cat.shortLabel}
-              </button>
-            );
-          })}
-        </div>
-
+      <div className="max-w-7xl mx-auto px-4 pt-4 pb-8">
       <div className="flex gap-6">
 
         {/* ── FILTER SIDEBAR (desktop: always visible, mobile: slide-in drawer) ── */}
@@ -287,7 +277,7 @@ const IntegratedBrowsePage = () => {
             </button>
           </div>
 
-          <div className={`rounded-xl border p-3 sticky top-24 ${
+          <div className={`rounded-xl border p-3 sticky top-[7.5rem] ${
             darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
           }`}>
 
@@ -586,12 +576,21 @@ const IntegratedBrowsePage = () => {
                     )}
 
                     {!isOwner(item.seller) && !isUnavailable && (
-                      <button
-                        onClick={e => { e.stopPropagation(); handleAddToCart(item); }}
-                        className="w-full px-3 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-lg font-medium text-sm transition-colors"
-                      >
-                        Add to Cart
-                      </button>
+                      item.listing_type === 'service' ? (
+                        <button
+                          onClick={e => { e.stopPropagation(); navigate(`/listings/${item.id}`); }}
+                          className="w-full px-3 py-2 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white rounded-lg font-medium text-sm transition-colors"
+                        >
+                          Book Now
+                        </button>
+                      ) : !isOutOfStock && (
+                        <button
+                          onClick={e => { e.stopPropagation(); handleAddToCart(item); }}
+                          className="w-full px-3 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-lg font-medium text-sm transition-colors"
+                        >
+                          Add to Cart
+                        </button>
+                      )
                     )}
                   </div>
                 </div>

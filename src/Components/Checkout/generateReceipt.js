@@ -217,7 +217,7 @@ function generateBulkReceipt({ bulkItems, bulkTotal, bulkTxns, scheduledDate, sc
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(...MUTED);
-  doc.text(`Bulk purchase — ${bulkItems.length} item${bulkItems.length === 1 ? '' : 's'}`, margin + 4, 47);
+  doc.text(`${bulkItems.length} item${bulkItems.length === 1 ? '' : 's'}`, margin + 4, 47);
   doc.setFontSize(16);
   doc.setTextColor(...EMERALD);
   doc.text(formatMoney(bulkTotal), margin + 4, 55);
@@ -228,14 +228,19 @@ function generateBulkReceipt({ bulkItems, bulkTotal, bulkTxns, scheduledDate, sc
 
   let y = 74;
 
+  // Column x anchors (all right-aligned except ITEM)
+  const colQty   = pageWidth - margin - 50;   // ~146 mm
+  const colUnit  = pageWidth - margin - 26;   // ~170 mm  (24 mm gap → fits "KSh 2,000.00")
+  const colTotal = pageWidth - margin;        // ~196 mm  (26 mm gap → fits "KSh 2,000.00")
+
   // Column headers
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7);
   doc.setTextColor(...MUTED);
-  doc.text('ITEM', margin, y);
-  doc.text('QTY',        pageWidth - margin - 34, y, { align: 'right' });
-  doc.text('UNIT PRICE', pageWidth - margin - 16, y, { align: 'right' });
-  doc.text('SUBTOTAL',   pageWidth - margin,      y, { align: 'right' });
+  doc.text('ITEM',       margin,    y);
+  doc.text('QTY',        colQty,   y, { align: 'right' });
+  doc.text('UNIT PRICE', colUnit,  y, { align: 'right' });
+  doc.text('SUBTOTAL',   colTotal, y, { align: 'right' });
   y += 3;
   doc.setDrawColor(...LINE);
   doc.setLineWidth(0.2);
@@ -260,21 +265,21 @@ function generateBulkReceipt({ bulkItems, bulkTotal, bulkTxns, scheduledDate, sc
       y = 20;
     }
 
-    const maxTitleWidth = pageWidth - margin * 2 - 62;
+    const maxTitleWidth = colQty - margin - 6;
     const titleLine = doc.splitTextToSize(item.title || '-', maxTitleWidth)[0];
 
     doc.setTextColor(...INK);
     doc.text(titleLine, margin, y);
 
     doc.setTextColor(...MUTED);
-    doc.text(String(qty), pageWidth - margin - 34, y, { align: 'right' });
+    doc.text(String(qty), colQty,  y, { align: 'right' });
 
     doc.setTextColor(...INK);
-    doc.text(formatMoney(unit), pageWidth - margin - 16, y, { align: 'right' });
+    doc.text(formatMoney(unit), colUnit,  y, { align: 'right' });
 
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...EMERALD);
-    doc.text(formatMoney(subtotal), pageWidth - margin, y, { align: 'right' });
+    doc.text(formatMoney(subtotal), colTotal, y, { align: 'right' });
     doc.setFont('helvetica', 'normal');
 
     // Seller sub-row

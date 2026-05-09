@@ -4,6 +4,7 @@ import { Flag, Loader2, MapPin, Package, Star, Store, UserRound, Wrench } from '
 import ReportModal from '../Components/ReportModal';
 import DashboardNavbar from '../Components/Layout/DashboardNavbar';
 import BackButton from '../Components/shared/BackButton';
+import Avatar from '../Components/shared/Avatar';
 import { getAllListings } from '../api/dashboardapi';
 import { getReviewsForUser } from '../api/reviewsapi';
 import { useTheme } from '../context/Themecontext';
@@ -62,9 +63,7 @@ function ReviewCard({ review, darkMode }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 text-sm font-semibold text-white flex-shrink-0">
-              {(review.reviewer_name || 'K').charAt(0).toUpperCase()}
-            </div>
+            <Avatar src={review.reviewer_profile_picture} name={review.reviewer_name} size="w-9 h-9" textSize="text-sm" />
             <div className="min-w-0">
               <p className={`truncate text-sm font-semibold ${darkMode ? 'text-white' : 'text-stone-900'}`}>
                 {review.reviewer_name || 'KU Student'}
@@ -243,6 +242,11 @@ const SellerProfilePage = () => {
 
   const isOwnProfile = normalizeId(user?.id) === String(sellerId);
 
+  const sellerProfilePicture = useMemo(() =>
+    listings[0]?.seller_profile_picture ||
+    (isOwnProfile ? user?.profile_picture : null),
+  [listings, isOwnProfile, user?.profile_picture]);
+
   if (loading) {
     return (
       <div className={`min-h-screen ${darkMode ? 'bg-gray-950' : 'bg-stone-50'}`}>
@@ -285,7 +289,7 @@ const SellerProfilePage = () => {
       <div className="h-16" />
 
       <div className="mx-auto max-w-5xl px-4 py-8">
-        <BackButton darkMode={darkMode} label="Back" onClick={() => navigate(-1)} />
+        <BackButton darkMode={darkMode} onClick={() => navigate(-1)} />
 
         <div className={`mt-6 overflow-hidden rounded-[32px] border ${
           darkMode ? 'border-gray-800 bg-gray-900' : 'border-stone-200 bg-white'
@@ -293,9 +297,7 @@ const SellerProfilePage = () => {
           <div className={`border-b px-6 py-7 ${darkMode ? 'border-gray-800' : 'border-stone-200'}`}>
             <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 text-2xl font-semibold text-white">
-                  {(sellerName || 'K').charAt(0).toUpperCase()}
-                </div>
+                <Avatar src={sellerProfilePicture} name={sellerName} size="w-16 h-16" textSize="text-2xl" />
                 <div>
                   <p className="text-xs uppercase tracking-[0.28em] text-emerald-500">
                     {isOwnProfile ? 'Your seller profile' : 'Seller profile'}

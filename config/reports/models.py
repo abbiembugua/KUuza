@@ -14,9 +14,10 @@ class Report(models.Model):
     ]
 
     STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('dismissed', 'Dismissed'),
-        ('acted', 'Acted On'),
+        ('pending',       'Pending'),
+        ('in_mediation',  'Parties Asked to Resolve'),
+        ('dismissed',     'Dismissed'),
+        ('acted',         'Acted On'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -48,7 +49,7 @@ class Report(models.Model):
     )
     reason = models.CharField(max_length=30, choices=REASON_CHOICES)
     details = models.TextField(blank=True)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

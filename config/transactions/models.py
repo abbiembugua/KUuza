@@ -70,10 +70,13 @@ class Transaction(models.Model):
     # M-Pesa
     mpesa_phone   = models.CharField(max_length=20, blank=True)
     mpesa_receipt = models.CharField(max_length=50, blank=True)
+    mpesa_paid    = models.BooleanField(default=False)
 
     seller_confirmed      = models.BooleanField(default=False)
     buyer_confirmed       = models.BooleanField(default=False)
     is_disputed           = models.BooleanField(default=False)
+    dispute_deadline      = models.DateTimeField(null=True, blank=True)
+    dispute_escalated     = models.BooleanField(default=False)
     completed_at          = models.DateTimeField(null=True, blank=True)
     confirmation_deadline = models.DateTimeField(null=True, blank=True)
     disputed_at           = models.DateTimeField(null=True, blank=True)
@@ -118,46 +121,3 @@ class Transaction(models.Model):
                 cart__user=self.buyer,
                 listing_id=self.listing_id,
             ).delete()
-
-
-class Notification(models.Model):
-    TYPE_CHOICES = [
-        ('purchase_created',   'Purchase Created'),
-        ('receipt_ready',      'Receipt Ready'),
-        ('delivery_marked',    'Delivery Marked'),
-        ('receipt_confirmed',  'Receipt Confirmed'),
-        ('delivery_disputed',  'Delivery Disputed'),
-    ]
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    recipient = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='notifications'
-    )
-    actor = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='sent_notifications'
-    )
-    transaction = models.ForeignKey(
-        Transaction,
-        on_delete=models.CASCADE,
-        related_name='notifications'
-    )
-    notification_type = models.CharField(max_length=32, choices=TYPE_CHOICES)
-    title = models.CharField(max_length=255)
-    body = models.TextField()
-    is_read = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    read_at = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['recipient', 'is_read']),
-            models.Index(fields=['created_at']),
-        ]
-
-    def __str__(self):
-        return f"{self.notification_type} for {self.recipient}"

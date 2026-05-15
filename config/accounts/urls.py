@@ -11,7 +11,6 @@ from .views import (
     ResetPasswordView,
     SellerOptOutView,
     SellerVerifyView,
-    VerifyEmailView,
     VerifyEmailOTPView,
 )
 
@@ -21,7 +20,6 @@ urlpatterns = [
     path('me/', MeView.as_view()),
     path('me/profile-picture/', ProfilePictureView.as_view(), name='profile-picture'),
     path("logout/", LogoutView.as_view(), name="logout"),
-    path('verify-email/', VerifyEmailView.as_view(), name='verify-email'),
     path('verify-email-otp/', VerifyEmailOTPView.as_view(), name='verify-email-otp'),
     path('resend-verification/', ResendVerificationView.as_view(), name='resend-verification'),
     path('forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),

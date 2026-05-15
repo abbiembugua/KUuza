@@ -26,12 +26,11 @@ class MeView(APIView):
                 request.build_absolute_uri(user.profile_picture.url)
                 if request else user.profile_picture.url
             )
-        parts = user.full_name.split(' ', 1)
         return {
             "id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
             "full_name": user.full_name,
-            "first_name": parts[0],
-            "last_name": parts[1] if len(parts) > 1 else '',
             "email": user.email,
             "is_email_verified": user.is_email_verified,
             "is_verified_seller": user.is_verified_seller,
@@ -140,6 +139,8 @@ class RegisterView(generics.CreateAPIView):
                 "user": {
                     "id": str(user.id),
                     "email": user.email,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
                     "full_name": user.full_name,
                     "is_email_verified": user.is_email_verified,
                 }

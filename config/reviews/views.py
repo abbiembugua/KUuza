@@ -57,7 +57,22 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     # ── POST /api/reviews/ ────────────────────────────────────────────────────
     def perform_create(self, serializer):
-        serializer.save(reviewer=self.request.user)
+        review = serializer.save(reviewer=self.request.user)
+        try:
+            from notifications.models import Notification
+            Notification.objects.create(
+                recipient=review.reviewee,
+                actor=review.reviewer,
+                notification_type='review_received',
+                title='You received a new review',
+                body=(
+                    f'{review.reviewer.full_name} left you a '
+                    f'{review.score}-star review'
+                    + (f': "{review.comment[:80]}"' if review.comment else '.')
+                ),
+            )
+        except Exception:
+            pass
 
     # ── GET /api/reviews/for_user/{user_id}/ ──────────────────────────────────
     @action(detail=False, methods=['get'], url_path='for_user/(?P<user_id>[^/.]+)')

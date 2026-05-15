@@ -4,16 +4,16 @@ from .models import User
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display    = ['email', 'full_name', 'is_email_verified', 'is_verified_seller', 'is_active', 'is_staff', 'created_at']
+    list_display    = ['email', 'first_name', 'last_name', 'is_email_verified', 'is_verified_seller', 'is_active', 'is_staff', 'created_at']
     list_filter     = ['is_active', 'is_email_verified', 'is_verified_seller', 'is_staff']
-    search_fields   = ['email', 'full_name']
+    search_fields   = ['email', 'first_name', 'last_name']
     readonly_fields = ['id', 'created_at', 'email_verification_token', 'email_verification_otp']
     ordering        = ['-created_at']
     actions         = ['suspend_users', 'activate_users']
 
     fieldsets = (
         ('Identity', {
-            'fields': ('id', 'email', 'full_name', 'created_at')
+            'fields': ('id', 'email', 'first_name', 'last_name', 'created_at')
         }),
         ('Account Status', {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'is_email_verified', 'accepted_terms')

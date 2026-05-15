@@ -56,6 +56,13 @@ class ListingSerializer(serializers.ModelSerializer):
             'quantity_remaining', 'is_out_of_stock',
         ]
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        if request and request.user == instance.seller:
+            data['contact_value'] = instance.contact_value
+        return data
+
     def get_seller_profile_picture(self, obj):
         if not (obj.seller and obj.seller.profile_picture):
             return None

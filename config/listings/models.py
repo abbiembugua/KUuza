@@ -11,13 +11,24 @@ class Listing(models.Model):
     ]
 
     CATEGORY_CHOICES = [
-        ('books', 'Books'),
+        # Goods
+        ('books',       'Academics'),
         ('electronics', 'Electronics'),
-        ('fashion', 'Fashion'),
-        ('furniture', 'Furniture'),
+        ('fashion',     'Fashion'),
+        ('furniture',   'Furniture'),
         ('food_beverages', 'Food & Beverages'),
-        ('beauty', 'Beauty'),
-        ('other', 'Other'),
+        ('beauty',      'Beauty'),
+        ('stationery',  'Stationery & Supplies'),
+        ('sports',      'Sports & Fitness'),
+        # Services
+        ('tutoring',    'Tutoring & Academics'),
+        ('printing',    'Printing & Photocopying'),
+        ('design',      'Design & Creative'),
+        ('tech_repair', 'Tech & Repairs'),
+        ('laundry',     'Laundry & Cleaning'),
+        ('photography', 'Photography & Video'),
+        # Catch-all
+        ('other',       'Other'),
     ]
 
     CONDITION_CHOICES = [

@@ -1,13 +1,14 @@
 from django.db.models import Q
-from django.db import connection
 from django.utils import timezone
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Notification, Transaction
-from .serializers import NotificationSerializer, TransactionSerializer
+from .models import Transaction
+from .serializers import TransactionSerializer
+from notifications.models import Notification
+from accounts.emails import send_dispute_raised_email
 
 
 class TransactionViewSet(viewsets.ModelViewSet):
@@ -29,6 +30,40 @@ class TransactionViewSet(viewsets.ModelViewSet):
             is_disputed=False,
             confirmation_deadline__lt=now,
         ).update(status='completed', buyer_confirmed=True)
+
+        # Lazy dispute escalation: deadline passed, not yet escalated
+        expired = list(Transaction.objects.filter(
+            Q(buyer=user) | Q(seller=user),
+            is_disputed=True,
+            dispute_escalated=False,
+            dispute_deadline__lt=now,
+        ).select_related('listing', 'buyer', 'seller'))
+        for txn in expired:
+            txn.dispute_escalated = True
+            txn.save(update_fields=['dispute_escalated', 'updated_at'])
+            listing_title = txn.listing.title if txn.listing else 'the item'
+            try:
+                Notification.objects.create(
+                    recipient=txn.seller,
+                    transaction=txn,
+                    notification_type='delivery_disputed',
+                    title='Dispute deadline passed — admin review pending',
+                    body=f'The 72-hour window to resolve the dispute on "{listing_title}" has passed. KUuza admin will now review and may take action on your account.',
+                )
+                Notification.objects.create(
+                    recipient=txn.buyer,
+                    transaction=txn,
+                    notification_type='delivery_disputed',
+                    title='Dispute escalated to admin',
+                    body=f'The 72-hour resolution window for your dispute on "{listing_title}" has passed. KUuza admin will now review.',
+                )
+            except Exception:
+                pass
+            try:
+                from accounts.emails import send_dispute_escalation_email
+                send_dispute_escalation_email(txn.seller, txn.buyer.full_name, listing_title)
+            except Exception:
+                pass
 
         queryset = Transaction.objects.filter(
             Q(buyer=user) | Q(seller=user)
@@ -114,14 +149,15 @@ class TransactionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        if not transaction.seller_confirmed or transaction.status != 'pending':
+        if transaction.status != 'pending' or transaction.is_disputed:
             return Response(
                 {'error': 'This transaction is not awaiting confirmation.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        transaction.status          = 'completed'
-        transaction.buyer_confirmed = True
+        transaction.status           = 'completed'
+        transaction.buyer_confirmed  = True
+        transaction.seller_confirmed = True
         transaction.save()
 
         # Notify seller
@@ -155,20 +191,55 @@ class TransactionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        if not transaction.seller_confirmed or transaction.status != 'pending':
+        if transaction.is_disputed:
             return Response(
-                {'error': 'This transaction is not awaiting confirmation.'},
+                {'error': 'A dispute has already been raised on this transaction.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        transaction.is_disputed = True
-        transaction.disputed_at = timezone.now()
-        transaction.save(update_fields=['is_disputed', 'disputed_at', 'updated_at'])
+        buyer_reason = (request.data.get('reason') or '').strip()
+        if not buyer_reason:
+            return Response(
+                {'error': 'Please describe the issue with your order so admin can review it if needed.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        now = timezone.now()
+        post_receipt = False
+
+        if transaction.status == 'pending':
+            pass  # always allowed while pending
+        elif transaction.status in ('completed', 'auto_completed'):
+            if not transaction.completed_at:
+                return Response(
+                    {'error': 'This transaction cannot be disputed.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            hours_since = (now - transaction.completed_at).total_seconds() / 3600
+            if hours_since > 24:
+                return Response(
+                    {'error': 'Disputes on completed orders must be raised within 24 hours of confirming receipt.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            post_receipt = True
+        else:
+            return Response(
+                {'error': 'This transaction cannot be disputed.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        from datetime import timedelta
+        transaction.is_disputed       = True
+        transaction.disputed_at       = now
+        transaction.dispute_deadline  = now + timedelta(hours=72)
+        transaction.dispute_escalated = False
+        transaction.save(update_fields=['is_disputed', 'disputed_at', 'dispute_deadline', 'dispute_escalated', 'updated_at'])
 
         # Create a report record so admin can review it
         try:
             from reports.models import Report
             listing_title = transaction.listing.title if transaction.listing else 'Unknown listing'
+            context_note = 'after confirming receipt (item defective/not as described)' if post_receipt else 'before receipt (item not received)'
             Report.objects.create(
                 transaction=transaction,
                 listing=transaction.listing,
@@ -176,16 +247,19 @@ class TransactionViewSet(viewsets.ModelViewSet):
                 reporter=transaction.buyer,
                 reason='delivery_dispute',
                 details=(
-                    f'Buyer {transaction.buyer.full_name} reported not receiving '
+                    f'Buyer {transaction.buyer.full_name} reported an issue with '
                     f'"{listing_title}" (KSh {transaction.agreed_price}) '
-                    f'from seller {transaction.seller.full_name}. '
-                    f'Scheduled date: {transaction.scheduled_date}.'
+                    f'from seller {transaction.seller.full_name} — {context_note}. '
+                    f'Scheduled: {transaction.scheduled_date}. '
+                    f'Payment: {transaction.get_payment_method_display()}.\n\n'
+                    f'Buyer\'s description: {buyer_reason}'
                 ),
             )
         except Exception:
             pass
 
         # Notify seller
+        listing_title = transaction.listing.title if transaction.listing else 'the item'
         try:
             Notification.objects.create(
                 recipient=transaction.seller,
@@ -194,9 +268,64 @@ class TransactionViewSet(viewsets.ModelViewSet):
                 notification_type='delivery_disputed',
                 title='Buyer raised a dispute',
                 body=(
-                    f'{transaction.buyer.full_name} reported they did not receive '
+                    f'{transaction.buyer.full_name} reported an issue with '
+                    f'"{listing_title}". '
+                    f'Please contact them directly to resolve this. '
+                    f'If resolved, ask them to close the dispute on their end.'
+                ),
+            )
+        except Exception:
+            pass
+        try:
+            send_dispute_raised_email(transaction.seller, transaction.buyer.full_name, listing_title)
+        except Exception:
+            pass
+
+        return Response(
+            TransactionSerializer(transaction, context={'request': request}).data
+        )
+
+    @action(detail=True, methods=['patch'])
+    def resolve_dispute(self, request, pk=None):
+        transaction = self.get_object()
+
+        if transaction.buyer != request.user:
+            return Response(
+                {'error': 'Only the buyer can close a dispute.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if not transaction.is_disputed:
+            return Response(
+                {'error': 'No active dispute on this transaction.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        transaction.is_disputed = False
+        transaction.save(update_fields=['is_disputed', 'updated_at'])
+
+        # Close the pending dispute report — no admin intervention needed
+        try:
+            from reports.models import Report
+            Report.objects.filter(
+                transaction=transaction,
+                reason='delivery_dispute',
+                status__in=['pending', 'in_mediation'],
+            ).update(status='dismissed')
+        except Exception:
+            pass
+
+        try:
+            Notification.objects.create(
+                recipient=transaction.seller,
+                actor=transaction.buyer,
+                transaction=transaction,
+                notification_type='dispute_resolved',
+                title='Dispute closed',
+                body=(
+                    f'{transaction.buyer.full_name} has closed the dispute on '
                     f'"{transaction.listing.title if transaction.listing else "the item"}". '
-                    f'Please contact them to resolve this.'
+                    f'The issue has been resolved — thank you for following up.'
                 ),
             )
         except Exception:
@@ -205,6 +334,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
         return Response(
             TransactionSerializer(transaction, context={'request': request}).data
         )
+
     @action(detail=True, methods=['patch'])
     def cancel(self, request, pk=None):
         from django.db.models import F
@@ -215,6 +345,12 @@ class TransactionViewSet(viewsets.ModelViewSet):
         if transaction.status != 'pending':
             return Response(
                 {'error': 'Only pending transactions can be cancelled.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if transaction.mpesa_paid:
+            return Response(
+                {'error': 'This transaction cannot be cancelled because M-Pesa payment has already been received. Raise a dispute if there is an issue.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -373,9 +509,26 @@ class TransactionViewSet(viewsets.ModelViewSet):
                     ''
                 )
                 transaction.mpesa_receipt = receipt
-                transaction.status = 'completed'
-                transaction.completed_at = timezone.now()
-                transaction.save(update_fields=['mpesa_receipt', 'status', 'completed_at', 'updated_at'])
+                transaction.mpesa_paid    = True
+                # Keep status='pending' — delivery still needs to happen.
+                # The normal mark_complete / confirm_receipt flow runs from here.
+                transaction.save(update_fields=['mpesa_receipt', 'mpesa_paid', 'updated_at'])
+                # Notify the seller that payment is confirmed and they should arrange delivery
+                try:
+                    Notification.objects.create(
+                        recipient=transaction.seller,
+                        actor=transaction.buyer,
+                        transaction=transaction,
+                        notification_type='purchase_created',
+                        title='M-Pesa payment confirmed',
+                        body=(
+                            f'{transaction.buyer.full_name} has paid via M-Pesa for '
+                            f'"{transaction.listing.title if transaction.listing else "your listing"}". '
+                            f'Please arrange delivery and mark it as delivered once done.'
+                        ),
+                    )
+                except Exception:
+                    pass
 
             else:
                 transaction.mpesa_receipt = ''
@@ -384,29 +537,3 @@ class TransactionViewSet(viewsets.ModelViewSet):
             print(f"M-Pesa callback error: {exc}")
 
         return Response({"ResultCode": 0, "ResultDesc": "Accepted"})
-
-
-class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = NotificationSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [filters.OrderingFilter]
-    ordering_fields = ['created_at']
-    ordering = ['-created_at']
-
-    def get_queryset(self):
-        existing_tables = connection.introspection.table_names()
-        if 'transactions_notification' not in existing_tables:
-            return Notification.objects.none()
-
-        return Notification.objects.filter(
-            recipient=self.request.user,
-            is_read=False
-        ).select_related('actor', 'transaction')
-
-    @action(detail=True, methods=['patch'])
-    def dismiss(self, request, pk=None):
-        notification = self.get_object()
-        notification.is_read = True
-        notification.read_at = timezone.now()
-        notification.save(update_fields=['is_read', 'read_at'])
-        return Response(self.get_serializer(notification).data)

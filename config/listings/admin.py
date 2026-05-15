@@ -12,7 +12,7 @@ class ListingImageInline(admin.TabularInline):
 class ListingAdmin(admin.ModelAdmin):
     list_display  = ['title', 'seller', 'category', 'listing_type', 'price', 'status', 'is_draft', 'created_at']
     list_filter   = ['status', 'listing_type', 'category', 'is_draft']
-    search_fields = ['title', 'seller__email', 'seller__full_name']
+    search_fields = ['title', 'seller__email', 'seller__first_name', 'seller__last_name']
     readonly_fields = ['id', 'created_at', 'updated_at', 'views_count']
     ordering      = ['-created_at']
     inlines       = [ListingImageInline]

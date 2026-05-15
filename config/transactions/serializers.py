@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.db import connection, transaction as db_transaction
-from .models import Notification, Transaction
+from .models import Transaction
+from notifications.models import Notification
 from listings.serializers import ListingSerializer
 from listings.models import Listing
 
@@ -9,13 +10,11 @@ class TransactionSerializer(serializers.ModelSerializer):
     buyer_name  = serializers.CharField(source='buyer.full_name',  read_only=True)
     seller_name = serializers.CharField(source='seller.full_name', read_only=True)
 
-    # Listing snapshot fields for display
     listing_title    = serializers.CharField(source='listing.title',        read_only=True)
     listing_image    = serializers.SerializerMethodField()
     listing_type     = serializers.CharField(source='listing.listing_type', read_only=True)
     listing_category = serializers.CharField(source='listing.category',     read_only=True)
 
-    # Counterparty profile pictures
     buyer_profile_picture  = serializers.SerializerMethodField()
     seller_profile_picture = serializers.SerializerMethodField()
 
@@ -37,9 +36,12 @@ class TransactionSerializer(serializers.ModelSerializer):
             'inquiry_note',
             'mpesa_phone',
             'mpesa_receipt',
+            'mpesa_paid',
             'seller_confirmed',
             'buyer_confirmed',
             'is_disputed',
+            'dispute_deadline',
+            'dispute_escalated',
             'completed_at',
             'confirmation_deadline',
             'disputed_at',
@@ -53,9 +55,12 @@ class TransactionSerializer(serializers.ModelSerializer):
             'buyer_profile_picture', 'seller_profile_picture',
             'auto_complete_date',
             'mpesa_receipt',
+            'mpesa_paid',
             'seller_confirmed',
             'buyer_confirmed',
             'is_disputed',
+            'dispute_deadline',
+            'dispute_escalated',
             'completed_at',
             'confirmation_deadline',
             'disputed_at',
@@ -184,7 +189,7 @@ class TransactionSerializer(serializers.ModelSerializer):
                 else:
                     Listing.objects.filter(pk=locked.pk).update(quantity=new_qty)
 
-            if 'transactions_notification' in connection.introspection.table_names():
+            if 'notifications_notification' in connection.introspection.table_names():
                 Notification.objects.create(
                     recipient=transaction.seller,
                     actor=transaction.buyer,
@@ -193,6 +198,17 @@ class TransactionSerializer(serializers.ModelSerializer):
                     title='New purchase request',
                     body=f'{transaction.buyer.full_name} placed an order for {locked.title}.',
                 )
+                try:
+                    from accounts.emails import send_purchase_email
+                    send_purchase_email(
+                        transaction.seller,
+                        transaction.buyer.full_name,
+                        locked.title,
+                        transaction.scheduled_date,
+                        transaction.payment_method,
+                    )
+                except Exception:
+                    pass
                 # For M-Pesa, the receipt notification fires only after the STK push
                 # succeeds (in initiate_mpesa), not here at transaction creation.
                 if transaction.payment_method != 'mpesa':
@@ -206,22 +222,3 @@ class TransactionSerializer(serializers.ModelSerializer):
                     )
 
         return transaction
-
-
-class NotificationSerializer(serializers.ModelSerializer):
-    actor_name     = serializers.CharField(source='actor.full_name', read_only=True)
-    transaction_id = serializers.UUIDField(source='transaction.id',  read_only=True)
-
-    class Meta:
-        model  = Notification
-        fields = [
-            'id',
-            'title',
-            'body',
-            'notification_type',
-            'is_read',
-            'created_at',
-            'read_at',
-            'actor_name',
-            'transaction_id',
-        ]

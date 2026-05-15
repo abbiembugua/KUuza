@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Notification, Transaction
+from .models import Transaction
 
 
 @admin.register(Transaction)
@@ -13,12 +13,3 @@ class TransactionAdmin(admin.ModelAdmin):
     def listing_title(self, obj):
         return obj.listing.title if obj.listing else '—'
     listing_title.short_description = 'Listing'
-
-
-@admin.register(Notification)
-class NotificationAdmin(admin.ModelAdmin):
-    list_display  = ['title', 'recipient', 'actor', 'notification_type', 'is_read', 'created_at']
-    list_filter   = ['notification_type', 'is_read']
-    search_fields = ['recipient__email', 'title']
-    readonly_fields = ['id', 'created_at', 'read_at']
-    ordering      = ['-created_at']

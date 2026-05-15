@@ -1,4 +1,4 @@
-"""
+﻿"""
 URL configuration for config project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
@@ -28,6 +28,8 @@ urlpatterns = [
     path('api/', include('Cart.urls')),
     path('api/', include('reports.urls')),
     path('api/admin-panel/', include('admin_api.urls')),
+    path('api/', include('questions.urls')),
+    path('api/', include('notifications.urls')),
 
 
 

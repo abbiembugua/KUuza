@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Eye, EyeOff, UserPlus, User, Mail, Lock, Check } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { resendVerification, signup, verifyEmailOTP } from '../api/authapi';
@@ -20,10 +20,11 @@ const SignUpPage = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [submitted, setSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [openPolicy, setOpenPolicy] = useState(null); // 'terms' | 'privacy' | null
+  const [openPolicy, setOpenPolicy] = useState(null);
   const navigate = useNavigate();
   const { setUser } = useAuth();
   const [emailSent, setEmailSent] = useState(false);
@@ -31,6 +32,22 @@ const SignUpPage = () => {
   const [otpError, setOtpError] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpSuccess, setOtpSuccess] = useState(false);
+
+  const firstNameRef = useRef(null);
+  const lastNameRef = useRef(null);
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
+  const confirmPasswordRef = useRef(null);
+  const termsRef = useRef(null);
+
+  const fieldRefs = {
+    firstName: firstNameRef,
+    lastName: lastNameRef,
+    email: emailRef,
+    password: passwordRef,
+    confirmPassword: confirmPasswordRef,
+    terms: termsRef,
+  };
 
   const [passwordStrength, setPasswordStrength] = useState({
     length: false,
@@ -55,9 +72,24 @@ const SignUpPage = () => {
     return kuEmailPattern.test(email);
   };
 
+  const clearFieldError = (field) => {
+    setFieldErrors(prev => ({ ...prev, [field]: '' }));
+  };
+
+  const focusFirstError = (errors) => {
+    const order = ['firstName', 'lastName', 'email', 'password', 'confirmPassword', 'terms'];
+    const first = order.find(f => errors[f]);
+    if (!first) return;
+    const ref = fieldRefs[first];
+    if (ref?.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      ref.current.focus();
+    }
+  };
+
   const handleEmailChange = (e) => {
-    const value = e.target.value.trim();
-    setEmail(value);
+    setEmail(e.target.value.trim());
+    clearFieldError('email');
   };
 
   const handleResendVerification = async (emailAddress) => {
@@ -86,44 +118,27 @@ const SignUpPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setSubmitted(true);
     setIsLoading(true);
 
-    if (!firstName.trim()) {
-      setError('First name is required.');
+    const errors = {};
+
+    if (!firstName.trim()) errors.firstName = 'First name is required.';
+    if (!lastName.trim()) errors.lastName = 'Last name is required.';
+    if (!validateKUEmail(email)) errors.email = 'Please use your official KU student email (e.g., 0983.2022@students.ku.ac.ke).';
+    if (!Object.values(passwordStrength).every(Boolean)) errors.password = 'Password must meet all the requirements shown below.';
+    if (password !== confirmPassword) errors.confirmPassword = 'Passwords do not match.';
+    if (!acceptedTerms) errors.terms = 'Please accept the terms and conditions to continue.';
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      focusFirstError(errors);
       setIsLoading(false);
       return;
     }
 
-    if (!lastName.trim()) {
-      setError('Last name is required.');
-      setIsLoading(false);
-      return;
-    }
-
-    if (!validateKUEmail(email)) {
-      setError('Please use your official KU student email (e.g., 0983.2022@students.ku.ac.ke).');
-      setIsLoading(false);
-      return;
-    }
-
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
-      setIsLoading(false);
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
-      setIsLoading(false);
-      return;
-    }
-
-    if (!acceptedTerms) {
-      setError('Please accept the terms and conditions.');
-      setIsLoading(false);
-      return;
-    }
+    setSubmitted(true);
+    setFieldErrors({});
 
     try {
       const response = await signup({
@@ -135,8 +150,6 @@ const SignUpPage = () => {
         accepted_terms: true
       });
 
-      console.log('Signup successful:', response);
-
       toast.success('Account created successfully! Redirecting to verification...', {
         duration: 4000,
         position: 'top-center',
@@ -147,35 +160,43 @@ const SignUpPage = () => {
         }
       });
 
-      if (response.access_token) {
-        if (response.user) {
-          setUser(response.user);
-        }
+      if (response.access_token && response.user) {
+        setUser(response.user);
       }
 
-      setTimeout(() => {
-        setEmailSent(true);
-      }, 2000);
+      setTimeout(() => setEmailSent(true), 2000);
 
     } catch (err) {
-      setError(err.message || 'Signup failed. The email might already be registered.');
-      toast.error(err.message || 'Signup failed. Please try again.', {
+      const msg = err.message || 'Signup failed. Please try again.';
+      const lower = msg.toLowerCase();
+
+      let backendErrors = {};
+      if (lower.includes('email')) {
+        backendErrors = { email: msg };
+      } else if (lower.includes('password')) {
+        backendErrors = { confirmPassword: msg };
+      } else if (lower.includes('first name')) {
+        backendErrors = { firstName: msg };
+      } else if (lower.includes('last name')) {
+        backendErrors = { lastName: msg };
+      } else {
+        backendErrors = { general: msg };
+      }
+
+      setFieldErrors(backendErrors);
+      focusFirstError(backendErrors);
+
+      toast.error(msg, {
         duration: 4000,
         position: 'top-center',
-        style: {
-          background: '#fee2e2',
-          color: '#dc2626',
-          border: '1px solid #fecaca',
-        }
+        style: { background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca' }
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleBack = () => {
-    navigate('/');
-  };
+  const handleBack = () => navigate('/');
 
   const getPasswordStrengthScore = () => {
     const score = Object.values(passwordStrength).filter(Boolean).length;
@@ -190,6 +211,26 @@ const SignUpPage = () => {
     if (score <= 80) return 'bg-emerald-400';
     return 'bg-emerald-500';
   };
+
+  const inputClass = (field, extraFocus = 'emerald') => {
+    const hasError = !!fieldErrors[field];
+    const base = 'w-full px-4 py-3.5 rounded-xl border focus:outline-none transition-all duration-200';
+    if (hasError) {
+      return `${base} ${darkMode
+        ? 'bg-gray-800/50 border-red-500 text-gray-100 placeholder-gray-500 focus:border-red-400 focus:ring-2 focus:ring-red-500/30'
+        : 'bg-white border-red-400 text-gray-900 placeholder-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/20'}`;
+    }
+    return `${base} ${darkMode
+      ? `bg-gray-800/50 border-gray-700 text-gray-100 placeholder-gray-500 focus:border-${extraFocus}-500 focus:ring-2 focus:ring-${extraFocus}-500/30`
+      : `bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-${extraFocus}-500 focus:ring-2 focus:ring-${extraFocus}-500/20`}`;
+  };
+
+  const FieldError = ({ field }) => fieldErrors[field] ? (
+    <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+      <span className="inline-block w-1 h-1 rounded-full bg-red-500 flex-shrink-0" />
+      {fieldErrors[field]}
+    </p>
+  ) : null;
 
   if (emailSent) {
     return (
@@ -270,12 +311,7 @@ const SignUpPage = () => {
       <Toaster
         toastOptions={{
           className: '',
-          style: {
-            borderRadius: '10px',
-            padding: '16px',
-            fontSize: '14px',
-            fontWeight: '500',
-          },
+          style: { borderRadius: '10px', padding: '16px', fontSize: '14px', fontWeight: '500' },
         }}
       />
 
@@ -295,27 +331,23 @@ const SignUpPage = () => {
           }`}>
             <UserPlus size={32} className="text-white" />
           </div>
-          <h1 className={`text-3xl font-bold mb-2 ${
-            darkMode ? 'text-white' : 'text-gray-900'
-          }`}>
+          <h1 className={`text-3xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             Join KUuza
           </h1>
-          <p className={`text-sm ${
-            darkMode ? 'text-gray-400' : 'text-gray-600'
-          }`}>
+          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             Create your account to start trading on campus
           </p>
         </div>
 
         <AuthCard darkMode={darkMode}>
-          {error && (
+          {fieldErrors.general && (
             <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 ${
               darkMode
                 ? 'bg-red-500/10 border border-red-500/30 text-red-400'
                 : 'bg-red-50 border border-red-200 text-red-600'
             }`}>
-              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-              <p className="text-sm font-medium">{error}</p>
+              <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" />
+              <p className="text-sm font-medium">{fieldErrors.general}</p>
             </div>
           )}
 
@@ -327,17 +359,15 @@ const SignUpPage = () => {
                   First Name
                 </label>
                 <input
+                  ref={firstNameRef}
                   type="text"
                   value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  onChange={(e) => { setFirstName(e.target.value.replace(/[^a-zA-Z\s'-]/g, '')); clearFieldError('firstName'); }}
                   placeholder="John"
-                  className={`w-full px-4 py-3.5 rounded-xl border focus:outline-none transition-all duration-200 ${
-                    darkMode
-                      ? 'bg-gray-800/50 border-gray-700 text-gray-100 placeholder-gray-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
-                  }`}
+                  className={inputClass('firstName')}
                   required
                 />
+                <FieldError field="firstName" />
               </div>
               <div>
                 <label className="flex items-center gap-2 mb-2 font-medium">
@@ -345,17 +375,15 @@ const SignUpPage = () => {
                   Last Name
                 </label>
                 <input
+                  ref={lastNameRef}
                   type="text"
                   value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
+                  onChange={(e) => { setLastName(e.target.value.replace(/[^a-zA-Z\s'-]/g, '')); clearFieldError('lastName'); }}
                   placeholder="Doe"
-                  className={`w-full px-4 py-3.5 rounded-xl border focus:outline-none transition-all duration-200 ${
-                    darkMode
-                      ? 'bg-gray-800/50 border-gray-700 text-gray-100 placeholder-gray-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
-                  }`}
+                  className={inputClass('lastName')}
                   required
                 />
+                <FieldError field="lastName" />
               </div>
             </div>
 
@@ -365,23 +393,20 @@ const SignUpPage = () => {
                 KU Student Email
               </label>
               <input
+                ref={emailRef}
                 type="email"
                 value={email}
                 onChange={handleEmailChange}
-                placeholder="e.g., 1234.1234@students.ku.ac.ke"
-                className={`w-full px-4 py-3.5 rounded-xl border focus:outline-none transition-all duration-200 ${
-                  darkMode
-                    ? 'bg-gray-800/50 border-gray-700 text-gray-100 placeholder-gray-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30'
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
-                }`}
+                placeholder="e.g., 1234.2022@students.ku.ac.ke"
+                className={inputClass('email')}
                 required
               />
-
-              {email && !validateKUEmail(email) && (
+              {!fieldErrors.email && email && !validateKUEmail(email) && (
                 <p className={`mt-1 text-xs ${darkMode ? 'text-yellow-400/80' : 'text-yellow-600'}`}>
-                  Enter your admission number followed by year (e.g., 1234.1234)
+                  Enter your admission number followed by year (e.g., 1234.2022)
                 </p>
               )}
+              <FieldError field="email" />
             </div>
 
             <div>
@@ -391,15 +416,12 @@ const SignUpPage = () => {
               </label>
               <div className="relative mb-2">
                 <input
+                  ref={passwordRef}
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); clearFieldError('password'); }}
                   placeholder="Create a strong password"
-                  className={`w-full px-4 py-3.5 rounded-xl border focus:outline-none transition-all duration-200 ${
-                    darkMode
-                      ? 'bg-gray-800/50 border-gray-700 text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20'
-                  }`}
+                  className={inputClass('password', 'sky')}
                   required
                 />
                 <button
@@ -415,12 +437,11 @@ const SignUpPage = () => {
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
+              <FieldError field="password" />
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
-                    Password strength
-                  </span>
+                  <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>Password strength</span>
                   <span className="font-medium">
                     {getPasswordStrengthScore() >= 80 ? 'Strong' :
                      getPasswordStrengthScore() >= 60 ? 'Good' :
@@ -431,7 +452,7 @@ const SignUpPage = () => {
                   <div
                     className={`h-2 rounded-full transition-all duration-500 ${getStrengthColor()}`}
                     style={{ width: `${getPasswordStrengthScore()}%` }}
-                  ></div>
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 mt-4">
@@ -441,24 +462,28 @@ const SignUpPage = () => {
                     { key: 'lowercase', label: 'One lowercase letter' },
                     { key: 'number', label: 'One number' },
                     { key: 'special', label: 'One special character' }
-                  ].map((req) => (
-                    <div key={req.key} className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                        passwordStrength[req.key]
-                          ? darkMode ? 'bg-emerald-500' : 'bg-emerald-400'
-                          : darkMode ? 'bg-gray-700' : 'bg-gray-300'
-                      }`}>
-                        {passwordStrength[req.key] && (
-                          <Check size={10} className="text-white" />
-                        )}
+                  ].map((req) => {
+                    const met = passwordStrength[req.key];
+                    const flagged = submitted && !met;
+                    return (
+                      <div key={req.key} className="flex items-center gap-2">
+                        <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          met
+                            ? darkMode ? 'bg-emerald-500' : 'bg-emerald-400'
+                            : flagged ? 'bg-red-500' : darkMode ? 'bg-gray-700' : 'bg-gray-300'
+                        }`}>
+                          {met && <Check size={10} className="text-white" />}
+                        </div>
+                        <span className={`text-xs ${
+                          met
+                            ? darkMode ? 'text-emerald-400' : 'text-emerald-600'
+                            : flagged ? 'text-red-500 font-medium' : darkMode ? 'text-gray-400' : 'text-gray-600'
+                        }`}>
+                          {req.label}
+                        </span>
                       </div>
-                      <span className={`text-xs ${
-                        darkMode ? 'text-gray-400' : 'text-gray-600'
-                      }`}>
-                        {req.label}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -467,15 +492,12 @@ const SignUpPage = () => {
               <label className="block mb-2 font-medium">Confirm Password</label>
               <div className="relative">
                 <input
+                  ref={confirmPasswordRef}
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => { setConfirmPassword(e.target.value); clearFieldError('confirmPassword'); }}
                   placeholder="Confirm your password"
-                  className={`w-full px-4 py-3.5 rounded-xl border focus:outline-none transition-all duration-200 ${
-                    darkMode
-                      ? 'bg-gray-800/50 border-gray-700 text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20'
-                  }`}
+                  className={inputClass('confirmPassword', 'sky')}
                   required
                 />
                 <button
@@ -491,7 +513,7 @@ const SignUpPage = () => {
                   {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
-              {password && confirmPassword && password === confirmPassword && (
+              {!fieldErrors.confirmPassword && password && confirmPassword && password === confirmPassword && (
                 <p className={`mt-1 text-xs flex items-center gap-1 ${
                   darkMode ? 'text-emerald-400' : 'text-emerald-600'
                 }`}>
@@ -499,14 +521,15 @@ const SignUpPage = () => {
                   Passwords match
                 </p>
               )}
+              <FieldError field="confirmPassword" />
             </div>
 
-            <div className="pt-2">
+            <div className="pt-2" ref={termsRef}>
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={acceptedTerms}
-                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  onChange={(e) => { setAcceptedTerms(e.target.checked); clearFieldError('terms'); }}
                   className="mt-1 w-4 h-4 text-emerald-500 rounded focus:ring-emerald-500"
                 />
                 <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -528,19 +551,22 @@ const SignUpPage = () => {
                   </button>. I verify that I am a current KU student with a valid student email.
                 </span>
               </label>
+              <FieldError field="terms" />
             </div>
 
             <button
               type="submit"
-              disabled={isLoading || !acceptedTerms}
+              disabled={isLoading}
               className={`w-full inline-flex items-center justify-center gap-2 rounded-xl
-                py-3.5 font-semibold text-lg text-white bg-emerald-600 hover:bg-emerald-700
-                shadow-md shadow-emerald-600/30 transition-all duration-200
-                ${isLoading || !acceptedTerms ? 'opacity-70 cursor-not-allowed' : 'hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]'}`}
+                py-3.5 font-semibold text-lg transition-all duration-200
+                ${isLoading || !acceptedTerms || !Object.values(passwordStrength).every(Boolean)
+                  ? 'bg-gray-300 text-gray-400 cursor-not-allowed shadow-none'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/30 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]'
+                }`}
             >
               {isLoading ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   <span>Creating Account...</span>
                 </>
               ) : (
@@ -553,17 +579,11 @@ const SignUpPage = () => {
           </form>
 
           <div className="flex items-center my-8">
-            <div className={`flex-1 h-px ${
-              darkMode ? 'bg-gray-700' : 'bg-gray-300'
-            }`}></div>
-            <span className={`px-4 text-sm ${
-              darkMode ? 'text-gray-500' : 'text-gray-500'
-            }`}>
+            <div className={`flex-1 h-px ${darkMode ? 'bg-gray-700' : 'bg-gray-300'}`} />
+            <span className={`px-4 text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
               Already have an account?
             </span>
-            <div className={`flex-1 h-px ${
-              darkMode ? 'bg-gray-700' : 'bg-gray-300'
-            }`}></div>
+            <div className={`flex-1 h-px ${darkMode ? 'bg-gray-700' : 'bg-gray-300'}`} />
           </div>
 
           <div className="text-center">
@@ -581,9 +601,7 @@ const SignUpPage = () => {
           </div>
         </AuthCard>
 
-        <p className={`mt-8 text-center text-xs ${
-          darkMode ? 'text-gray-500' : 'text-gray-500'
-        }`}>
+        <p className={`mt-8 text-center text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
           By creating an account, you verify that you are a current student of Kenyatta University.
           <br />
           Access is restricted to valid KU student emails only.

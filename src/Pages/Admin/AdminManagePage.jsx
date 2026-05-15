@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchLogoBase64, drawLogo } from '../../utils/pdfLogo';
 import {
   Trash2, UserX, UserCheck, BadgeCheck,
   ChevronDown, ChevronUp, Loader2, CheckCircle,
-  Search, FileText, X, Flag,
+  Search, FileText, X, Flag, AlertTriangle, Clock,
 } from 'lucide-react';
 import { toast, Toaster } from 'react-hot-toast';
 import {
@@ -37,6 +37,7 @@ const Pill = ({ label, color }) => {
     gray:   'bg-gray-100   text-gray-500',
     violet: 'bg-violet-100 text-violet-700',
     sky:    'bg-sky-100    text-sky-700',
+    orange: 'bg-orange-100 text-orange-700',
   };
   return (
     <span className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full ${map[color] ?? map.gray}`}>
@@ -220,7 +221,11 @@ const ListingsSection = ({ darkMode }) => {
 
   const remove = async (id) => {
     setBusy(b => ({ ...b, [id]: true }));
-    try { await removeListing(id); setRows(r => r.filter(l => l.id !== id)); toast.success('Listing removed.'); }
+    try {
+      await removeListing(id);
+      setRows(r => r.map(l => l.id === id ? { ...l, status: 'deactivated' } : l));
+      toast.success('Listing archived.');
+    }
     catch (e) { toast.error(e.message); }
     finally { setBusy(b => ({ ...b, [id]: false })); }
   };
@@ -231,7 +236,7 @@ const ListingsSection = ({ darkMode }) => {
       // Build a descriptive title from active filters so redundant columns can be dropped
       const STATUS_LABEL = { active: 'Active', sold: 'Sold', deactivated: 'Deactivated' };
       const TYPE_LABEL   = { good: 'Goods', service: 'Services' };
-      const CAT_LABEL    = { books: 'Books', electronics: 'Electronics', fashion: 'Fashion', furniture: 'Furniture', food_beverages: 'Food & Beverages', beauty: 'Beauty', other: 'Other' };
+      const CAT_LABEL    = { books: 'Academics', electronics: 'Electronics', fashion: 'Fashion', furniture: 'Furniture', food_beverages: 'Food & Beverages', beauty: 'Beauty', stationery: 'Stationery & Supplies', sports: 'Sports & Fitness', tutoring: 'Tutoring & Academics', printing: 'Printing & Photocopying', design: 'Design & Creative', tech_repair: 'Tech & Repairs', laundry: 'Laundry & Cleaning', photography: 'Photography & Video', other: 'Other' };
 
       const reportTitle = [
         status   && STATUS_LABEL[status],
@@ -304,7 +309,7 @@ const ListingsSection = ({ darkMode }) => {
 
   const selects = [
     { id: 'status', value: status, onChange: setStatus, options: [{ value: '', label: 'All statuses' }, { value: 'active', label: 'Active' }, { value: 'sold', label: 'Sold' }, { value: 'deactivated', label: 'Deactivated' }] },
-    { id: 'category', value: category, onChange: setCategory, options: [{ value: '', label: 'All categories' }, { value: 'books', label: 'Books' }, { value: 'electronics', label: 'Electronics' }, { value: 'fashion', label: 'Fashion' }, { value: 'furniture', label: 'Furniture' }, { value: 'food_beverages', label: 'Food & Beverages' }, { value: 'beauty', label: 'Beauty' }, { value: 'other', label: 'Other' }] },
+    { id: 'category', value: category, onChange: setCategory, options: [{ value: '', label: 'All categories' }, { value: 'books', label: 'Academics' }, { value: 'electronics', label: 'Electronics' }, { value: 'fashion', label: 'Fashion' }, { value: 'furniture', label: 'Furniture' }, { value: 'food_beverages', label: 'Food & Beverages' }, { value: 'beauty', label: 'Beauty' }, { value: 'stationery', label: 'Stationery & Supplies' }, { value: 'sports', label: 'Sports & Fitness' }, { value: 'tutoring', label: 'Tutoring & Academics' }, { value: 'printing', label: 'Printing & Photocopying' }, { value: 'design', label: 'Design & Creative' }, { value: 'tech_repair', label: 'Tech & Repairs' }, { value: 'laundry', label: 'Laundry & Cleaning' }, { value: 'photography', label: 'Photography & Video' }, { value: 'other', label: 'Other' }] },
     { id: 'type', value: type, onChange: setType, options: [{ value: '', label: 'All types' }, { value: 'good', label: 'Good' }, { value: 'service', label: 'Service' }] },
     { id: 'sort', value: sort, onChange: setSort, options: [{ value: 'newest', label: 'Newest first' }, { value: 'oldest', label: 'Oldest first' }, { value: 'price_high', label: 'Price: High → Low' }, { value: 'price_low', label: 'Price: Low → High' }, { value: 'title_az', label: 'Title A → Z' }] },
   ];
@@ -337,7 +342,7 @@ const ListingsSection = ({ darkMode }) => {
                   <td className={`py-3 pr-4 text-xs capitalize ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{l.listing_type}</td>
                   <td className="py-3 pr-4"><Pill label={l.status.charAt(0).toUpperCase() + l.status.slice(1)} color={l.status === 'active' ? 'green' : l.status === 'sold' ? 'violet' : 'gray'} /></td>
                   <td className={`py-3 pr-4 text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{fmtDate(l.created_at)}</td>
-                  <td className="py-3"><ConfirmButton onConfirm={() => remove(l.id)} label="Remove" icon={Trash2} variant="danger" loading={busy[l.id]} /></td>
+                  <td className="py-3"><ConfirmButton onConfirm={() => remove(l.id)} label="Archive" icon={Trash2} variant="warning" loading={busy[l.id]} /></td>
                 </tr>
               ))}
             </tbody>
@@ -535,6 +540,8 @@ const ReportsSection = ({ darkMode }) => {
                 <div className="space-y-1 flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Pill label={r.status === 'pending' ? 'Pending' : r.status === 'dismissed' ? 'Dismissed' : 'Acted'} color={r.status === 'pending' ? 'amber' : r.status === 'dismissed' ? 'gray' : 'green'} />
+                    {r.dispute_escalated && <Pill label="Escalated" color="red" />}
+                    {r.dispute_resolved  && <Pill label="Dispute Closed" color="green" />}
                     <span className={`text-xs font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{r.reason}</span>
                   </div>
                   <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -544,11 +551,27 @@ const ReportsSection = ({ darkMode }) => {
                   {r.reported_user_name && <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Seller: {r.reported_user_name} · {r.reported_user_email}</p>}
                   <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Reporter: {r.reporter_name} · {r.reporter_email} · {fmtDate(r.created_at)}</p>
                   {r.details && <p className={`text-xs mt-1 italic ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>"{r.details}"</p>}
+                  {r.dispute_deadline && r.status === 'pending' && (
+                    <div className={`mt-2 flex items-center gap-1.5 text-xs font-medium ${
+                      r.dispute_escalated
+                        ? 'text-red-500'
+                        : new Date(r.dispute_deadline) > new Date()
+                          ? 'text-amber-600'
+                          : 'text-red-500'
+                    }`}>
+                      {r.dispute_escalated
+                        ? <AlertTriangle size={12} />
+                        : <Clock size={12} />}
+                      {r.dispute_escalated
+                        ? `Deadline passed — action required (was ${fmtDate(r.dispute_deadline)})`
+                        : `Seller must resolve by ${new Date(r.dispute_deadline).toLocaleString('en-KE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true })}`}
+                    </div>
+                  )}
                 </div>
                 {r.status === 'pending' && (
                   <div className="flex items-center gap-2 flex-wrap shrink-0">
                     <ConfirmButton onConfirm={() => act(r.id, 'dismiss', dismissReport)} label="Dismiss" icon={CheckCircle} variant="success" loading={busy[`${r.id}_dismiss`]} />
-                    {r.listing_id && <ConfirmButton onConfirm={() => act(r.id, 'remove_listing', reportRemoveListing)} label="Remove listing" icon={Trash2} variant="danger" loading={busy[`${r.id}_remove_listing`]} />}
+                    {r.listing_id && <ConfirmButton onConfirm={() => act(r.id, 'remove_listing', reportRemoveListing)} label="Archive listing" icon={Trash2} variant="warning" loading={busy[`${r.id}_remove_listing`]} />}
                     {r.reported_user_id && <ConfirmButton onConfirm={() => act(r.id, 'suspend_user', reportSuspendUser)} label="Suspend user" icon={UserX} variant="warning" loading={busy[`${r.id}_suspend_user`]} />}
                   </div>
                 )}

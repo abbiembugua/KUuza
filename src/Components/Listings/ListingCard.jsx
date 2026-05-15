@@ -1,24 +1,21 @@
-// src/Components/Listings/ListingCard.jsx
-// Card component for displaying a single listing
-
 import React from 'react';
-import { Edit2, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Edit2, Trash2, Eye, EyeOff, Archive, ArchiveRestore } from 'lucide-react';
 
-const ListingCard = ({ listing, onEdit, onDelete, onTogglePublish, darkMode }) => {
-  const imageUrl = listing.images && listing.images.length > 0 
-    ? listing.images[0].image 
-    : null;
+const ListingCard = ({ listing, onEdit, onDelete, onTogglePublish, onArchive, darkMode }) => {
+  const imageUrl = listing.images?.length > 0 ? listing.images[0].image : null;
+  const isDeactivated = listing.status === 'deactivated';
 
-  const statusBadge = listing.is_draft
-    ? { text: '📝 Draft', color: darkMode ? 'bg-yellow-900 text-yellow-200' : 'bg-yellow-100 text-yellow-800' }
-    : { text: '✅ Published', color: darkMode ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800' };
+  const statusBadge = isDeactivated
+    ? { text: '📦 Archived', color: darkMode ? 'bg-yellow-900 text-yellow-200' : 'bg-yellow-100 text-yellow-800' }
+    : listing.is_draft
+      ? { text: '📝 Draft', color: darkMode ? 'bg-yellow-900 text-yellow-200' : 'bg-yellow-100 text-yellow-800' }
+      : { text: '✅ Published', color: darkMode ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800' };
 
   return (
-    <div
-      className={`${
-        darkMode ? 'bg-gray-800' : 'bg-white'
-      } rounded-2xl shadow-lg overflow-hidden transition-all hover:shadow-xl`}
-    >
+    <div className={`${
+      darkMode ? 'bg-gray-800' : 'bg-white'
+    } rounded-2xl shadow-lg overflow-hidden transition-all hover:shadow-xl ${isDeactivated ? 'opacity-70' : ''}`}>
+
       {/* Image */}
       <div className="relative h-48 bg-gray-300 overflow-hidden group">
         {imageUrl ? (
@@ -32,8 +29,6 @@ const ListingCard = ({ listing, onEdit, onDelete, onTogglePublish, darkMode }) =
             <span className="text-4xl">📦</span>
           </div>
         )}
-
-        {/* Status Badge */}
         <div className="absolute top-3 right-3">
           <span className={`text-xs font-semibold px-3 py-1 rounded-full ${statusBadge.color}`}>
             {statusBadge.text}
@@ -43,13 +38,10 @@ const ListingCard = ({ listing, onEdit, onDelete, onTogglePublish, darkMode }) =
 
       {/* Content */}
       <div className="p-6">
-        
-        {/* Title */}
         <h3 className={`font-semibold text-lg mb-2 line-clamp-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
           {listing.title}
         </h3>
 
-        {/* Category & Price */}
         <div className={`text-sm mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
           <p className="font-medium">{listing.category}</p>
           <p className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -57,12 +49,10 @@ const ListingCard = ({ listing, onEdit, onDelete, onTogglePublish, darkMode }) =
           </p>
         </div>
 
-        {/* Description */}
         <p className={`text-sm mb-4 line-clamp-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
           {listing.description || 'No description'}
         </p>
 
-        {/* Meta Info */}
         <div className={`text-xs mb-4 space-y-1 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
           <p>📍 {listing.area_of_operation || 'Location not specified'}</p>
           <p>📅 {new Date(listing.created_at).toLocaleDateString()}</p>
@@ -79,11 +69,24 @@ const ListingCard = ({ listing, onEdit, onDelete, onTogglePublish, darkMode }) =
           </button>
 
           <button
+            onClick={onArchive}
+            title={isDeactivated ? 'Reactivate listing' : 'Archive listing'}
+            className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg font-semibold text-sm transition-colors ${
+              isDeactivated
+                ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-700'
+                : darkMode
+                  ? 'bg-yellow-900/40 hover:bg-yellow-900/60 text-yellow-300'
+                  : 'bg-yellow-100 hover:bg-yellow-200 text-yellow-700'
+            }`}
+          >
+            {isDeactivated ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+          </button>
+
+          <button
             onClick={onDelete}
-            className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-sm transition-colors"
+            className="flex items-center justify-center gap-2 py-2 px-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-sm transition-colors"
           >
             <Trash2 size={16} />
-            Delete
           </button>
 
           <button

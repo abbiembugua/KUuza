@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/Themecontext';
 import DashboardNavbar from '../Components/Layout/DashboardNavbar';
 import BackButton from '../Components/shared/BackButton';
-import { ShoppingCart, Trash2, Plus, Minus, Package, Shield, Loader } from 'lucide-react';
+import { ShoppingCart, Trash2, Plus, Minus, Package, Shield, Loader, AlertTriangle } from 'lucide-react';
 import { getCartItems, updateCartItem, removeFromCart } from '../api/dashboardapi';
 import { showToast } from '../Services/toastService';
 
@@ -93,6 +93,12 @@ const IntegratedCartPage = () => {
 
   const subtotal = cartItems.reduce((sum, item) => sum + getPrice(item) * item.quantity, 0);
 
+  const anyIssue = cartItems.some(item => {
+    const ld = getListingData(item);
+    return ld.is_draft || ld.status === 'deactivated' || ld.status === 'sold' || ld.is_out_of_stock
+      || (ld.listing_type === 'good' && ld.quantity_remaining != null && item.quantity > ld.quantity_remaining);
+  });
+
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <DashboardNavbar />
@@ -132,8 +138,19 @@ const IntegratedCartPage = () => {
                 const imgUrl      = getImageUrl(item);
                 const price       = getPrice(item);
 
+                const isUnavailable = listingData.is_draft || listingData.status === 'deactivated';
+                const isSoldOut     = listingData.status === 'sold' || listingData.is_out_of_stock;
+                const stockShort    = !isSoldOut && listingData.listing_type === 'good'
+                  && listingData.quantity_remaining != null
+                  && item.quantity > listingData.quantity_remaining;
+                const hasIssue = isUnavailable || isSoldOut || stockShort;
+
                 return (
-                  <div key={item.id} className={`rounded-2xl border p-4 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+                  <div key={item.id} className={`rounded-2xl border p-4 ${
+                    hasIssue
+                      ? darkMode ? 'bg-gray-800 border-amber-700/50' : 'bg-white border-amber-300 shadow-sm'
+                      : darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100 shadow-sm'
+                  }`}>
                     <div className="flex gap-3">
                       <div className={`w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                         {imgUrl
@@ -199,11 +216,29 @@ const IntegratedCartPage = () => {
                           </p>
                         </div>
 
+                        {hasIssue && (
+                          <div className={`mt-2 flex items-start gap-2 px-3 py-2 rounded-lg text-xs ${
+                            darkMode ? 'bg-amber-900/30 text-amber-300' : 'bg-amber-50 text-amber-700'
+                          }`}>
+                            <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                            <span>
+                              {isUnavailable && 'This listing has been unpublished by the seller and cannot be purchased.'}
+                              {isSoldOut && 'This item is sold out and cannot be purchased.'}
+                              {stockShort && `Only ${listingData.quantity_remaining} left — reduce your quantity to continue.`}
+                            </span>
+                          </div>
+                        )}
+
                         <button
                           onClick={() => handleCheckoutItem(item)}
-                          className="mt-2 w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                          disabled={isUnavailable || isSoldOut}
+                          className={`mt-2 w-full py-1.5 rounded-lg text-sm font-semibold transition-colors ${
+                            isUnavailable || isSoldOut
+                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                          }`}
                         >
-                          Checkout this item
+                          {isUnavailable ? 'Unavailable' : isSoldOut ? 'Sold Out' : 'Checkout this item'}
                         </button>
                       </div>
                     </div>
@@ -230,9 +265,22 @@ const IntegratedCartPage = () => {
                   </div>
                 </div>
 
+                {anyIssue && (
+                  <div className={`mb-2 flex items-start gap-2 px-3 py-2 rounded-lg text-xs ${
+                    darkMode ? 'bg-amber-900/30 text-amber-300' : 'bg-amber-50 text-amber-700'
+                  }`}>
+                    <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                    <span>Some items in your cart are unavailable. Remove or fix them before checking out together.</span>
+                  </div>
+                )}
                 <button
                   onClick={handleCheckoutAll}
-                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm transition-colors"
+                  disabled={anyIssue}
+                  className={`w-full py-2.5 rounded-xl font-semibold text-sm transition-colors ${
+                    anyIssue
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  }`}
                 >
                   Checkout all ({cartItems.length} items)
                 </button>

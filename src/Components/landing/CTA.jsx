@@ -22,6 +22,7 @@ const CTA = () => {
 
   return (
     <section
+      id="join"
       ref={ref}
       className={`py-28 px-6 transition-colors duration-300 ${
         darkMode ? 'bg-gray-900' : 'bg-white'
@@ -58,7 +59,7 @@ const CTA = () => {
               text-lg rounded-xl shadow-lg shadow-emerald-500/20 transition-all duration-300
               hover:scale-105 active:scale-100 flex items-center justify-center gap-2"
           >
-            Sign in with Student ID
+            Sign in with School Email
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </button>
 

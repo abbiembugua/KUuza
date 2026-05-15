@@ -81,7 +81,7 @@ const Hero = () => {
             className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-lg rounded-xl
               shadow-lg shadow-emerald-500/20 transition-all duration-300 hover:scale-105 active:scale-100"
           >
-            Sign in with Student ID
+            Sign in with Student Email
           </button>
           <a
             href="#how-it-works"

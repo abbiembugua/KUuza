@@ -11,18 +11,30 @@ import BackButton from '../Components/shared/BackButton';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const CATEGORIES = [
-  { value: 'books',          label: 'Books' },
+const GOOD_CATEGORIES = [
+  { value: 'books',          label: 'Academics' },
   { value: 'electronics',    label: 'Electronics' },
   { value: 'fashion',        label: 'Fashion' },
   { value: 'furniture',      label: 'Furniture' },
   { value: 'food_beverages', label: 'Food & Beverages' },
-  { value: 'beauty',       label: 'Beauty' },
+  { value: 'beauty',         label: 'Beauty' },
+  { value: 'stationery',     label: 'Stationery & Supplies' },
+  { value: 'sports',         label: 'Sports & Fitness' },
   { value: 'other',          label: 'Other' },
 ];
 
-// Services category always means listing_type = service
-const SERVICE_CATEGORIES = ['services'];
+const SERVICE_CATEGORIES = [
+  { value: 'tutoring',       label: 'Tutoring & Academics' },
+  { value: 'printing',       label: 'Printing & Photocopying' },
+  { value: 'design',         label: 'Design & Creative' },
+  { value: 'tech_repair',    label: 'Tech & Repairs' },
+  { value: 'laundry',        label: 'Laundry & Cleaning' },
+  { value: 'photography',    label: 'Photography & Video' },
+  { value: 'beauty',         label: 'Beauty' },
+  { value: 'food_beverages', label: 'Food & Beverages' },
+  { value: 'fashion',        label: 'Fashion' },
+  { value: 'other',          label: 'Other' },
+];
 
 const CONDITIONS = [
   { value: 'new',      label: 'New' },
@@ -30,6 +42,7 @@ const CONDITIONS = [
   { value: 'used',     label: 'Used' },
   { value: 'fair',     label: 'Fair' },
 ];
+
 
 const INITIAL_FORM = {
   listing_type:       'good',   // 'good' | 'service'
@@ -111,34 +124,69 @@ const SellPage = () => {
 
   // ── Derived state ──────────────────────────────────────────────────────────
 
-  // When category changes, auto-set listing_type
   const handleCategoryChange = (e) => {
-    const value = e.target.value;
-    const autoType = SERVICE_CATEGORIES.includes(value) ? 'service' : 'good';
-    setFormData(prev => ({
-      ...prev,
-      category:     value,
-      listing_type: autoType,
-      // Clear goods-only fields if switching to service
-      ...(autoType === 'service' && { condition: '', quantity: 1 }),
-    }));
+    setFormData(prev => ({ ...prev, category: e.target.value }));
     clearError('category');
   };
 
   const handleListingTypeToggle = (type) => {
-    setFormData(prev => ({
-      ...prev,
-      listing_type: type,
-      // Clear goods-only fields when switching to service
-      ...(type === 'service' && { condition: '', quantity: 1 }),
-    }));
+    setFormData(prev => {
+      const serviceValues = SERVICE_CATEGORIES.map(c => c.value);
+      const goodValues    = GOOD_CATEGORIES.map(c => c.value);
+      const sharedValues  = serviceValues.filter(v => goodValues.includes(v));
+      const categoryInvalid =
+        (type === 'good'    && serviceValues.includes(prev.category) && !sharedValues.includes(prev.category)) ||
+        (type === 'service' && goodValues.includes(prev.category)    && !sharedValues.includes(prev.category));
+      return {
+        ...prev,
+        listing_type: type,
+        category:     categoryInvalid ? '' : prev.category,
+        ...(type === 'service' && { condition: '', quantity: 1 }),
+      };
+    });
   };
 
+
+  // ── Restricted keyword check ───────────────────────────────────────────────
+
+  const RESTRICTED_KEYWORDS = [
+    // Academic dishonesty
+    'exam answers', 'cat answers', 'exam paper', 'past paper answers',
+    'assignment answers', 'coursework answers', 'homework answers',
+    'do my assignment', 'do my exam', 'sit my exam',
+    // Drugs & substances (food/beverages are allowed — only controlled substances blocked)
+    'weed', 'marijuana', 'cannabis', 'bhang', 'cocaine', 'heroin',
+    'drugs', 'narcotics', 'alcohol', 'Vodka', 'Gin','beer', 'whiskey', 'wine', 'spirits', 'Keg',
+    'cigarettes', 'tobacco', 'vape', 'nicotine', 'illegal brew', 'chang\'aa',
+    // Weapons
+    'weapon', 'gun', 'pistol', 'firearm', 'ammunition', 'bullets',
+    // Medications
+    'prescription', 'sleeping pills', 'painkillers', 'opioids',
+    // Counterfeit / illegal
+    'fake', 'counterfeit', 'pirated', 'cracked software', 'stolen',
+    // Solicitation
+    'pyramid scheme', 'fundraising', 'donate', 'sponsorship', 'sharpboy', 'sharpgirl', 'pornography'
+  ];
+
+  const checkRestrictedContent = (title, description) => {
+    const titleLow = title.toLowerCase();
+    const descLow  = description.toLowerCase();
+    for (const kw of RESTRICTED_KEYWORDS) {
+      if (titleLow.includes(kw)) return { word: kw, field: 'title' };
+      if (descLow.includes(kw))  return { word: kw, field: 'description' };
+    }
+    return null;
+  };
 
   // ── Validation ─────────────────────────────────────────────────────────────
 
   const validate = () => {
     const e = {};
+
+    const flagged = checkRestrictedContent(formData.title, formData.description);
+    if (flagged) {
+      e[flagged.field] = `Restricted content detected ("${flagged.word}") — this may violate platform rules. Remove it to continue.`;
+    }
 
     if (!formData.title.trim())
       e.title = 'Title is required';
@@ -172,11 +220,24 @@ const SellPage = () => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-    clearError(name);
+    const updated = { ...formData, [name]: type === 'checkbox' ? checked : value };
+    setFormData(updated);
+
+    // Live restricted-content check on title or description change
+    if (name === 'title' || name === 'description') {
+      const flagged = checkRestrictedContent(updated.title, updated.description);
+      if (flagged) {
+        setErrors(prev => ({
+          ...prev,
+          title:       flagged.field === 'title'       ? `Restricted content detected ("${flagged.word}") — remove it to continue.` : (prev.title || ''),
+          description: flagged.field === 'description' ? `Restricted content detected ("${flagged.word}") — remove it to continue.` : (prev.description || ''),
+        }));
+      } else {
+        setErrors(prev => ({ ...prev, title: '', description: '' }));
+      }
+    } else {
+      clearError(name);
+    }
   };
 
   const handleImageUpload = (e) => {
@@ -305,8 +366,8 @@ const SellPage = () => {
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { value: 'good',    label: '📦 Physical Good',  sub: 'Item you can hand over' },
-                      { value: 'service', label: '🛠️ Service',        sub: 'Skill or task you offer' },
+                      { value: 'good',    label: 'Physical Good',  sub: 'Item you can hand over' },
+                      { value: 'service', label: 'Service',        sub: 'Skill or task you offer' },
                     ].map(({ value, label, sub }) => (
                       <button
                         key={value}
@@ -362,17 +423,11 @@ const SellPage = () => {
                     className={inputClass('category')}
                   >
                     <option value="">Select a category</option>
-                    {CATEGORIES.map(c => (
+                    {(isService ? SERVICE_CATEGORIES : GOOD_CATEGORIES).map(c => (
                       <option key={c.value} value={c.value}>{c.label}</option>
                     ))}
                   </select>
                   {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
-                  {/* Inform user that selecting Services auto-switches type */}
-                  {formData.category === 'services' && (
-                    <p className={`text-sm mt-1 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                      Services category automatically set listing type to Service.
-                    </p>
-                  )}
                 </div>
 
                 {/* ── AI panel — appears after title + category filled ── */}

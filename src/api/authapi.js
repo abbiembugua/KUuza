@@ -255,7 +255,13 @@ export const submitSellerVerification = async (data) => {
       result.detail ||
       result.error ||
       "Verification failed";
-    throw new Error(msg);
+    const err = new Error(msg);
+    err.fieldErrors = {
+      student_id: result.student_id?.[0],
+      national_id: result.national_id?.[0],
+      mpesa_phone: result.mpesa_phone?.[0],
+    };
+    throw err;
   }
 
   return result;

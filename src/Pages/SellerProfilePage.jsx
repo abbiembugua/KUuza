@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Flag, Loader2, MapPin, Package, Star, Store, UserRound, Wrench } from 'lucide-react';
 import ReportModal from '../Components/ReportModal';
@@ -11,14 +11,13 @@ import { useTheme } from '../context/Themecontext';
 import { useAuth } from '../context/AuthContext';
 
 const CATEGORY_LABELS = {
-  books: 'Books',
-  electronics: 'Electronics',
-  fashion: 'Fashion',
-  furniture: 'Furniture',
-  food_beverages: 'Food & Beverages',
-  services: 'Services',
-  beauty: 'Beauty',
-  other: 'Other',
+  books: 'Academics', electronics: 'Electronics', fashion: 'Fashion',
+  furniture: 'Furniture', food_beverages: 'Food & Beverages',
+  beauty: 'Beauty', stationery: 'Stationery & Supplies',
+  sports: 'Sports & Fitness', tutoring: 'Tutoring & Academics',
+  printing: 'Printing & Photocopying', design: 'Design & Creative',
+  tech_repair: 'Tech & Repairs', laundry: 'Laundry & Cleaning',
+  photography: 'Photography & Video', other: 'Other',
 };
 
 const formatMoney = (value) => {

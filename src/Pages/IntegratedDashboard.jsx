@@ -24,7 +24,6 @@ const IntegratedDashboard = () => {
   const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [exploreOpen, setExploreOpen] = useState(false);
   const [cartItems, setCartItems] = useState([]);
   const [trendingListings, setTrendingListings] = useState([]);
   const [recentListings, setRecentListings] = useState([]);
@@ -91,15 +90,7 @@ const IntegratedDashboard = () => {
 
       <div className="max-w-7xl mx-auto px-4 pt-6 pb-12 space-y-6">
 
-        {/* At a glance tag + stats */}
         <div>
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider mb-3 ${
-            darkMode
-              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-              : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-          }`}>
-            At a glance
-          </span>
           <StatsStrip
             darkMode={darkMode}
             cartCount={cartItems.length}
@@ -112,47 +103,16 @@ const IntegratedDashboard = () => {
         {/* Explore KUuza */}
         <div>
           <button
-            onClick={() => setExploreOpen(o => !o)}
+            onClick={() => navigate('/browse')}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold border transition-all duration-200 ${
-              exploreOpen
-                ? 'bg-emerald-500 border-emerald-500 text-white'
-                : darkMode
-                  ? 'bg-gray-800 border-gray-600 text-gray-200 hover:border-emerald-500 hover:text-emerald-400'
-                  : 'bg-white border-gray-300 text-gray-700 hover:border-emerald-500 hover:text-emerald-600'
+              darkMode
+                ? 'bg-gray-800 border-gray-600 text-gray-200 hover:border-emerald-500 hover:text-emerald-400'
+                : 'bg-white border-gray-300 text-gray-700 hover:border-emerald-500 hover:text-emerald-600'
             }`}
           >
-            Explore KUuza
-            <span className={`text-base leading-none transition-transform duration-200 ${exploreOpen ? 'rotate-180 inline-block' : ''}`}>
-              ↓
-            </span>
+            Explore KUuza →
           </button>
 
-          {exploreOpen && (
-            <div className="flex flex-wrap gap-2.5 mt-3">
-              {[
-                { id: 'all',            label: 'All listings'   },
-                { id: 'books',          label: 'Books'          },
-                { id: 'electronics',    label: 'Electronics'    },
-                { id: 'fashion',        label: 'Fashion'        },
-                { id: 'furniture',      label: 'Furniture'      },
-                { id: 'food_beverages', label: 'Food'           },
-                { id: 'beauty',         label: 'Beauty'         },
-                { id: 'other',          label: 'Other'          },
-              ].map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => navigate(cat.id === 'all' ? '/browse' : `/browse?category=${cat.id}`)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors duration-150 ${
-                    darkMode
-                      ? 'bg-transparent border-gray-600 text-gray-300 hover:border-emerald-500 hover:text-emerald-400'
-                      : 'bg-transparent border-gray-300 text-gray-700 hover:border-emerald-500 hover:text-emerald-600'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         <div className="space-y-8">

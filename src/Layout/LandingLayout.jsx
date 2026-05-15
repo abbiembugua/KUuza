@@ -1,7 +1,7 @@
 // layouts/LandingLayout.jsx
 import React from 'react';
 import Navbar from '../Components/Layout/navbar';
-import Footer from '../Components/Layout/footer';
+import { LandingFooter as Footer } from '../Components/Layout/footer';
 
 // AnimatedBackground removed — each landing section manages its own background
 // and bubble animation so the page can alternate between bubbles and plain colour.

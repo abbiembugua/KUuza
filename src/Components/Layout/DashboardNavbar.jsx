@@ -9,6 +9,7 @@ import {
   User,
   Package,
   ShoppingCart,
+  Receipt,
   LogOut,
   Plus,
   Sun,
@@ -56,7 +57,9 @@ const DashboardNavbar = ({ onSearch, searchQuery, setSearchQuery, cartItemsCount
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen]   = useState(false);
 
-  const dropdownRef = useRef(null);
+  const dropdownRef          = useRef(null);
+  const seenNotificationIds  = useRef(null); // null = first load not done yet
+  const pollCallbackRef      = useRef(null); // always points to latest poll fn
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
@@ -93,10 +96,17 @@ const DashboardNavbar = ({ onSearch, searchQuery, setSearchQuery, cartItemsCount
     setNotificationsLoading(true);
     try {
       const items = await getNotifications();
-      setNotifications(items.map((item) => ({
+      const mapped = items.map((item) => ({
         ...item,
         time: formatNotificationTime(item.created_at),
-      })));
+      }));
+      // On first load just mark everything as seen — no popup spam
+      if (seenNotificationIds.current === null) {
+        seenNotificationIds.current = new Set(mapped.map((i) => i.id));
+      } else {
+        mapped.forEach((i) => seenNotificationIds.current.add(i.id));
+      }
+      setNotifications(mapped);
     } catch {
       setNotifications([]);
     } finally {
@@ -149,23 +159,108 @@ const DashboardNavbar = ({ onSearch, searchQuery, setSearchQuery, cartItemsCount
   };
 
   const openNotification = async (notification) => {
+    const txId = notification.transaction_id;
+    const type = notification.notification_type;
+
+    // Notification types that go to the buyer tab
+    const buyerTypes = new Set(['receipt_ready', 'delivery_marked', 'report_dismissed', 'report_acted']);
+    // Types with no linked transaction — go to profile or listings
+    const noTxnTypes = new Set(['account_suspended', 'account_reactivated', 'seller_verified', 'seller_revoked', 'listing_archived']);
+
     try {
-      if (notification.notification_type === 'receipt_ready') {
+      if (type === 'receipt_ready' && txId) {
         await downloadReceiptFromNotification(notification);
         toast.success('Receipt downloaded.');
         await dismissNotification(notification.id);
         setNotificationsOpen(false);
-        navigate('/purchases?tab=buyer');
+        navigate(`/purchases?tab=buyer${txId ? `&transaction=${txId}` : ''}`);
         return;
       }
+
       await dismissNotification(notification.id);
       setNotificationsOpen(false);
-      navigate('/purchases?tab=seller');
+
+      if (noTxnTypes.has(type)) {
+        navigate('/profile');
+        return;
+      }
+      if (type === 'listing_archived') {
+        navigate('/my-listings');
+        return;
+      }
+      if (type === 'question_asked' || type === 'question_answered') {
+        const listingId = notification.listing_id;
+        navigate(listingId ? `/listings/${listingId}` : '/my-listings');
+        return;
+      }
+
+      const tab = buyerTypes.has(type) ? 'buyer' : 'seller';
+      navigate(`/purchases?tab=${tab}${txId ? `&transaction=${txId}` : ''}`);
     } catch (error) {
       console.error('Unable to open notification', error);
       toast.error('Could not open this notification right now.');
     }
   };
+
+  // Keep the ref pointing to the latest version so the interval never goes stale
+  pollCallbackRef.current = async () => {
+    if (!token || seenNotificationIds.current === null) return;
+    try {
+      const items = await getNotifications();
+      const mapped = items.map((item) => ({
+        ...item,
+        time: formatNotificationTime(item.created_at),
+      }));
+      mapped
+        .filter((item) => !seenNotificationIds.current.has(item.id))
+        .forEach((item) => {
+          seenNotificationIds.current.add(item.id);
+          toast.custom(
+            (t) => (
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => { toast.dismiss(t.id); openNotification(item); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') { toast.dismiss(t.id); openNotification(item); }
+                }}
+                className={`flex items-start gap-3 p-4 rounded-2xl shadow-xl border cursor-pointer w-80 ${
+                  darkMode
+                    ? 'bg-gray-900 border-gray-700 text-white'
+                    : 'bg-white border-gray-200 text-gray-900'
+                }`}
+              >
+                <Bell className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold truncate">{item.title}</p>
+                  <p className={`text-xs mt-0.5 line-clamp-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {item.body}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); toast.dismiss(t.id); }}
+                  className={`flex-shrink-0 rounded-full p-1 transition-colors ${
+                    darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ),
+            { duration: 6000, position: 'top-right' },
+          );
+        });
+      setNotifications(mapped);
+    } catch { /* silent — polling should never surface errors */ }
+  };
+
+  // Poll every 30 s; stable interval because we call through the ref
+  useEffect(() => {
+    if (!token) return undefined;
+    const id = setInterval(() => pollCallbackRef.current?.(), 30000);
+    return () => clearInterval(id);
+  }, [token]);
 
   const handleOpenNotifications = async () => {
     setNotificationsOpen(true);
@@ -377,8 +472,8 @@ const DashboardNavbar = ({ onSearch, searchQuery, setSearchQuery, cartItemsCount
                             darkMode ? 'text-gray-300 hover:bg-gray-800 hover:text-white' : 'text-gray-700 hover:bg-gray-100'
                           }`}
                         >
-                          <ShoppingCart size={16} />
-                          Purchases
+                          <Receipt size={16} />
+                          Transactions
                         </Link>
 
                         <hr className={`my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
@@ -419,8 +514,8 @@ const DashboardNavbar = ({ onSearch, searchQuery, setSearchQuery, cartItemsCount
               </Link>
 
               <Link to="/purchases" onClick={closeMobileMenu} className={navLinkClass}>
-                <ShoppingCart size={18} />
-                Purchases
+                <Receipt size={18} />
+                Transactions
               </Link>
 
               <div className={`border-t pt-2 mt-1 space-y-1 ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>

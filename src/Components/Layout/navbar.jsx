@@ -28,6 +28,24 @@ const Navbar = ({ scrolled }) => {
           </div>
         </div>
 
+        <div className="hidden md:flex items-center space-x-6">
+          {[
+            { label: 'How it Works', href: '#how-it-works' },
+            { label: 'Browse',       href: '#listings' },
+            { label: 'Contact Us',   href: '#contact' },
+          ].map(({ label, href }) => (
+            <a
+              key={href}
+              href={href}
+              className={`text-sm font-medium transition-colors hover:text-emerald-500 ${
+                darkMode ? 'text-gray-300' : 'text-gray-600'
+              }`}
+            >
+              {label}
+            </a>
+          ))}
+        </div>
+
         <div className="flex items-center space-x-4">
           <button 
             onClick={toggleTheme} // Use toggleTheme from context

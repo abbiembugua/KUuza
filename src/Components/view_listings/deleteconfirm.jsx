@@ -1,5 +1,4 @@
 // src/Components/Listings/DeleteConfirmModal.jsx
-// Confirmation modal for deleting a listing
 
 import React, { useState } from 'react';
 import { AlertTriangle, Loader2 } from 'lucide-react';
@@ -42,7 +41,7 @@ const DeleteConfirmModal = ({ listing, onClose, onConfirm, darkMode }) => {
               "{listing.title}"
             </p>
             <p className="text-sm text-red-600">
-              ⚠️ This action cannot be undone.
+              This action cannot be undone.
             </p>
           </div>
 

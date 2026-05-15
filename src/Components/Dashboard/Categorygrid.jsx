@@ -1,15 +1,23 @@
-import React from 'react';
+﻿import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 
 const categoryData = [
-  { id: 'books',          name: 'Books'       },
-  { id: 'electronics',    name: 'Electronics' },
-  { id: 'fashion',        name: 'Fashion'     },
-  { id: 'furniture',      name: 'Furniture'   },
-  { id: 'food_beverages', name: 'Food'        },
-  { id: 'beauty',         name: 'Beauty'      },
-  { id: 'other',          name: 'Other'       },
+  { id: 'books',          name: 'Academics'         },
+  { id: 'electronics',    name: 'Electronics'   },
+  { id: 'fashion',        name: 'Fashion'       },
+  { id: 'furniture',      name: 'Furniture'     },
+  { id: 'food_beverages', name: 'Food'          },
+  { id: 'beauty',         name: 'Beauty'        },
+  { id: 'stationery',     name: 'Stationery'    },
+  { id: 'sports',         name: 'Sports'        },
+  { id: 'tutoring',       name: 'Tutoring'      },
+  { id: 'printing',       name: 'Printing'      },
+  { id: 'design',         name: 'Design'        },
+  { id: 'tech_repair',    name: 'Tech Repairs'  },
+  { id: 'laundry',        name: 'Laundry'       },
+  { id: 'photography',    name: 'Photography'   },
+  { id: 'other',          name: 'Other'         },
 ];
 
 const CategoryGrid = ({ darkMode }) => {

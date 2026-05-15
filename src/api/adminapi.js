@@ -7,8 +7,11 @@ const adminHeaders = () => ({
 
 const handleResponse = async (res) => {
   if (res.status === 204) return null;
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || data.detail || 'Request failed');
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const msg = data?.error || data?.detail || `Server error (${res.status})`;
+    throw new Error(msg);
+  }
   return data;
 };
 

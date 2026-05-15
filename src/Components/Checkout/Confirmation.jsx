@@ -31,7 +31,7 @@ function MpesaPaymentStatus({ transactionId, token, darkMode, onRetry, onComplet
       try {
         const data = await checkTransactionStatus(transactionId, token);
 
-        if (data.status === 'completed') {
+        if (data.mpesa_paid || data.status === 'completed') {
           setStatus('completed');
           clearInterval(interval);
           clearTimeout(timeout);

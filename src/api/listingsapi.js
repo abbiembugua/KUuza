@@ -35,17 +35,22 @@ const handleResponse = async (response) => {
  * Get all listings for current user
  * @returns {Promise<Array>} Array of listing objects
  */
-export const getMyListings = async () => {
+export const getMyListings = async (params = {}) => {
   const token = getToken();
-  
-  const response = await fetch(`${BASE_URL}/listings/my_listings/`, {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, val]) => {
+    if (val !== '' && val !== null && val !== undefined) query.append(key, val);
+  });
+  const qs = query.toString();
+
+  const response = await fetch(`${BASE_URL}/listings/my_listings/${qs ? `?${qs}` : ''}`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
   });
-  
+
   return handleResponse(response);
 };
 
@@ -154,28 +159,47 @@ export const convertToDraft = async (listingId) => {
   return updateListing(listingId, { is_draft: true });
 };
 
+// ==================== ARCHIVE / REACTIVATE ====================
+
+export const archiveListing = async (listingId) => {
+  const token = getToken();
+  const response = await fetch(`${BASE_URL}/listings/${listingId}/deactivate/`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  return handleResponse(response);
+};
+
+export const reactivateListing = async (listingId) => {
+  const token = getToken();
+  const response = await fetch(`${BASE_URL}/listings/${listingId}/reactivate/`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  return handleResponse(response);
+};
+
 // ==================== DELETE OPERATIONS ====================
 
 /**
- * Delete listing
+ * Delete listing permanently
  * @param {string} listingId - Listing ID
  * @returns {Promise<Object>} Delete response
  */
 export const deleteListing = async (listingId) => {
   const token = getToken();
-  
+
   const response = await fetch(`${BASE_URL}/listings/${listingId}/`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`,
     },
   });
-  
+
   if (response.status === 204) {
-    // No content response
     return { success: true, message: 'Listing deleted successfully' };
   }
-  
+
   return handleResponse(response);
 };
 

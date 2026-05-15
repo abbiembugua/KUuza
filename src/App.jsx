@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Outlet } from 'react-router-dom';
+import AppFooter from './Components/Layout/footer';
 import ForgotPassword from './Pages/ForgotPassword';
 import IntegratedBrowsePage from './Pages/IntegratedBrowsePage';
 import IntegratedCartPage from './Pages/IntegratedCartPage';
@@ -23,6 +24,14 @@ import { AuthProvider } from './context/AuthContext';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import { ThemeProvider } from './context/Themecontext';
 
+// Wraps pages that should show the footer
+const WithFooter = () => (
+  <>
+    <Outlet />
+    <AppFooter />
+  </>
+);
+
 const App = () => {
   const [scrolled, setScrolled] = useState(false);
 
@@ -44,18 +53,23 @@ const App = () => {
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/ForgotPassword" element={<ForgotPassword />} />
-            <Route path="/dashboard" element={<IntegratedDashboard />} />
-            <Route path="/browse" element={<IntegratedBrowsePage />} />
-            <Route path="/cart" element={<IntegratedCartPage />} />
-            <Route path="/needs" element={<NeedsPage />} />
-            <Route path="/sell" element={<SellPage />} />
-            <Route path="/my-listings" element={<MyListingsPage />} />
-            <Route path="/listings/:id" element={<ListingDetailPage />} />
+            {/* Pages with footer */}
+            <Route element={<WithFooter />}>
+              <Route path="/dashboard" element={<IntegratedDashboard />} />
+              <Route path="/browse" element={<IntegratedBrowsePage />} />
+              <Route path="/cart" element={<IntegratedCartPage />} />
+              <Route path="/needs" element={<NeedsPage />} />
+              <Route path="/sell" element={<SellPage />} />
+              <Route path="/my-listings" element={<MyListingsPage />} />
+              <Route path="/listings/:id" element={<ListingDetailPage />} />
+              <Route path="/purchases" element={<PurchasesPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/sellers/:sellerId" element={<SellerProfilePage />} />
+            </Route>
+
+            {/* No footer on checkout (focused flow) */}
             <Route path="/checkout/:id" element={<CheckoutPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
-            <Route path="/purchases" element={<PurchasesPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/sellers/:sellerId" element={<SellerProfilePage />} />
 
             {/* Admin routes — wrapped in their own auth provider */}
             <Route

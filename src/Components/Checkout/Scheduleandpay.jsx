@@ -56,32 +56,30 @@ function PaymentOption({ value, selected, onSelect, icon: Icon, label, descripti
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 const ScheduleAndPay = ({
-  // single-mode listing
   listing,
   darkMode,
-  // schedule state
   scheduledDate, setScheduledDate,
   scheduledTime, setScheduledTime,
   inquiryNote,   setInquiryNote,
-  // payment state
   paymentMethod, setPaymentMethod,
   mpesaPhone,    setMpesaPhone,
-  // errors
   errors, setErrors,
-  // actions
   mpesaError,
   submitting,
   onConfirm,
-  // bulk props
-  isBulk   = false,
-  bulkItems = [],
-  bulkTotal = 0,
+  bookedSlots = [],
+  isBulk      = false,
+  bulkItems   = [],
+  bulkTotal   = 0,
   singleQuantity = 1,
-  singleTotal = 0,
+  singleTotal    = 0,
+  platformFee    = 0,
 }) => {
   // In bulk mode all items are goods; single mode respects listing_type
-  const isService = !isBulk && listing?.listing_type === 'service';
-  const isGood    = isBulk || listing?.listing_type === 'good';
+  const isService   = !isBulk && listing?.listing_type === 'service';
+  const isGood      = isBulk || listing?.listing_type === 'good';
+  const activeTotal = isBulk ? bulkTotal : singleTotal;
+  const chargedTotal = activeTotal + platformFee;
 
   // Bulk: cash option is always cash_on_pickup (no services in bulk)
   const cashValue = isService ? 'pay_after_service' : 'cash_on_pickup';
@@ -92,6 +90,44 @@ const ScheduleAndPay = ({
 
   const clearError = (field) => setErrors(prev => ({ ...prev, [field]: '' }));
   const todayStr   = getTodayStr();
+
+  const isToday = scheduledDate === todayStr;
+
+  // Times already booked on the selected date
+  const bookedTimesOnDate = React.useMemo(() => {
+    if (!scheduledDate) return new Set();
+    return new Set(
+      bookedSlots
+        .filter(s => s.date === scheduledDate)
+        .map(s => s.time?.slice(0, 5)) // normalise to HH:MM
+    );
+  }, [bookedSlots, scheduledDate]);
+
+  const availableTimeSlots = React.useMemo(() => {
+    let slots = TIME_SLOTS;
+    // Filter out past times when today is selected
+    if (isToday) {
+      const now = new Date();
+      const cutoff = now.getHours() * 60 + now.getMinutes() + 30;
+      slots = slots.filter(({ value }) => {
+        const [h, m] = value.split(':').map(Number);
+        return h * 60 + m >= cutoff;
+      });
+    }
+    // Filter out already-booked slots
+    slots = slots.filter(({ value }) => !bookedTimesOnDate.has(value));
+    return slots;
+  }, [isToday, scheduledDate, bookedTimesOnDate]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const dateFullyBooked = scheduledDate && availableTimeSlots.length === 0;
+
+  // Clear selected time if it's no longer available
+  React.useEffect(() => {
+    if (scheduledTime) {
+      const still_valid = availableTimeSlots.some(s => s.value === scheduledTime);
+      if (!still_valid) setScheduledTime('');
+    }
+  }, [availableTimeSlots]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-4">
@@ -153,13 +189,22 @@ const ScheduleAndPay = ({
                 }`}
               >
                 <option value="">Select a time</option>
-                {TIME_SLOTS.map(({ label, value }) => (
+                {availableTimeSlots.map(({ label, value }) => (
                   <option key={value} value={value}>{label}</option>
                 ))}
               </select>
               {errors.scheduledTime && (
                 <p className="text-red-500 text-xs mt-1">{errors.scheduledTime}</p>
               )}
+              {dateFullyBooked ? (
+                <p className="text-amber-500 text-xs mt-1">
+                  All time slots for this date are taken — please choose another date.
+                </p>
+              ) : isToday ? (
+                <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Showing available slots from now + 30 min
+                </p>
+              ) : null}
             </div>
           )}
         </div>
@@ -321,13 +366,31 @@ const ScheduleAndPay = ({
                 </div>
               )}
 
-              <div className={`flex justify-between pt-2 border-t ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
-                <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Total ({bulkItems.length} items)
-                </span>
-                <span className={`font-bold text-lg ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                  KSh {bulkTotal.toLocaleString('en-KE')}
-                </span>
+              <div className={`pt-2 border-t ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
+                {platformFee > 0 && (
+                  <>
+                    <div className="flex justify-between mb-1">
+                      <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Subtotal</span>
+                      <span className={darkMode ? 'text-white' : 'text-gray-900'}>
+                        KSh {bulkTotal.toLocaleString('en-KE')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between mb-1">
+                      <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Platform fee (2%)</span>
+                      <span className={darkMode ? 'text-white' : 'text-gray-900'}>
+                        KSh {platformFee.toLocaleString('en-KE')}
+                      </span>
+                    </div>
+                  </>
+                )}
+                <div className="flex justify-between">
+                  <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Total ({bulkItems.length} items)
+                  </span>
+                  <span className={`font-bold text-lg ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                    KSh {chargedTotal.toLocaleString('en-KE')}
+                  </span>
+                </div>
               </div>
             </>
           ) : (
@@ -364,13 +427,31 @@ const ScheduleAndPay = ({
                   </span>
                 </div>
               )}
-              <div className={`flex justify-between pt-2 border-t ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
-                <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Total</span>
-                <span className={`font-bold text-lg ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                  {listing?.price
-                    ? `KSh ${singleTotal.toLocaleString('en-KE')}`
-                    : 'Negotiable'}
-                </span>
+              <div className={`pt-2 border-t ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
+                {platformFee > 0 && (
+                  <>
+                    <div className="flex justify-between mb-1">
+                      <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Subtotal</span>
+                      <span className={darkMode ? 'text-white' : 'text-gray-900'}>
+                        KSh {singleTotal.toLocaleString('en-KE')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between mb-1">
+                      <span className={darkMode ? 'text-gray-400' : 'text-gray-500'}>Platform fee (2%)</span>
+                      <span className={darkMode ? 'text-white' : 'text-gray-900'}>
+                        KSh {platformFee.toLocaleString('en-KE')}
+                      </span>
+                    </div>
+                  </>
+                )}
+                <div className="flex justify-between">
+                  <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Total</span>
+                  <span className={`font-bold text-lg ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                    {listing?.price
+                      ? `KSh ${chargedTotal.toLocaleString('en-KE')}`
+                      : 'Negotiable'}
+                  </span>
+                </div>
               </div>
             </>
           )}
@@ -394,8 +475,8 @@ const ScheduleAndPay = ({
           </span>
         ) : paymentMethod === 'mpesa' ? (
           isBulk
-            ? `Confirm & Pay KSh ${bulkTotal.toLocaleString('en-KE')} via M-Pesa`
-            : `Confirm & Pay ${listing?.price ? `KSh ${singleTotal.toLocaleString('en-KE')}` : ''} via M-Pesa`.trim()
+            ? `Confirm & Pay KSh ${chargedTotal.toLocaleString('en-KE')} via M-Pesa`
+            : `Confirm & Pay ${listing?.price ? `KSh ${chargedTotal.toLocaleString('en-KE')}` : ''} via M-Pesa`.trim()
         ) : (
           isBulk
             ? `Confirm ${bulkItems.length} Orders`

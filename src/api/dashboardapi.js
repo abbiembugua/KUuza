@@ -1,4 +1,4 @@
-// src/api/dashboardapi.js
+﻿// src/api/dashboardapi.js
 // Fixed version — correct token key, differentiated trending/recent, working filters
 
 const BASE_URL = 'http://127.0.0.1:8000/api';
@@ -166,13 +166,21 @@ export async function checkCartAvailability() {
 // ── Categories (static — matches your database values exactly) ───────────────
 
 export const getCategories = async () => [
-  { id: 'books',          name: 'Books & Textbooks' },
-  { id: 'electronics',    name: 'Electronics' },
-  { id: 'fashion',        name: 'Fashion' },
-  { id: 'furniture',      name: 'Furniture' },
-  { id: 'food_beverages', name: 'Food & Beverages' },
-  { id: 'beauty',         name: 'Beauty' },
-  { id: 'other',          name: 'Other' },
+  { id: 'books',          name: 'Academics'       },
+  { id: 'electronics',    name: 'Electronics'             },
+  { id: 'fashion',        name: 'Fashion'                 },
+  { id: 'furniture',      name: 'Furniture'               },
+  { id: 'food_beverages', name: 'Food & Beverages'        },
+  { id: 'beauty',         name: 'Beauty'                  },
+  { id: 'stationery',     name: 'Stationery & Supplies'   },
+  { id: 'sports',         name: 'Sports & Fitness'        },
+  { id: 'tutoring',       name: 'Tutoring & Academics'    },
+  { id: 'printing',       name: 'Printing & Photocopying' },
+  { id: 'design',         name: 'Design & Creative'       },
+  { id: 'tech_repair',    name: 'Tech & Repairs'          },
+  { id: 'laundry',        name: 'Laundry & Cleaning'      },
+  { id: 'photography',    name: 'Photography & Video'     },
+  { id: 'other',          name: 'Other'                   },
 ];
 
 // ── Campus locations (static) ─────────────────────────────────────────────────

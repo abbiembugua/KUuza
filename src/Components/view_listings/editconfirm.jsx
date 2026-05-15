@@ -2,15 +2,29 @@ import React, { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-const CATEGORY_OPTIONS = [
-  { value: 'books', label: 'Books' },
-  { value: 'electronics', label: 'Electronics' },
-  { value: 'fashion', label: 'Fashion' },
-  { value: 'furniture', label: 'Furniture' },
+const GOOD_CATEGORIES = [
+  { value: 'books',          label: 'Academics' },
+  { value: 'electronics',    label: 'Electronics' },
+  { value: 'fashion',        label: 'Fashion' },
+  { value: 'furniture',      label: 'Furniture' },
   { value: 'food_beverages', label: 'Food & Beverages' },
-  { value: 'services', label: 'Services' },
-  { value: 'beauty', label: 'Beauty' },
-  { value: 'other', label: 'Other' },
+  { value: 'beauty',         label: 'Beauty' },
+  { value: 'stationery',     label: 'Stationery & Supplies' },
+  { value: 'sports',         label: 'Sports & Fitness' },
+  { value: 'other',          label: 'Other' },
+];
+
+const SERVICE_CATEGORIES = [
+  { value: 'tutoring',       label: 'Tutoring & Academics' },
+  { value: 'printing',       label: 'Printing & Photocopying' },
+  { value: 'design',         label: 'Design & Creative' },
+  { value: 'tech_repair',    label: 'Tech & Repairs' },
+  { value: 'laundry',        label: 'Laundry & Cleaning' },
+  { value: 'photography',    label: 'Photography & Video' },
+  { value: 'beauty',         label: 'Beauty' },
+  { value: 'food_beverages', label: 'Food & Beverages' },
+  { value: 'fashion',        label: 'Fashion' },
+  { value: 'other',          label: 'Other' },
 ];
 
 const CONDITION_OPTIONS = [
@@ -56,15 +70,7 @@ const EditListingModal = ({ listing, onClose, onSave, darkMode }) => {
         [name]: nextValue,
       };
 
-      if (name === 'category') {
-        const nextIsService = value === 'services';
-        nextState.listing_type = nextIsService ? 'service' : 'good';
-
-        if (nextIsService) {
-          nextState.condition = '';
-          nextState.quantity = 1;
-        }
-      }
+      // Category change doesn't switch listing_type — user controls that via the type toggle
 
       return nextState;
     });
@@ -175,7 +181,8 @@ const EditListingModal = ({ listing, onClose, onSave, darkMode }) => {
           <div>
             <label className={`mb-2 block font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Category *</label>
             <select name="category" value={formData.category} onChange={handleInputChange} className={controlClassName('category')}>
-              {CATEGORY_OPTIONS.map((category) => (
+              <option value="">Select a category</option>
+              {(isService ? SERVICE_CATEGORIES : GOOD_CATEGORIES).map((category) => (
                 <option key={category.value} value={category.value}>{category.label}</option>
               ))}
             </select>

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+﻿import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ShoppingBag, TrendingUp, Star, Loader2, RefreshCw, ChevronDown, Wallet, Pencil, Trash2, MessageSquare, X, Search } from 'lucide-react';
 import { toast, Toaster } from 'react-hot-toast';
@@ -65,22 +65,29 @@ const TABS = [
 
 
 const CATEGORY_OPTIONS = [
-  { value: '',               label: 'All categories'     },
-  { value: 'books',          label: 'Books & Textbooks'  },
-  { value: 'electronics',    label: 'Electronics'        },
-  { value: 'fashion',        label: 'Clothing & Fashion' },
-  { value: 'furniture',      label: 'Furniture'          },
-  { value: 'food_beverages', label: 'Food & Beverages'   },
-  { value: 'beauty',         label: 'Beauty'             },
-  { value: 'other',          label: 'Other'              },
+  { value: '',               label: 'All categories'          },
+  { value: 'books',          label: 'Academics'       },
+  { value: 'electronics',    label: 'Electronics'             },
+  { value: 'fashion',        label: 'Fashion'                 },
+  { value: 'furniture',      label: 'Furniture'               },
+  { value: 'food_beverages', label: 'Food & Beverages'        },
+  { value: 'beauty',         label: 'Beauty'                  },
+  { value: 'stationery',     label: 'Stationery & Supplies'   },
+  { value: 'sports',         label: 'Sports & Fitness'        },
+  { value: 'tutoring',       label: 'Tutoring & Academics'    },
+  { value: 'printing',       label: 'Printing & Photocopying' },
+  { value: 'design',         label: 'Design & Creative'       },
+  { value: 'tech_repair',    label: 'Tech & Repairs'          },
+  { value: 'laundry',        label: 'Laundry & Cleaning'      },
+  { value: 'photography',    label: 'Photography & Video'     },
+  { value: 'other',          label: 'Other'                   },
 ];
 
 const STATUS_OPTIONS = [
-  { value: '',               label: 'All statuses'   },
-  { value: 'pending',        label: 'Pending'        },
-  { value: 'completed',      label: 'Completed'      },
-  { value: 'auto_completed', label: 'Auto-completed' },
-  { value: 'cancelled',      label: 'Cancelled'      },
+  { value: '',          label: 'All statuses' },
+  { value: 'pending',   label: 'Pending'      },
+  { value: 'completed', label: 'Completed'    },
+  { value: 'cancelled', label: 'Cancelled'    },
 ];
 
 const selectCls = (darkMode) =>
@@ -95,6 +102,7 @@ const PurchasesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { darkMode } = useTheme();
   const { token, user } = useAuth();
+  const highlightedTxId = searchParams.get('transaction') || null;
 
   const [transactions,     setTransactions]     = useState([]);
   const [pendingReviewIds, setPendingReviewIds] = useState([]);
@@ -105,7 +113,8 @@ const PurchasesPage = () => {
   const [categoryFilter,   setCategoryFilter]   = useState('');
   const [dateRange,        setDateRange]        = useState({ from: null, to: null });
   const [searchQuery,      setSearchQuery]      = useState('');
-  const [showInsights,     setShowInsights]     = useState(false);
+  const [showInsights,          setShowInsights]          = useState(false);
+  const [pendingReviewFilter,   setPendingReviewFilter]   = useState(false);
 
   const [reviewModal,      setReviewModal]      = useState({ isOpen: false, transaction: null, reviewTarget: null });
   const [myReviews,        setMyReviews]        = useState([]);
@@ -120,7 +129,8 @@ const PurchasesPage = () => {
     try {
       const params = {};
       if (activeTab !== 'all')   params.role     = activeTab;
-      if (statusFilter !== '')   params.status   = statusFilter;
+      // 'completed' filter covers both completed and auto_completed — handled client-side
+      if (statusFilter !== '' && statusFilter !== 'completed') params.status = statusFilter;
       if (categoryFilter !== '') params.category = categoryFilter;
       const [txnData, pendingData] = await Promise.all([
         fetchTransactions(token, params),
@@ -155,6 +165,8 @@ const PurchasesPage = () => {
   }, [activeTab, token]);
 
   const filtered = transactions.filter((t) => {
+    if (pendingReviewFilter && !pendingReviewIds.includes(t.id)) return false;
+    if (statusFilter === 'completed' && !['completed', 'auto_completed'].includes(t.status)) return false;
     if (dateRange.from || dateRange.to) {
       const created = t.created_at ? new Date(t.created_at) : null;
       if (created) {
@@ -213,10 +225,10 @@ const PurchasesPage = () => {
             <BackButton darkMode={darkMode} onClick={() => navigate(-1)} />
             <div className="flex-1">
               <h1 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                Purchases &amp; Sales
+                Transactions
               </h1>
               <p className={`text-xs mt-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                Your marketplace activity
+                Your purchases &amp; sales
               </p>
             </div>
             <button
@@ -232,18 +244,33 @@ const PurchasesPage = () => {
 
           {/* ── Pending reviews banner ── */}
           {pendingReviewIds.length > 0 && (
-            <div className={`mb-4 p-3 rounded-xl flex items-center gap-3 ${
-              darkMode ? 'bg-amber-900/20 border border-amber-800' : 'bg-amber-50 border border-amber-200'
+            <div className={`mb-4 rounded-xl border overflow-hidden ${
+              darkMode ? 'bg-amber-900/20 border-amber-800' : 'bg-amber-50 border-amber-200'
             }`}>
-              <Star size={16} className="text-amber-500 flex-shrink-0" />
-              <div className="flex-1">
-                <p className={`text-sm font-semibold ${darkMode ? 'text-amber-400' : 'text-amber-700'}`}>
-                  {pendingReviewIds.length} transaction{pendingReviewIds.length > 1 ? 's' : ''} awaiting your review
-                </p>
-                <p className={`text-xs mt-0.5 ${darkMode ? 'text-amber-500/70' : 'text-amber-600'}`}>
-                  Help your fellow KU students by leaving honest feedback.
-                </p>
-              </div>
+              <button
+                onClick={() => {
+                  setActiveTab('all');
+                  setStatusFilter('completed');
+                  setPendingReviewFilter(true);
+                }}
+                className="w-full p-3 flex items-center gap-3 text-left hover:brightness-95 transition-all"
+              >
+                <Star size={16} className="text-amber-500 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className={`text-sm font-semibold ${darkMode ? 'text-amber-400' : 'text-amber-700'}`}>
+                    {pendingReviewIds.length} transaction{pendingReviewIds.length > 1 ? 's' : ''} awaiting your review
+                  </p>
+                  <p className={`text-xs mt-0.5 ${darkMode ? 'text-amber-500/70' : 'text-amber-600'}`}>
+                    Tap to see them → leave honest feedback for your fellow KU students.
+                  </p>
+                </div>
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg flex-shrink-0 ${
+                  darkMode ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-200 text-amber-800'
+                }`}>
+                  View
+                </span>
+              </button>
+
             </div>
           )}
 
@@ -258,7 +285,7 @@ const PurchasesPage = () => {
                 {TABS.map((tab) => (
                   <button
                     key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
+                    onClick={() => { setActiveTab(tab.key); setPendingReviewFilter(false); setStatusFilter(''); }}
                     className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
                       activeTab === tab.key
                         ? 'bg-emerald-600 text-white shadow-sm'
@@ -463,6 +490,7 @@ const PurchasesPage = () => {
                   onTransactionUpdate={handleTransactionUpdate}
                   onReview={(txn, target) => setReviewModal({ isOpen: true, transaction: txn, reviewTarget: target })}
                   pendingReviewIds={pendingReviewIds}
+                  highlighted={highlightedTxId === transaction.id}
                 />
               ))}
             </div>

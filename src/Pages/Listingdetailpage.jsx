@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, MapPin, Star, Eye, Users, Package,
@@ -6,6 +6,7 @@ import {
   Shield, Tag, AlertCircle, CheckCircle, Loader2, Minus, Plus, Flag
 } from 'lucide-react';
 import ReportModal from '../Components/ReportModal';
+import QASection   from '../Components/Listings/QASection';
 import DashboardNavbar from '../Components/Layout/DashboardNavbar';
 import BackButton from '../Components/shared/BackButton';
 import { useTheme } from '../context/Themecontext';
@@ -58,9 +59,13 @@ async function addToCartAPI(listingId, token, quantity = 1) {
 }
 
 const CATEGORY_LABELS = {
-  books: 'Books', electronics: 'Electronics', fashion: 'Fashion',
+  books: 'Academics', electronics: 'Electronics', fashion: 'Fashion',
   furniture: 'Furniture', food_beverages: 'Food & Beverages',
-  services: 'Services', beauty: 'Beauty', other: 'Other',
+  beauty: 'Beauty', stationery: 'Stationery & Supplies',
+  sports: 'Sports & Fitness', tutoring: 'Tutoring & Academics',
+  printing: 'Printing & Photocopying', design: 'Design & Creative',
+  tech_repair: 'Tech & Repairs', laundry: 'Laundry & Cleaning',
+  photography: 'Photography & Video', other: 'Other',
 };
 
 const CONDITION_LABELS = { new: 'New', like_new: 'Like New', used: 'Used', fair: 'Fair' };
@@ -288,7 +293,7 @@ const ListingDetailPage = () => {
           )}
 
           {/* Grid: 1/3 gallery + 2/3 details — mirrors SellPage split */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
             {/* Gallery */}
             <div className="lg:col-span-1">
@@ -296,12 +301,12 @@ const ListingDetailPage = () => {
             </div>
 
             {/* Details */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-3">
 
-              <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-lg p-6`}>
+              <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-sm p-4`}>
 
                 {/* Badges */}
-                <div className="flex items-center gap-2 flex-wrap mb-5">
+                <div className="flex items-center gap-2 flex-wrap mb-3">
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${isService ? darkMode ? 'bg-purple-900/40 text-purple-300' : 'bg-purple-100 text-purple-700' : darkMode ? 'bg-emerald-900/40 text-emerald-300' : 'bg-emerald-100 text-emerald-700'}`}>
                     {isService ? <Wrench size={11} /> : <Package size={11} />}
                     {isService ? 'Service' : 'Good'}
@@ -318,11 +323,11 @@ const ListingDetailPage = () => {
                 </div>
 
                 {/* Title */}
-                <h1 className={`text-2xl md:text-3xl font-bold leading-snug mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{listing.title}</h1>
+                <h1 className={`text-xl md:text-2xl font-bold leading-snug mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{listing.title}</h1>
 
                 {/* Price */}
                 <div className="flex items-baseline gap-3 flex-wrap mb-4">
-                  <span className={`text-3xl font-bold ${listing.price ? 'text-emerald-600' : darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <span className={`text-2xl font-bold ${listing.price ? 'text-emerald-600' : darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                     {listing.price ? `KSh ${parseFloat(listing.price).toLocaleString('en-KE')}` : 'Price on request'}
                   </span>
                 </div>
@@ -345,7 +350,7 @@ const ListingDetailPage = () => {
                 )}
 
                 {isGood && !isUnavailable && (
-                  <div className="mb-5">
+                  <div className="mb-3">
                     <label className={`mb-2 block text-sm font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
                       Quantity
                     </label>
@@ -357,7 +362,7 @@ const ListingDetailPage = () => {
                           type="button"
                           onClick={() => setSelectedQuantity((current) => Math.max(1, current - 1))}
                           disabled={selectedQuantity <= 1}
-                          className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
+                          className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${
                             selectedQuantity <= 1
                               ? 'cursor-not-allowed opacity-40'
                               : darkMode ? 'bg-gray-800 text-gray-200 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-100'
@@ -374,7 +379,7 @@ const ListingDetailPage = () => {
                           type="button"
                           onClick={() => setSelectedQuantity((current) => Math.min(maxSelectableQuantity, current + 1))}
                           disabled={selectedQuantity >= maxSelectableQuantity}
-                          className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
+                          className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${
                             selectedQuantity >= maxSelectableQuantity
                               ? 'cursor-not-allowed opacity-40'
                               : darkMode ? 'bg-gray-800 text-gray-200 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-100'
@@ -398,10 +403,10 @@ const ListingDetailPage = () => {
                   </div>
                 )}
 
-                <div className={`border-t mb-5 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
+                <div className={`border-t mb-2 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
 
                 {/* Description */}
-                <div className="mb-5">
+                <div className="mb-3">
                   <label className={`font-semibold mb-2 block ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Description</label>
                   {listing.description
                     ? <p className={`text-sm leading-relaxed whitespace-pre-line ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{listing.description}</p>
@@ -409,10 +414,10 @@ const ListingDetailPage = () => {
                   }
                 </div>
 
-                <div className={`border-t mb-5 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
+                <div className={`border-t mb-2 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
 
                 {/* Area */}
-                <div className="mb-5">
+                <div className="mb-3">
                   <label className={`font-semibold mb-2 block ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
                     {isService ? 'Area of Operation' : 'Pickup / Meetup Location'}
                   </label>
@@ -422,12 +427,12 @@ const ListingDetailPage = () => {
                   </div>
                 </div>
 
-                <div className={`border-t mb-5 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
+                <div className={`border-t mb-2 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
 
                 {/* Seller */}
                 <Link
                   to={`/sellers/${sellerId}`}
-                  className={`flex items-center gap-3 mb-5 rounded-2xl p-2 -m-2 transition-colors ${
+                  className={`flex items-center gap-3 mb-3 rounded-2xl p-2 -m-2 transition-colors ${
                     darkMode ? 'hover:bg-gray-700/60' : 'hover:bg-gray-50'
                   }`}
                 >
@@ -444,7 +449,7 @@ const ListingDetailPage = () => {
                 </Link>
 
                 {/* Privacy note — same style as SellPage tips */}
-                <div className={`p-3 rounded-lg mb-5 flex items-center gap-2.5 ${darkMode ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
+                <div className={`p-3 rounded-lg mb-3 flex items-center gap-2.5 ${darkMode ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
                   <Shield size={14} className="flex-shrink-0 text-emerald-500" />
                   <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     Seller contact details are only shared after a transaction is created.
@@ -475,18 +480,18 @@ const ListingDetailPage = () => {
                   </div>
 
                 ) : isUnavailable ? (
-                  <button disabled className="w-full py-4 rounded-xl font-bold text-lg bg-gray-300 text-gray-400 cursor-not-allowed">
+                  <button disabled className="w-full py-2.5 rounded-xl font-bold text-lg bg-gray-300 text-gray-400 cursor-not-allowed">
                     {isSold ? isService ? 'Unavailable' : 'Sold Out' : 'Currently Unavailable'}
                   </button>
 
                 ) : isGood ? (
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-3">
-                      <button onClick={handleAddToCart} disabled={cartLoading} className={`py-4 rounded-xl font-bold text-base transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}>
+                      <button onClick={handleAddToCart} disabled={cartLoading} className={`py-2.5 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}>
                         {cartLoading ? <Loader2 className="animate-spin" size={20} /> : <ShoppingCart size={20} />}
                         {cartLoading ? 'Adding...' : 'Add to Cart'}
                       </button>
-                      <button onClick={handleBuyNow} className="py-4 rounded-xl font-bold text-base bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+                      <button onClick={handleBuyNow} className="py-2.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
                         <Zap size={20} />Buy Now
                       </button>
                     </div>
@@ -495,7 +500,7 @@ const ListingDetailPage = () => {
 
                 ) : (
                   <div className="space-y-4">
-                    <button onClick={handleBookNow} className="w-full py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+                    <button onClick={handleBookNow} className="w-full py-2.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
                       <CheckCircle size={22} />Book Now
                     </button>
                     <p className={`text-sm text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>💡 Seller contact details will be shared after booking</p>
@@ -522,15 +527,14 @@ const ListingDetailPage = () => {
                 </div>
               )}
 
-              {/* Tips panel — identical to SellPage tips box */}
-              <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
-                <p className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>💡 Buying tips:</p>
-                <ul className={`text-sm space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  <li>• Meet in safe, visible campus locations</li>
-                  <li>• Inspect goods before completing payment</li>
-                  <li>• Rate your experience after the transaction</li>
-                </ul>
-              </div>
+              {/* Q&A */}
+              <QASection
+                listingId={listing.id}
+                sellerId={listing.seller}
+                currentUser={user}
+                token={token}
+                darkMode={darkMode}
+              />
 
             </div>
           </div>

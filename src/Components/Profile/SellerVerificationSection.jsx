@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   BadgeCheck, BookOpen, ChevronDown, ChevronUp, CreditCard,
-  Fingerprint, PencilLine, Phone, Save, ShieldAlert, X,
+  Fingerprint, PencilLine, Phone, Save, ShieldAlert, X, AlertCircle,
 } from 'lucide-react';
 import { submitSellerVerification, updateCurrentUser } from '../../api/authapi';
 import { showToast } from '../../Services/toastService';
@@ -54,7 +54,6 @@ const KU_SCHOOLS = [
       'Department of Architecture & Interior Design',
       'Department of Spatial & Environmental Planning',
       'Department of Construction & Real Estate Management',
-      'Department of Computing & Information Technology',
       'Department of Mechanical Engineering',
       'Department of Energy Engineering',
       'Department of Civil Engineering',
@@ -95,6 +94,7 @@ const KU_SCHOOLS = [
     departments: [
       'Department of Biochemistry, Microbiology & Biotechnology',
       'Department of Chemistry',
+      'Department of Computing & Information Science',
       'Department of Mathematics & Actuarial Science',
       'Department of Plant Sciences',
       'Department of Physics',
@@ -142,7 +142,7 @@ const TERMS_SECTIONS = [
       'Only sell items you personally own or have made.',
       'Descriptions must be accurate — no misleading photos or details.',
       'No counterfeit, pirated, or illegally obtained goods.',
-      'No food or consumables unless you hold a valid food handler\'s certificate.',
+      'Food and beverages are permitted. By listing food items you confirm you comply with all KU campus rules and Kenyan food safety regulations. KUuza is not liable for any health issues arising from food sold on the platform.',
       'No prescription medications, alcohol, or tobacco products.',
       'No weapons, hazardous materials, or any restricted items.',
     ],
@@ -177,9 +177,13 @@ const TERMS_SECTIONS = [
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const selectClass = (darkMode) =>
+const selectClass = (darkMode, hasError = false) =>
   `w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none transition-colors appearance-none cursor-pointer ${
-    darkMode
+    hasError
+      ? darkMode
+        ? 'border-red-700 bg-gray-900 text-white focus:border-red-500'
+        : 'border-red-400 bg-white text-stone-900 focus:border-red-500'
+      : darkMode
       ? 'border-gray-700 bg-gray-900 text-white focus:border-emerald-500'
       : 'border-stone-200 bg-white text-stone-900 focus:border-emerald-500'
   }`;
@@ -198,6 +202,9 @@ const inputClass = (darkMode, hasError) =>
 const labelClass = (darkMode) =>
   `text-xs font-medium mb-1.5 block ${darkMode ? 'text-gray-400' : 'text-stone-500'}`;
 
+const FieldError = ({ msg }) =>
+  msg ? <p className="mt-1.5 text-xs text-red-500">{msg}</p> : null;
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 const ReadValue = ({ value, darkMode }) =>
@@ -211,6 +218,7 @@ const SelectWithOther = ({
   label, options, selectValue, customValue,
   onSelectChange, onCustomChange,
   editing, darkMode, placeholder, customPlaceholder, disabled = false,
+  error,
 }) => (
   <div>
     <label className={labelClass(darkMode)}>{label}</label>
@@ -221,7 +229,7 @@ const SelectWithOther = ({
             value={selectValue}
             onChange={(e) => onSelectChange(e.target.value)}
             disabled={disabled}
-            className={`${selectClass(darkMode)} pr-10 ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+            className={`${selectClass(darkMode, !!error)} pr-10 ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
           >
             <option value="">{placeholder || 'Select…'}</option>
             {options.map((opt) => (
@@ -244,6 +252,7 @@ const SelectWithOther = ({
             className={inputClass(darkMode, false)}
           />
         )}
+        <FieldError msg={error} />
       </div>
     ) : (
       <ReadValue value={selectValue === '__other__' ? customValue : selectValue} darkMode={darkMode} />
@@ -279,6 +288,8 @@ const SellerVerificationSection = ({ user, darkMode, onVerified }) => {
   const [submitting,       setSubmitting]       = useState(false);
   const [termsOpen,        setTermsOpen]        = useState(!isVerified);
   const [termsRead,        setTermsRead]        = useState(!isVerified);
+  const [fieldErrors,      setFieldErrors]      = useState({});
+  const [apiError,         setApiError]         = useState('');
   const [studentIdError,   setStudentIdError]   = useState('');
   const [studentId,     setStudentId]     = useState(user?.student_id || '');
   const [nationalId,    setNationalId]    = useState(user?.national_id || '');
@@ -312,15 +323,16 @@ const SellerVerificationSection = ({ user, darkMode, onVerified }) => {
   const isEditable        = isVerified ? editing : true;
 
   const validateStudentId = (id) => {
-    if (!id || !emailAdmNumber || !emailYear) { setStudentIdError(''); return; }
+    if (!id) { setStudentIdError(''); return; }
     const parts = id.trim().split('/');
     if (parts.length < 3) {
-      setStudentIdError(`Expected format: XX/${emailAdmNumber}/${emailYear}`); return;
+      setStudentIdError('Expected format: XX/AdmissionNo/Year (e.g. J17/12345/2022)'); return;
     }
-    if (parts[1] !== emailAdmNumber) {
+    const admNoIsNumeric = /^\d+$/.test(emailAdmNumber);
+    if (admNoIsNumeric && emailAdmNumber && parts[1] !== emailAdmNumber) {
       setStudentIdError(`Admission number "${parts[1]}" doesn't match your email (${emailAdmNumber})`); return;
     }
-    if (parts[2] !== emailYear) {
+    if (admNoIsNumeric && emailYear && parts[2] !== emailYear) {
       setStudentIdError(`Year "${parts[2]}" doesn't match your email (${emailYear})`); return;
     }
     setStudentIdError('');
@@ -340,6 +352,8 @@ const SellerVerificationSection = ({ user, darkMode, onVerified }) => {
     setDepartmentSelect(kdl.includes(user?.department) ? user.department : user?.department ? '__other__' : '');
     setDepartmentCustom(!kdl.includes(user?.department) && user?.department ? user.department : '');
     setStudentIdError('');
+    setFieldErrors({});
+    setApiError('');
   };
 
   const handleCancel = () => { resetFields(); setEditing(false); };
@@ -351,15 +365,30 @@ const SellerVerificationSection = ({ user, darkMode, onVerified }) => {
     setDepartmentCustom('');
   };
 
+  const clearFieldError = (key) => {
+    if (fieldErrors[key]) setFieldErrors((prev) => { const next = { ...prev }; delete next[key]; return next; });
+  };
+
   const handleSubmit = async () => {
-    if (!studentId.trim() || !nationalId.trim() || !mpesaPhone.trim() ||
-        !course.trim() || !finalSchool || !finalDept || !yearOfStudy) {
-      showToast('Please fill in all fields.', 'error'); return;
+    // Client-side field validation — collect all errors at once
+    const errors = {};
+    if (!studentId.trim())  errors.studentId   = 'Student ID is required';
+    else if (studentIdError) errors.studentId  = studentIdError;
+    if (!nationalId.trim()) errors.nationalId  = 'National ID is required';
+    if (!mpesaPhone.trim()) errors.mpesaPhone  = 'M-Pesa number is required';
+    if (!course.trim())     errors.course      = 'Course of study is required';
+    if (!yearOfStudy)       errors.yearOfStudy = 'Year of study is required';
+    if (!finalSchool)       errors.school      = 'School is required';
+    if (!finalDept)         errors.department  = 'Department is required';
+    if (!isVerified && !termsAccepted) errors.terms = 'You must accept the seller terms to continue';
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
     }
-    if (studentIdError) { showToast(studentIdError, 'error'); return; }
-    if (!isVerified && !termsAccepted) {
-      showToast('You must accept the seller terms to continue.', 'error'); return;
-    }
+
+    setFieldErrors({});
+    setApiError('');
 
     const payload = {
       student_id:  studentId.trim(),
@@ -384,7 +413,15 @@ const SellerVerificationSection = ({ user, darkMode, onVerified }) => {
       setEditing(false);
       if (onVerified) onVerified();
     } catch (err) {
-      showToast(err.message || 'Something went wrong.', 'error');
+      // Map backend field errors back to inline highlights
+      if (err.fieldErrors) {
+        const be = {};
+        if (err.fieldErrors.student_id) be.studentId  = err.fieldErrors.student_id;
+        if (err.fieldErrors.national_id) be.nationalId = err.fieldErrors.national_id;
+        if (err.fieldErrors.mpesa_phone) be.mpesaPhone = err.fieldErrors.mpesa_phone;
+        if (Object.keys(be).length > 0) setFieldErrors(be);
+      }
+      setApiError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -465,6 +502,16 @@ const SellerVerificationSection = ({ user, darkMode, onVerified }) => {
         </div>
       )}
 
+      {/* ── API error banner ── */}
+      {apiError && (
+        <div className={`mt-4 flex items-start gap-2.5 rounded-xl border px-4 py-3 ${
+          darkMode ? 'border-red-800 bg-red-950/40 text-red-300' : 'border-red-200 bg-red-50 text-red-700'
+        }`}>
+          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+          <p className="text-sm">{apiError}</p>
+        </div>
+      )}
+
       {/* ── Fields ── */}
       <div className="mt-4 space-y-3">
 
@@ -480,14 +527,16 @@ const SellerVerificationSection = ({ user, darkMode, onVerified }) => {
                 <input
                   type="text"
                   value={studentId}
-                  onChange={(e) => { setStudentId(e.target.value); validateStudentId(e.target.value); }}
+                  onChange={(e) => {
+                    setStudentId(e.target.value);
+                    validateStudentId(e.target.value);
+                    clearFieldError('studentId');
+                  }}
                   placeholder={`e.g. J17/${emailAdmNumber || '1234'}/${emailYear || '2022'}`}
-                  className={inputClass(darkMode, !!studentIdError)}
+                  className={inputClass(darkMode, !!(fieldErrors.studentId || studentIdError))}
                 />
-                {studentIdError && (
-                  <p className="mt-1.5 text-xs text-red-500">{studentIdError}</p>
-                )}
-                {!studentIdError && studentId && (
+                <FieldError msg={fieldErrors.studentId || studentIdError} />
+                {!(fieldErrors.studentId || studentIdError) && studentId && (
                   <p className={`mt-1.5 text-xs ${darkMode ? 'text-gray-600' : 'text-stone-400'}`}>
                     Format: letters+numbers / {emailAdmNumber || 'admission no.'} / {emailYear || 'year'}
                   </p>
@@ -503,13 +552,16 @@ const SellerVerificationSection = ({ user, darkMode, onVerified }) => {
             <div>
               <label className={labelClass(darkMode)}>National ID</label>
               {isEditable ? (
-                <input
-                  type="text"
-                  value={nationalId}
-                  onChange={(e) => setNationalId(e.target.value)}
-                  placeholder="e.g. 38291047"
-                  className={inputClass(darkMode, false)}
-                />
+                <>
+                  <input
+                    type="text"
+                    value={nationalId}
+                    onChange={(e) => { setNationalId(e.target.value); clearFieldError('nationalId'); }}
+                    placeholder="e.g. 38291047"
+                    className={inputClass(darkMode, !!fieldErrors.nationalId)}
+                  />
+                  <FieldError msg={fieldErrors.nationalId} />
+                </>
               ) : (
                 <ReadValue value={nationalId} darkMode={darkMode} />
               )}
@@ -518,13 +570,16 @@ const SellerVerificationSection = ({ user, darkMode, onVerified }) => {
             <div>
               <label className={labelClass(darkMode)}>M-Pesa number</label>
               {isEditable ? (
-                <input
-                  type="tel"
-                  value={mpesaPhone}
-                  onChange={(e) => setMpesaPhone(e.target.value)}
-                  placeholder="e.g. 0712 345 678"
-                  className={inputClass(darkMode, false)}
-                />
+                <>
+                  <input
+                    type="tel"
+                    value={mpesaPhone}
+                    onChange={(e) => { setMpesaPhone(e.target.value); clearFieldError('mpesaPhone'); }}
+                    placeholder="e.g. 0712 345 678"
+                    className={inputClass(darkMode, !!fieldErrors.mpesaPhone)}
+                  />
+                  <FieldError msg={fieldErrors.mpesaPhone} />
+                </>
               ) : (
                 <ReadValue value={mpesaPhone} darkMode={darkMode} />
               )}
@@ -541,13 +596,16 @@ const SellerVerificationSection = ({ user, darkMode, onVerified }) => {
             <div>
               <label className={labelClass(darkMode)}>Course of study</label>
               {isEditable ? (
-                <input
-                  type="text"
-                  value={course}
-                  onChange={(e) => setCourse(e.target.value)}
-                  placeholder="e.g. BSc Computer Science"
-                  className={inputClass(darkMode, false)}
-                />
+                <>
+                  <input
+                    type="text"
+                    value={course}
+                    onChange={(e) => { setCourse(e.target.value); clearFieldError('course'); }}
+                    placeholder="e.g. BSc Computer Science"
+                    className={inputClass(darkMode, !!fieldErrors.course)}
+                  />
+                  <FieldError msg={fieldErrors.course} />
+                </>
               ) : (
                 <ReadValue value={course} darkMode={darkMode} />
               )}
@@ -556,23 +614,26 @@ const SellerVerificationSection = ({ user, darkMode, onVerified }) => {
             <div>
               <label className={labelClass(darkMode)}>Year of study</label>
               {isEditable ? (
-                <div className="relative">
-                  <select
-                    value={yearOfStudy}
-                    onChange={(e) => setYearOfStudy(e.target.value)}
-                    className={`${selectClass(darkMode)} pr-10`}
-                  >
-                    <option value="">Select…</option>
-                    {YEARS_OF_STUDY.map((y) => (
-                      <option key={y} value={y}>
-                        {y === 'Postgraduate' ? 'Postgraduate' : `Year ${y}`}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 ${
-                    darkMode ? 'text-gray-500' : 'text-stone-400'
-                  }`} />
-                </div>
+                <>
+                  <div className="relative">
+                    <select
+                      value={yearOfStudy}
+                      onChange={(e) => { setYearOfStudy(e.target.value); clearFieldError('yearOfStudy'); }}
+                      className={`${selectClass(darkMode, !!fieldErrors.yearOfStudy)} pr-10`}
+                    >
+                      <option value="">Select…</option>
+                      {YEARS_OF_STUDY.map((y) => (
+                        <option key={y} value={y}>
+                          {y === 'Postgraduate' ? 'Postgraduate' : `Year ${y}`}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 ${
+                      darkMode ? 'text-gray-500' : 'text-stone-400'
+                    }`} />
+                  </div>
+                  <FieldError msg={fieldErrors.yearOfStudy} />
+                </>
               ) : (
                 <ReadValue
                   value={yearOfStudy && yearOfStudy !== 'Postgraduate' ? `Year ${yearOfStudy}` : yearOfStudy}
@@ -587,12 +648,13 @@ const SellerVerificationSection = ({ user, darkMode, onVerified }) => {
             options={KU_SCHOOLS.map((s) => ({ value: s.value, label: s.label }))}
             selectValue={schoolSelect}
             customValue={schoolCustom}
-            onSelectChange={handleSchoolChange}
+            onSelectChange={(val) => { handleSchoolChange(val); clearFieldError('school'); }}
             onCustomChange={setSchoolCustom}
             editing={isEditable}
             darkMode={darkMode}
             placeholder="Select your school…"
             customPlaceholder="Type your school name…"
+            error={fieldErrors.school}
           />
 
           <SelectWithOther
@@ -600,13 +662,14 @@ const SellerVerificationSection = ({ user, darkMode, onVerified }) => {
             options={availableDepts.map((d) => ({ value: d, label: d }))}
             selectValue={departmentSelect}
             customValue={departmentCustom}
-            onSelectChange={setDepartmentSelect}
+            onSelectChange={(val) => { setDepartmentSelect(val); clearFieldError('department'); }}
             onCustomChange={setDepartmentCustom}
             editing={isEditable}
             darkMode={darkMode}
             placeholder={schoolSelect && schoolSelect !== '__other__' ? 'Select your department…' : 'Select a school first…'}
             customPlaceholder="Type your department name…"
             disabled={!schoolSelect || schoolSelect === '__other__' ? false : availableDepts.length === 0}
+            error={fieldErrors.department}
           />
         </FieldCard>
       </div>
@@ -657,18 +720,21 @@ const SellerVerificationSection = ({ user, darkMode, onVerified }) => {
           )}
 
           {!isVerified && (
-            <label className={`mt-3 flex items-start gap-3 ${termsRead ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
-              <input
-                type="checkbox"
-                checked={termsAccepted}
-                disabled={!termsRead}
-                onChange={(e) => setTermsAccepted(e.target.checked)}
-                className="mt-0.5 h-4 w-4 accent-emerald-600 cursor-pointer"
-              />
-              <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-stone-700'}`}>
-                I have read and agree to KUuza's seller terms and platform rules.
-              </span>
-            </label>
+            <>
+              <label className={`mt-3 flex items-start gap-3 ${termsRead ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  disabled={!termsRead}
+                  onChange={(e) => { setTermsAccepted(e.target.checked); clearFieldError('terms'); }}
+                  className="mt-0.5 h-4 w-4 accent-emerald-600 cursor-pointer"
+                />
+                <span className={`text-sm ${fieldErrors.terms ? 'text-red-500' : darkMode ? 'text-gray-300' : 'text-stone-700'}`}>
+                  I have read and agree to KUuza's seller terms and platform rules.
+                </span>
+              </label>
+              <FieldError msg={fieldErrors.terms} />
+            </>
           )}
 
           <button

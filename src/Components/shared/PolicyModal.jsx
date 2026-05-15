@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 const CONTENT = {
   terms: {
     title: 'Terms of Service',
-    updated: 'Last updated: April 2026',
+    updated: 'Last updated: May 2026',
     sections: [
       {
         heading: '1. Eligibility',
@@ -23,34 +23,38 @@ const CONTENT = {
         body: 'All transactions are directly between the buyer and seller. KUuza is not a party to any transaction and accepts no liability for disputes, non-delivery, or misrepresentation of goods. All physical exchanges must take place within Kenyatta University campus.',
       },
       {
-        heading: '5. Prohibited Items',
+        heading: '5. Platform Fees',
+        body: 'KUuza charges a 2% platform fee on M-Pesa payments for orders totalling KSh 100 and above. This fee is added to the amount charged to the buyer; sellers always receive the full agreed listing price. For orders below KSh 100 paid via M-Pesa, and for all cash-on-pickup transactions, no platform fee applies. The fee is shown as a separate line item on the checkout screen before you confirm any payment.',
+      },
+      {
+        heading: '6. Prohibited Items',
         body: 'You may not list or sell: counterfeit or stolen goods, prescription or recreational drugs, weapons or dangerous items, alcohol or tobacco, exam papers or academic-dishonesty materials, or any item illegal under Kenyan law. Violating this rule results in immediate account suspension and may be reported to university authorities.',
       },
       {
-        heading: '6. Intellectual Property',
+        heading: '7. Intellectual Property',
         body: 'Content you post (photos, descriptions) remains yours. By posting, you grant KUuza a non-exclusive, royalty-free licence to display that content on the platform for the purpose of facilitating the listing.',
       },
       {
-        heading: '7. Limitation of Liability',
+        heading: '8. Limitation of Liability',
         body: 'KUuza is a peer-to-peer platform. We do not inspect, verify, or guarantee the condition, authenticity, or safety of any listed item. We are not liable for financial losses, personal injury, or any other damages arising from transactions between users.',
       },
       {
-        heading: '8. Termination',
+        heading: '9. Termination',
         body: 'We may suspend or permanently terminate your account if you violate these terms, engage in fraudulent activity, or behave in a way that harms other users or the platform.',
       },
       {
-        heading: '9. Changes to These Terms',
+        heading: '10. Changes to These Terms',
         body: 'We may update these terms at any time. Continued use of KUuza after changes are posted constitutes acceptance of the updated terms.',
       },
       {
-        heading: '10. Contact',
+        heading: '11. Contact',
         body: 'Questions about these terms? Email us at hello.kuuza@gmail.com.',
       },
     ],
   },
   privacy: {
     title: 'Privacy Policy',
-    updated: 'Last updated: April 2026',
+    updated: 'Last updated: May 2026',
     sections: [
       {
         heading: '1. What We Collect',

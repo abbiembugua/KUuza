@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Camera, BadgeCheck, MapPin, Smartphone, Sparkles } from 'lucide-react';
+import { Camera, BadgeCheck, Smartphone, Sparkles } from 'lucide-react';
 import { useTheme } from '../../context/Themecontext';
 
 const pillars = [
@@ -13,12 +13,7 @@ const pillars = [
     label: 'Students only',
     copy: 'Your student ID is your key. Every buyer and seller is a verified KU student.',
   },
-  {
-    Icon: MapPin,
-    label: 'Campus delivery',
-    copy: 'Meet on campus. No shipping, no strangers, no drama.',
-  },
-  {
+{
     Icon: Smartphone,
     label: 'Pay with M-Pesa',
     copy: "No cash, no stress. Pay instantly through M-Pesa the moment you find what you need.",
@@ -67,12 +62,11 @@ const Features = () => {
           </p>
         </div>
 
-        {/* Pillars grid — each has a visible card background */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-5xl mx-auto">
           {pillars.map(({ Icon, label, copy }, idx) => (
             <div
               key={idx}
-              className={`flex flex-col items-center text-center p-6 rounded-2xl border
+              className={`flex flex-col items-center text-center p-8 rounded-2xl border
                 transition-all duration-700 ease-out
                 ${darkMode
                   ? 'bg-gray-700/60 border-gray-600/40 hover:bg-gray-700 hover:border-emerald-500/30'
@@ -81,13 +75,13 @@ const Features = () => {
                 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
               style={{ transitionDelay: `${idx * 120 + 150}ms` }}
             >
-              <div className={`mb-5 p-3 rounded-2xl ${darkMode ? 'bg-emerald-500/10' : 'bg-emerald-100'}`}>
-                <Icon className="w-7 h-7 text-emerald-500" strokeWidth={1.5} />
+              <div className={`mb-5 p-3.5 rounded-2xl ${darkMode ? 'bg-emerald-500/10' : 'bg-emerald-100'}`}>
+                <Icon className="w-8 h-8 text-emerald-500" strokeWidth={1.5} />
               </div>
-              <h3 className={`text-sm font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              <h3 className={`text-base font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                 {label}
               </h3>
-              <p className={`text-xs leading-relaxed ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                 {copy}
               </p>
             </div>

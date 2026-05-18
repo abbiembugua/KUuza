@@ -1,6 +1,7 @@
-﻿import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ShoppingBag, TrendingUp, Star, Loader2, RefreshCw, ChevronDown, Wallet, Pencil, Trash2, MessageSquare, X, Search } from 'lucide-react';
+import PageSpinner from '../Components/shared/PageSpinner';
 import { toast, Toaster } from 'react-hot-toast';
 
 import DashboardNavbar from '../Components/Layout/DashboardNavbar';
@@ -43,7 +44,7 @@ function EmptyState({ tab, darkMode, onBrowse }) {
   };
   const { icon: Icon, title, sub } = messages[tab] || messages.all;
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
+    <div className="flex flex-col items-center justify-center py-12 text-center">
       <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
         <Icon size={28} className={darkMode ? 'text-gray-500' : 'text-gray-400'} />
       </div>
@@ -71,7 +72,7 @@ const CATEGORY_OPTIONS = [
   { value: 'fashion',        label: 'Fashion'                 },
   { value: 'furniture',      label: 'Furniture'               },
   { value: 'food_beverages', label: 'Food & Beverages'        },
-  { value: 'beauty',         label: 'Beauty'                  },
+  { value: 'beauty',         label: 'Beauty & Accessories'   },
   { value: 'stationery',     label: 'Stationery & Supplies'   },
   { value: 'sports',         label: 'Sports & Fitness'        },
   { value: 'tutoring',       label: 'Tutoring & Academics'    },
@@ -308,7 +309,7 @@ const PurchasesPage = () => {
                     activeTab={activeTab}
                     downloaderName={user?.full_name}
                     statusFilter={statusFilter}
-                    categoryFilter={categoryFilter}
+                    categoryLabel={categoryFilter ? (CATEGORY_OPTIONS.find(o => o.value === categoryFilter)?.label || '') : ''}
                   />
                 )}
               </div>
@@ -394,12 +395,9 @@ const PurchasesPage = () => {
           {/* ── Content ── */}
           {activeTab === 'reviews' ? (
             reviewsLoading ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <Loader2 size={28} className="animate-spin text-emerald-500" />
-                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading your reviews…</p>
-              </div>
+              <PageSpinner label="Loading your reviews…" />
             ) : myReviews.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
                   <MessageSquare size={28} className={darkMode ? 'text-gray-500' : 'text-gray-400'} />
                 </div>
@@ -469,10 +467,7 @@ const PurchasesPage = () => {
               </div>
             )
           ) : loading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <Loader2 size={28} className="animate-spin text-emerald-500" />
-              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading your transactions…</p>
-            </div>
+            <PageSpinner label="Loading your transactions…" />
           ) : filtered.length === 0 ? (
             <EmptyState tab={activeTab} darkMode={darkMode} onBrowse={() => navigate('/dashboard')} />
           ) : (

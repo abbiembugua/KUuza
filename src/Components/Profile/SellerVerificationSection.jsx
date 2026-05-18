@@ -375,6 +375,7 @@ const SellerVerificationSection = ({ user, darkMode, onVerified }) => {
     if (!studentId.trim())  errors.studentId   = 'Student ID is required';
     else if (studentIdError) errors.studentId  = studentIdError;
     if (!nationalId.trim()) errors.nationalId  = 'National ID is required';
+    else if (!/^\d{8}$/.test(nationalId.trim())) errors.nationalId = 'National ID must be exactly 8 digits';
     if (!mpesaPhone.trim()) errors.mpesaPhone  = 'M-Pesa number is required';
     if (!course.trim())     errors.course      = 'Course of study is required';
     if (!yearOfStudy)       errors.yearOfStudy = 'Year of study is required';
@@ -555,9 +556,15 @@ const SellerVerificationSection = ({ user, darkMode, onVerified }) => {
                 <>
                   <input
                     type="text"
+                    inputMode="numeric"
+                    maxLength={8}
                     value={nationalId}
-                    onChange={(e) => { setNationalId(e.target.value); clearFieldError('nationalId'); }}
-                    placeholder="e.g. 38291047"
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, '').slice(0, 8);
+                      setNationalId(digits);
+                      clearFieldError('nationalId');
+                    }}
+                    placeholder="8-digit ID e.g. 38291047"
                     className={inputClass(darkMode, !!fieldErrors.nationalId)}
                   />
                   <FieldError msg={fieldErrors.nationalId} />

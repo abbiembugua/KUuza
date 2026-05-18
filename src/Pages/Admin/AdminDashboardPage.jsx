@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LayoutGrid, Users, Flag, BadgeCheck, Loader2, AlertTriangle } from 'lucide-react';
+import PageSpinner from '../../Components/shared/PageSpinner';
 import { toast, Toaster } from 'react-hot-toast';
 import { fetchDashboardStats } from '../../api/adminapi';
 import { useAdminAuth } from '../../context/AdminAuthContext';
@@ -53,14 +54,12 @@ const AdminDashboardPage = () => {
     { icon: Users,         label: 'Registered Users',     value: stats?.total_users        ?? null, color: 'bg-sky-500',     to: '/kuuza-control/users' },
     { icon: Flag,          label: 'Pending Reports',      value: stats?.pending_reports    ?? null, color: 'bg-amber-500',   to: '/kuuza-control/reports' },
     { icon: BadgeCheck,    label: 'Verified Sellers',     value: stats?.verified_sellers   ?? null, color: 'bg-violet-500',  to: '/kuuza-control/sellers' },
-    { icon: AlertTriangle, label: 'Escalated Disputes',   value: stats?.escalated_disputes ?? null, color: 'bg-red-500',     to: '/kuuza-control/reports' },
+    { icon: AlertTriangle, label: 'Escalated Disputes',   value: stats?.escalated_disputes ?? null, color: 'bg-red-500',     to: '/kuuza-control/disputes' },
   ];
 
   if (adminLoading) return (
     <AdminLayout title="Overview">
-      <div className="flex items-center justify-center py-24">
-        <Loader2 size={28} className="animate-spin text-emerald-500" />
-      </div>
+      <PageSpinner />
     </AdminLayout>
   );
 
@@ -69,9 +68,7 @@ const AdminDashboardPage = () => {
       <Toaster position="top-center" />
 
       {loading ? (
-        <div className="flex items-center justify-center py-24">
-          <Loader2 size={32} className="animate-spin text-emerald-500" />
-        </div>
+        <PageSpinner />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
           {cards.map((c) => (

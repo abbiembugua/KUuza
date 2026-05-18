@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { clearAuthStorage, getCurrentUser, logout as logoutApi } from "../api/authapi";
+import { clearAuthStorage, getCurrentUser, logout as logoutApi, refreshAccessToken } from "../api/authapi";
 
 const AuthContext = createContext();
 
@@ -28,13 +28,21 @@ export const AuthProvider = ({ children }) => {
           setToken(null);
           return;
         }
-
         setUser(currentUser);
       })
-      .catch(() => {
-        clearAuthStorage();
-        setUser(null);
-        setToken(null);
+      .catch(async () => {
+        // Access token may have expired — try refreshing silently
+        try {
+          const newToken = await refreshAccessToken();
+          setToken(newToken);
+          const currentUser = await getCurrentUser();
+          setUser(currentUser);
+        } catch {
+          // Refresh also failed — clear session and send to login
+          clearAuthStorage();
+          setUser(null);
+          setToken(null);
+        }
       })
       .finally(() => setLoading(false));
   }, []);

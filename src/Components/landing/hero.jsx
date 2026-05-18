@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/Themecontext';
 
@@ -21,7 +21,7 @@ const Bubbles = ({ darkMode }) => {
         <div
           key={i}
           className={`absolute rounded-full animate-pulse ${
-            darkMode ? 'bg-emerald-400/10' : 'bg-cyan-400/20'
+            darkMode ? 'bg-emerald-400/10' : 'bg-emerald-400/15'
           }`}
           style={{ left: b.left, top: b.top, width: b.size, height: b.size, animationDelay: b.delay }}
         />

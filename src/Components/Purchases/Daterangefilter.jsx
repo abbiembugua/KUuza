@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { CalendarRange, SlidersHorizontal, X } from 'lucide-react';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -89,7 +89,7 @@ export default function DateRangeFilter({ darkMode, onRangeChange }) {
   const pillBase = (active) =>
     `px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
       active
-        ? 'bg-gradient-to-r from-emerald-600 to-cyan-600 text-white shadow-sm'
+        ? 'bg-emerald-600 text-white shadow-sm'
         : darkMode
           ? 'bg-gray-700 text-gray-400 hover:text-gray-200'
           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -111,7 +111,7 @@ export default function DateRangeFilter({ darkMode, onRangeChange }) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-600 to-cyan-600 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center">
             <CalendarRange size={13} className="text-white" />
           </div>
           <span className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
@@ -172,7 +172,7 @@ export default function DateRangeFilter({ darkMode, onRangeChange }) {
           <button
             onClick={handleCustomApply}
             disabled={!customFrom && !customTo}
-            className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-emerald-600 to-cyan-600 text-white hover:opacity-90 transition-opacity disabled:opacity-40"
+            className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:opacity-90 transition-opacity disabled:opacity-40"
           >
             Apply
           </button>

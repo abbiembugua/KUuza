@@ -29,9 +29,9 @@ const STATUS_CONFIG = {
   },
   auto_completed: {
     label:  'Auto-completed',
-    color:  'text-cyan-600',
-    bg:     'bg-cyan-50',
-    border: 'border-l-cyan-400',
+    color:  'text-emerald-600',
+    bg:     'bg-emerald-50',
+    border: 'border-l-emerald-400',
     icon:   CheckCircle,
   },
   cancelled: {
@@ -164,7 +164,7 @@ function ReceiptConfirmBanner({ transaction, darkMode, token, onConfirmed, onDis
   return (
     <>
       <div className={`mt-3 rounded-xl border p-3.5 ${
-        darkMode ? 'bg-violet-950/30 border-violet-800/40' : 'bg-violet-50 border-violet-200'
+        darkMode ? 'bg-amber-950/30 border-amber-800/40' : 'bg-amber-50 border-amber-200'
       }`}>
         <div className="flex items-start gap-2.5">
           <Package size={14} className={`mt-0.5 flex-shrink-0 ${darkMode ? 'text-violet-400' : 'text-violet-600'}`} />
@@ -489,7 +489,7 @@ function ContactDetails({ listingId, token, darkMode }) {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="px-3 py-1 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:opacity-90 text-white text-xs font-semibold rounded-lg transition-opacity flex-shrink-0"
+          className="px-3 py-1 bg-emerald-600 hover:opacity-90 text-white text-xs font-semibold rounded-lg transition-opacity flex-shrink-0"
         >
           {isWhatsApp ? 'WhatsApp' : 'Email'}
         </a>
@@ -791,7 +791,7 @@ export default function TransactionCard({
             </div>
 
             {/* Price */}
-            <p className="text-sm font-bold mt-1.5 bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent">
+            <p className="text-sm font-bold mt-1.5 bg-emerald-600 bg-clip-text text-transparent">
               {transaction.agreed_price
                 ? `KSh ${(parseFloat(transaction.agreed_price) * transactionQuantity).toLocaleString('en-KE')}`
                 : 'Negotiable'}
@@ -952,7 +952,7 @@ export default function TransactionCard({
             <button
               onClick={handleComplete}
               disabled={completing}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:opacity-90 text-white text-xs font-semibold rounded-lg transition-opacity disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:opacity-90 text-white text-xs font-semibold rounded-lg transition-opacity disabled:opacity-50"
             >
               {completing ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />}
               {completing ? 'Marking...' : 'Mark as Complete'}

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+﻿import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Home,
   Search,
@@ -360,7 +360,7 @@ const DashboardNavbar = ({ onSearch, searchQuery, setSearchQuery, cartItemsCount
               {/* Sell — desktop only (mobile: in hamburger menu) */}
               <Link
                 to="/sell"
-                className="hidden md:flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-xl text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+                className="hidden md:flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
               >
                 <Plus size={16} />
                 Sell Something
@@ -523,7 +523,7 @@ const DashboardNavbar = ({ onSearch, searchQuery, setSearchQuery, cartItemsCount
                 <Link
                   to="/sell"
                   onClick={closeMobileMenu}
-                  className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-emerald-600 to-emerald-700"
+                  className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-white bg-emerald-600"
                 >
                   <Plus size={18} />
                   Sell Something

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/Themecontext';
@@ -7,8 +7,9 @@ import BackButton from '../Components/shared/BackButton';
 import SellerRow from '../Components/shared/SellerRow';
 import {
   Grid, List, ChevronLeft, ChevronRight,
-  MapPin, SlidersHorizontal, X, Eye, Loader, Package,
+  MapPin, SlidersHorizontal, X, Eye, Package,
 } from 'lucide-react';
+import PageSpinner from '../Components/shared/PageSpinner';
 import { getCartItems, addToCart, viewListing, searchListings } from '../api/dashboardapi';
 import { showToast } from '../Services/toastService';
 
@@ -19,7 +20,7 @@ const CATEGORY_OPTIONS = [
   { id: 'fashion',        shortLabel: 'Fashion',      types: ['good', 'service'] },
   { id: 'furniture',      shortLabel: 'Furniture',    types: ['good'] },
   { id: 'food_beverages', shortLabel: 'Food',         types: ['good', 'service'] },
-  { id: 'beauty',         shortLabel: 'Beauty',       types: ['good', 'service'] },
+  { id: 'beauty',         shortLabel: 'Beauty & Acc.', types: ['good', 'service'] },
   { id: 'stationery',     shortLabel: 'Stationery',   types: ['good'] },
   { id: 'sports',         shortLabel: 'Sports',       types: ['good'] },
   { id: 'tutoring',       shortLabel: 'Tutoring',     types: ['service'] },
@@ -117,11 +118,7 @@ const IntegratedBrowsePage = () => {
     getCartItems().then(data => setCartItems(data || [])).catch(() => {});
   }, []);
 
-  useEffect(() => { setCurrentPage(1); }, [searchQuery, selectedCategory, selectedListingType, selectedCondition, minPrice, maxPrice, sortBy]);
-
-  useEffect(() => { loadListings(); }, [currentPage, searchQuery, selectedCategory, selectedListingType, selectedCondition, minPrice, maxPrice, sortBy]);
-
-  const loadListings = async () => {
+  const loadListings = useCallback(async () => {
     setIsLoading(true);
     try {
       const filters = {
@@ -156,7 +153,14 @@ const IntegratedBrowsePage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [searchQuery, selectedCategory, selectedListingType, selectedCondition, minPrice, maxPrice, sortBy, currentPage, setSearchParams]);
+
+  // Reset to page 1 whenever a filter changes (not when page itself changes)
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, selectedCategory, selectedListingType, selectedCondition, minPrice, maxPrice, sortBy]);
+
+  // loadListings is a stable memoised function — it only recreates when its
+  // own deps change, so this effect fires exactly when it should
+  useEffect(() => { loadListings(); }, [loadListings]);
 
   const handleTypeChange = (type) => {
     setSelectedListingType(type);
@@ -268,22 +272,20 @@ const IntegratedBrowsePage = () => {
           <div className={`border-t ${darkMode ? 'border-gray-700' : 'border-gray-100'}`} />
           <div>
             <p className={`text-xs font-semibold uppercase tracking-wider mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Condition</p>
-            <div className="space-y-0.5">
-              {[{ value: 'all', label: 'Any condition' }, ...CONDITION_OPTIONS].map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => setSelectedCondition(opt.value)}
-                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm text-left transition-colors ${
-                    selectedCondition === opt.value
-                      ? 'bg-emerald-500 text-white font-medium'
-                      : darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${selectedCondition === opt.value ? 'bg-white' : darkMode ? 'bg-gray-600' : 'bg-gray-300'}`} />
-                  {opt.label}
-                </button>
+            <select
+              value={selectedCondition}
+              onChange={e => setSelectedCondition(e.target.value)}
+              className={`w-full px-2.5 py-1.5 rounded-lg text-sm border focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                darkMode
+                  ? 'bg-gray-700 border-gray-600 text-gray-200'
+                  : 'bg-white border-gray-200 text-gray-700'
+              }`}
+            >
+              <option value="all">Any condition</option>
+              {CONDITION_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
-            </div>
+            </select>
           </div>
         </>
       )}
@@ -458,11 +460,7 @@ const IntegratedBrowsePage = () => {
               {getContextualHeader()}
             </h2>
 
-            {isLoading && listings.length === 0 && (
-              <div className="flex justify-center items-center h-32">
-                <Loader className="w-8 h-8 animate-spin text-emerald-500" />
-              </div>
-            )}
+            {isLoading && listings.length === 0 && <PageSpinner />}
 
             {listings.length > 0 && (
               <div className={
@@ -497,18 +495,19 @@ const IntegratedBrowsePage = () => {
                           alt={item.title}
                           className={`object-cover ${viewMode === 'grid' ? 'w-full h-32 rounded-t-xl' : 'w-48 h-full rounded-l-xl'}`}
                         />
-                        {isOwner(item.seller) && (
-                          <div className="absolute top-2 left-2 bg-emerald-600 text-white px-1.5 py-0.5 rounded-full text-xs font-bold shadow z-10">
-                            YOURS
+                        {isOwner(item.seller) ? (
+                          <div className="absolute top-2 right-2 bg-emerald-700 text-white px-2 py-0.5 rounded-full text-xs font-bold tracking-wide shadow z-10">
+                            YOUR LISTING
+                          </div>
+                        ) : (
+                          <div className="absolute top-2 right-2">
+                            <span className={`px-1.5 py-0.5 rounded-md text-xs font-medium backdrop-blur-sm ${
+                              darkMode ? 'bg-gray-900/80 text-gray-200' : 'bg-white/90 text-gray-700'
+                            }`}>
+                              {CATEGORY_OPTIONS.find(c => c.id === item.category)?.shortLabel || item.category}
+                            </span>
                           </div>
                         )}
-                        <div className="absolute top-2 right-2">
-                          <span className={`px-1.5 py-0.5 rounded-md text-xs font-medium backdrop-blur-sm ${
-                            darkMode ? 'bg-gray-900/80 text-gray-200' : 'bg-white/90 text-gray-700'
-                          }`}>
-                            {CATEGORY_OPTIONS.find(c => c.id === item.category)?.shortLabel || item.category}
-                          </span>
-                        </div>
                       </div>
 
                       <div className={`p-3 ${viewMode === 'list' ? 'flex-1' : ''}`}>

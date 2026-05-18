@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   Calendar, CreditCard, Smartphone, Banknote,
   AlertCircle, Loader2, ShoppingBag,
@@ -136,10 +136,10 @@ const ScheduleAndPay = ({
       <div className={`rounded-2xl p-5 shadow-sm ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
         <h3 className={`font-bold mb-4 flex items-center gap-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
           <Calendar size={18} className="text-emerald-500" />
-          {isService ? 'Preferred Service Date' : isBulk ? 'Pickup Details' : 'Pickup Details'}
+          {isService ? 'Service Date & Time' : 'Pickup Details'}
         </h3>
 
-        <div className={`grid gap-4 ${isGood ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        <div className="grid grid-cols-2 gap-4">
 
           {/* Date picker */}
           <div>
@@ -169,76 +169,74 @@ const ScheduleAndPay = ({
             </p>
           </div>
 
-          {/* Time picker — goods / bulk only */}
-          {isGood && (
-            <div>
-              <label className={`text-xs font-semibold uppercase tracking-wider block mb-2 ${
-                darkMode ? 'text-gray-400' : 'text-gray-500'
-              }`}>
-                Pickup time
-              </label>
-              <select
-                value={scheduledTime}
-                onChange={e => { setScheduledTime(e.target.value); clearError('scheduledTime'); }}
-                className={`w-full p-3 rounded-xl border-2 text-sm transition-all focus:outline-none ${
-                  errors.scheduledTime
-                    ? 'border-red-500'
-                    : darkMode
-                      ? 'bg-gray-700 border-gray-600 text-white focus:border-emerald-500'
-                      : 'bg-white border-gray-200 focus:border-emerald-500'
-                }`}
-              >
-                <option value="">Select a time</option>
-                {availableTimeSlots.map(({ label, value }) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-              {errors.scheduledTime && (
-                <p className="text-red-500 text-xs mt-1">{errors.scheduledTime}</p>
-              )}
-              {dateFullyBooked ? (
-                <p className="text-amber-500 text-xs mt-1">
-                  All time slots for this date are taken — please choose another date.
-                </p>
-              ) : isToday ? (
-                <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                  Showing available slots from now + 30 min
-                </p>
-              ) : null}
-            </div>
-          )}
-        </div>
-
-        {/* Note to seller */}
-        {isGood && (
-          <div className="mt-4">
+          {/* Time picker */}
+          <div>
             <label className={`text-xs font-semibold uppercase tracking-wider block mb-2 ${
               darkMode ? 'text-gray-400' : 'text-gray-500'
             }`}>
-              {isBulk ? 'Note to sellers' : 'Note to seller'}{' '}
-              <span className="font-normal normal-case">(optional)</span>
+              {isService ? 'Service time' : 'Pickup time'}
             </label>
-            <textarea
-              value={inquiryNote}
-              onChange={e => setInquiryNote(e.target.value)}
-              rows={2}
-              maxLength={300}
-              placeholder={
-                isBulk
+            <select
+              value={scheduledTime}
+              onChange={e => { setScheduledTime(e.target.value); clearError('scheduledTime'); }}
+              className={`w-full p-3 rounded-xl border-2 text-sm transition-all focus:outline-none ${
+                errors.scheduledTime
+                  ? 'border-red-500'
+                  : darkMode
+                    ? 'bg-gray-700 border-gray-600 text-white focus:border-emerald-500'
+                    : 'bg-white border-gray-200 focus:border-emerald-500'
+              }`}
+            >
+              <option value="">Select a time</option>
+              {availableTimeSlots.map(({ label, value }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+            {errors.scheduledTime && (
+              <p className="text-red-500 text-xs mt-1">{errors.scheduledTime}</p>
+            )}
+            {dateFullyBooked ? (
+              <p className="text-amber-500 text-xs mt-1">
+                All slots for this date are taken — please choose another date.
+              </p>
+            ) : isToday ? (
+              <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                Showing slots from now + 30 min
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Note to seller */}
+        <div className="mt-4">
+          <label className={`text-xs font-semibold uppercase tracking-wider block mb-2 ${
+            darkMode ? 'text-gray-400' : 'text-gray-500'
+          }`}>
+            {isBulk ? 'Note to sellers' : 'Note to seller'}{' '}
+            <span className="font-normal normal-case">(optional)</span>
+          </label>
+          <textarea
+            value={inquiryNote}
+            onChange={e => setInquiryNote(e.target.value)}
+            rows={2}
+            maxLength={300}
+            placeholder={
+              isService
+                ? 'Any specific requirements or questions about the service?'
+                : isBulk
                   ? 'Any special instructions for your sellers?'
                   : 'Any questions or special instructions for the seller?'
-              }
-              className={`w-full p-3 rounded-xl border-2 text-sm resize-none transition-all focus:outline-none ${
-                darkMode
-                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:border-emerald-500'
-                  : 'bg-white border-gray-200 placeholder-gray-400 focus:border-emerald-500'
-              }`}
-            />
-            <p className={`text-xs mt-1 text-right ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-              {inquiryNote.length}/300
-            </p>
-          </div>
-        )}
+            }
+            className={`w-full p-3 rounded-xl border-2 text-sm resize-none transition-all focus:outline-none ${
+              darkMode
+                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:border-emerald-500'
+                : 'bg-white border-gray-200 placeholder-gray-400 focus:border-emerald-500'
+            }`}
+          />
+          <p className={`text-xs mt-1 text-right ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+            {inquiryNote.length}/300
+          </p>
+        </div>
       </div>
 
       {/* ── Payment method section ── */}
@@ -465,7 +463,7 @@ const ScheduleAndPay = ({
         className={`w-full py-4 rounded-xl font-bold text-white transition-all active:scale-[0.98] ${
           submitting
             ? 'bg-gray-400 cursor-not-allowed'
-            : 'bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700'
+            : 'bg-emerald-600 hover:bg-emerald-700'
         }`}
       >
         {submitting ? (

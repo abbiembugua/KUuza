@@ -11,7 +11,7 @@ const Avatar = ({ src, name, size = 'w-8 h-8', textSize = 'text-sm', className =
     );
   }
   return (
-    <div className={`${size} rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center flex-shrink-0 ${className}`}>
+    <div className={`${size} rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0 ${className}`}>
       <span className={`text-white font-semibold ${textSize}`}>
         {(name || '?').charAt(0).toUpperCase()}
       </span>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Eye, EyeOff, LogIn, Mail, Shield } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
@@ -144,7 +144,7 @@ const LoginPage = () => {
   };
 
   return (
-    <AuthPageShell darkMode={darkMode} background="login">
+    <AuthPageShell darkMode={darkMode} background="login" locked>
       <Toaster
         toastOptions={{
           style: {
@@ -164,20 +164,18 @@ const LoginPage = () => {
       />
 
       <div className="w-full max-w-md z-20">
-        <div className="text-center mb-8">
+        <div className="text-center mb-5">
           <div
-            className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 ${
-              darkMode
-                ? 'bg-gradient-to-br from-emerald-500 to-sky-500'
-                : 'bg-gradient-to-br from-emerald-400 to-sky-400'
+            className={`inline-flex items-center justify-center w-12 h-12 rounded-xl mb-3 ${
+              darkMode ? 'bg-emerald-600' : 'bg-emerald-600'
             }`}
           >
-            <Shield size={32} className="text-white" />
+            <Shield size={24} className="text-white" />
           </div>
-          <h1 className={`text-3xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          <h1 className={`text-2xl font-bold mb-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             Welcome Back
           </h1>
-          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
             Sign in to your KUuza account
           </p>
         </div>
@@ -196,7 +194,7 @@ const LoginPage = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="flex items-center gap-2 mb-2 font-medium">
                 <Mail size={16} className={darkMode ? 'text-emerald-400' : 'text-emerald-500'} />
@@ -206,7 +204,7 @@ const LoginPage = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className={`w-full px-4 py-3.5 rounded-xl border focus:outline-none transition-all duration-200 ${
+                className={`w-full px-4 py-2.5 rounded-xl border focus:outline-none transition-all duration-200 ${
                   darkMode
                     ? 'bg-gray-800/50 border-gray-700 text-gray-100 placeholder-gray-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30'
                     : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
@@ -223,7 +221,7 @@ const LoginPage = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
-                  className={`w-full px-4 py-3.5 rounded-xl border focus:outline-none transition-all duration-200 ${
+                  className={`w-full px-4 py-2.5 rounded-xl border focus:outline-none transition-all duration-200 ${
                     darkMode
                       ? 'bg-gray-800/50 border-gray-700 text-gray-100 placeholder-gray-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30'
                       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
@@ -322,7 +320,7 @@ const LoginPage = () => {
             </div>
           )}
 
-          <div className="flex items-center my-8">
+          <div className="flex items-center my-4">
             <div className={`flex-1 h-px ${darkMode ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
             <span className={`px-4 text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
               New to KUuza?
@@ -345,7 +343,7 @@ const LoginPage = () => {
           </div>
         </AuthCard>
 
-        <p className={`mt-8 text-center text-sm ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>
+        <p className={`mt-4 text-center text-xs ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>
           By logging in, you agree to our{' '}
           <button
             type="button"

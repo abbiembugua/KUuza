@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { MapPin, Package, Wrench, ChevronRight, ShoppingBag, Tag } from 'lucide-react';
 
 const OrderReview = ({ listing, darkMode, onContinue, isBulk, bulkItems = [], bulkTotal = 0, singleQuantity = 1 }) => {
@@ -125,7 +125,7 @@ const OrderReview = ({ listing, darkMode, onContinue, isBulk, bulkItems = [], bu
             {/* Info */}
             <div className="flex-1 min-w-0">
               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full inline-block mb-1 ${
-                isService ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'
+                isService ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-100 text-emerald-700'
               }`}>
                 {isService ? 'Service' : 'Good'}
               </span>
@@ -185,7 +185,7 @@ const OrderReview = ({ listing, darkMode, onContinue, isBulk, bulkItems = [], bu
         {/* ── CTA ── */}
         <button
           onClick={onContinue}
-          className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white font-semibold rounded-xl transition-all active:scale-[0.98]"
+          className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all active:scale-[0.98]"
         >
           Continue to Schedule &amp; Pay
         </button>

@@ -1,7 +1,7 @@
-import { NavLink } from 'react-router-dom';
+﻿import { NavLink } from 'react-router-dom';
 import {
   TrendingUp, LayoutGrid, Users, Flag,
-  BadgeCheck, LogOut, ShieldCheck,
+  BadgeCheck, LogOut, AlertTriangle,
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useTheme } from '../../context/Themecontext';
@@ -11,6 +11,7 @@ const NAV = [
   { to: '/kuuza-control/listings',  label: 'Listings',  icon: LayoutGrid },
   { to: '/kuuza-control/users',     label: 'Users',     icon: Users },
   { to: '/kuuza-control/reports',   label: 'Reports',   icon: Flag },
+  { to: '/kuuza-control/disputes',  label: 'Disputes',  icon: AlertTriangle },
   { to: '/kuuza-control/sellers',   label: 'Sellers',   icon: BadgeCheck },
 ];
 
@@ -81,12 +82,12 @@ const AdminLayout = ({ children, title }) => {
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Page header */}
         {title && (
-          <header className={`border-b px-8 py-5 ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+          <header className={`border-b px-6 py-4 ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
             <h1 className={`text-lg font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>{title}</h1>
           </header>
         )}
 
-        <main className="flex-1 px-8 py-7">
+        <main className="flex-1 px-6 py-5">
           {children}
         </main>
       </div>

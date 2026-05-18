@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import { Upload, X, Loader2, Zap } from 'lucide-react';
 import DashboardNavbar from '../Components/Layout/DashboardNavbar';
 import { useTheme } from '../context/Themecontext';
@@ -17,7 +17,7 @@ const GOOD_CATEGORIES = [
   { value: 'fashion',        label: 'Fashion' },
   { value: 'furniture',      label: 'Furniture' },
   { value: 'food_beverages', label: 'Food & Beverages' },
-  { value: 'beauty',         label: 'Beauty' },
+  { value: 'beauty',         label: 'Beauty & Accessories' },
   { value: 'stationery',     label: 'Stationery & Supplies' },
   { value: 'sports',         label: 'Sports & Fitness' },
   { value: 'other',          label: 'Other' },
@@ -196,9 +196,11 @@ const SellPage = () => {
 
     if (!formData.price)
       e.price = 'A price is required';
+    else if (parseFloat(formData.price) < 1)
+      e.price = 'Price must be at least KSh 1';
 
-    if (formData.listing_type === 'good' && formData.images.length === 0)
-      e.images = 'Upload at least one image for a physical item';
+    if (formData.images.length === 0)
+      e.images = 'Upload at least one photo';
 
     if (!formData.area_of_operation.trim())
       e.area_of_operation = 'Area of operation is required';
@@ -280,7 +282,12 @@ const SellPage = () => {
       }));
       toast.success('AI suggestions applied — feel free to edit them.');
     } catch (err) {
-      toast.error(err.message || 'AI refinement failed. Please try again.');
+      const msg = err.message || '';
+      if (msg.includes('daily limit') || msg.includes('429')) {
+        toast.error('AI daily limit reached. Fill in the details manually — try again tomorrow.', { duration: 6000 });
+      } else {
+        toast.error(msg || 'AI refinement failed. Please try again.');
+      }
     } finally {
       setRefiningAI(false);
     }
@@ -456,8 +463,8 @@ const SellPage = () => {
                       }`}
                     >
                       {refiningAI
-                        ? <><Loader2 className="animate-spin" size={18} /> Refining...</>
-                        : <><Zap size={18} /> Refine with AI</>
+                        ? <><Loader2 className="animate-spin" size={18} /> Generating...</>
+                        : <><Zap size={18} /> Generate with AI</>
                       }
                     </button>
                   </div>
@@ -545,10 +552,10 @@ const SellPage = () => {
                   </div>
                 )}
 
-                {/* ── Images — goods only (optional for services) ── */}
+                {/* ── Images ── */}
                 <div>
                   <label className={`font-semibold mb-2 block ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-                    Photos {isService ? '(optional)' : '(required, up to 5)'}
+                    Photos (required, up to 5)
                   </label>
                   {errors.images && <p className="text-red-500 text-sm mb-2">{errors.images}</p>}
                   <div className="grid grid-cols-3 md:grid-cols-5 gap-3 mb-3">
@@ -605,6 +612,7 @@ const SellPage = () => {
                   <input
                     type="number"
                     name="price"
+                    min="1"
                     value={formData.price}
                     onChange={handleChange}
                     placeholder={isService ? 'e.g. 500 per session' : 'e.g. 1500'}
@@ -641,8 +649,8 @@ const SellPage = () => {
                   </label>
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     {[
-                      { value: 'email',    label: '📧 Email' },
-                      { value: 'whatsapp', label: '📱 WhatsApp' },
+                      { value: 'email',    label: 'Email' },
+                      { value: 'whatsapp', label: 'WhatsApp' },
                     ].map(({ value, label }) => (
                       <button
                         key={value}
@@ -768,7 +776,7 @@ const SellPage = () => {
                 </div>
 
                 <div className={`mt-6 p-3 rounded-lg text-sm ${darkMode ? 'bg-gray-700/50 text-gray-400' : 'bg-gray-50 text-gray-500'}`}>
-                  <p className="font-medium mb-1">💡 Tips</p>
+                  <p className="font-medium mb-1">Tips</p>
                   <ul className="space-y-1">
                     <li>• Clear photos sell faster</li>
                     <li>• Be honest about condition</li>

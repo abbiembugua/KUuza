@@ -5,12 +5,20 @@ import { submitReport, submitSellerReport } from '../api/reportsapi';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/Themecontext';
 
-const REASONS = [
-  { value: 'fake_misleading', label: 'Fake or misleading listing' },
-  { value: 'prohibited_item', label: 'Prohibited item' },
-  { value: 'suspected_scam', label: 'Suspected scam' },
+const LISTING_REASONS = [
+  { value: 'fake_misleading',       label: 'Fake or misleading listing' },
+  { value: 'prohibited_item',       label: 'Prohibited item' },
+  { value: 'suspected_scam',        label: 'Suspected scam' },
   { value: 'inappropriate_content', label: 'Inappropriate content' },
-  { value: 'other', label: 'Other' },
+  { value: 'other',                 label: 'Other' },
+];
+
+const SELLER_REASONS = [
+  { value: 'suspected_scam',        label: 'Suspected scam or fraud' },
+  { value: 'fake_misleading',       label: 'Fake profile or false credentials' },
+  { value: 'inappropriate_content', label: 'Harassment or inappropriate communication' },
+  { value: 'prohibited_item',       label: 'Selling prohibited items' },
+  { value: 'other',                 label: 'Other' },
 ];
 
 /**
@@ -101,7 +109,7 @@ const ReportModal = ({ listingId, sellerId, sellerName, isOpen, onClose }) => {
         {/* Header */}
         <div className={`flex items-center justify-between px-5 py-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
           <div className="flex items-center gap-2">
-            <Flag size={16} className="text-amber-500" />
+            <Flag size={16} className="text-emerald-500" />
             <h2 id="report-modal-title" className="font-semibold text-base">
               {isSeller ? `Report ${sellerName || 'Seller'}` : 'Report Listing'}
             </h2>
@@ -134,7 +142,7 @@ const ReportModal = ({ listingId, sellerId, sellerName, isOpen, onClose }) => {
                 }`}
               >
                 <option value="" disabled>Select a reason…</option>
-                {REASONS.map((r) => (
+                {(isSeller ? SELLER_REASONS : LISTING_REASONS).map((r) => (
                   <option key={r.value} value={r.value}>{r.label}</option>
                 ))}
               </select>
@@ -162,7 +170,7 @@ const ReportModal = ({ listingId, sellerId, sellerName, isOpen, onClose }) => {
           </div>
 
           {!user && (
-            <p className={`text-xs ${darkMode ? 'text-amber-400' : 'text-amber-600'}`}>
+            <p className={`text-xs ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
               You need to be logged in to submit a report.
             </p>
           )}
@@ -171,7 +179,7 @@ const ReportModal = ({ listingId, sellerId, sellerName, isOpen, onClose }) => {
           <button
             type="submit"
             disabled={loading || !user}
-            className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 transition-all duration-200 ${
+            className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-all duration-200 ${
               loading || !user ? 'opacity-60 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'
             }`}
           >

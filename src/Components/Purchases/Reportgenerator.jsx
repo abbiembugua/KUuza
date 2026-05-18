@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { FileText, Loader2 } from "lucide-react";
 import { fetchLogoBase64, drawLogo } from "../../utils/pdfLogo";
 
@@ -31,6 +31,7 @@ export default function ReportGenerator({
   activeTab = "all",
   downloaderName,
   statusFilter = "",
+  categoryLabel = "",
 }) {
   const [loading, setLoading] = useState(null);
 
@@ -135,11 +136,12 @@ export default function ReportGenerator({
     auto_completed: "Completed",
     cancelled:      "Cancelled",
   };
-  const statusPrefix = statusFilter ? (STATUS_TITLE_LABELS[statusFilter] ?? formatStatus(statusFilter)) : "";
+  const statusPrefix   = statusFilter   ? (STATUS_TITLE_LABELS[statusFilter] ?? formatStatus(statusFilter)) : "";
+  const categoryPrefix = categoryLabel  ? categoryLabel : "";
   const baseTitle =
     activeTab === "buyer"  ? "Purchases Report" :
     activeTab === "seller" ? "Sales Report"      : "Transaction Report";
-  const reportTitle = statusPrefix ? `${statusPrefix} ${baseTitle}` : baseTitle;
+  const reportTitle = [statusPrefix, categoryPrefix, baseTitle].filter(Boolean).join(" ");
 
   // Omit the Status column when filtered — it's already in the title
   const showStatusCol = !statusFilter;
@@ -356,7 +358,7 @@ export default function ReportGenerator({
       <button
         onClick={downloadPDF}
         disabled={!!loading}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-cyan-600 text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity shadow-sm"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity shadow-sm"
       >
         {loading === "pdf" ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
         PDF

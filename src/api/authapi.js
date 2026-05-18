@@ -5,6 +5,62 @@ export const clearAuthStorage = () => {
   localStorage.removeItem("refresh");
 };
 
+// Silently get a new access token using the stored refresh token.
+// Returns the new access token string, or throws if refresh fails.
+export const refreshAccessToken = async () => {
+  const refresh = localStorage.getItem("refresh");
+  if (!refresh) throw new Error("No refresh token");
+
+  const res = await fetch(`${API_URL}/token/refresh/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    clearAuthStorage();
+    throw new Error("Session expired. Please log in again.");
+  }
+
+  const newAccess = data.access;
+  localStorage.setItem("access", newAccess);
+
+  // If the server rotated the refresh token, store the new one too
+  if (data.refresh) localStorage.setItem("refresh", data.refresh);
+
+  return newAccess;
+};
+
+// Drop-in replacement for fetch() that automatically retries once with a
+// refreshed access token if the first attempt returns 401.
+export const fetchWithAuth = async (url, options = {}) => {
+  const token = localStorage.getItem("access");
+  const authOptions = {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      Authorization: `Bearer ${token}`,
+    },
+  };
+
+  let res = await fetch(url, authOptions);
+
+  if (res.status === 401) {
+    try {
+      const newToken = await refreshAccessToken();
+      res = await fetch(url, {
+        ...authOptions,
+        headers: { ...authOptions.headers, Authorization: `Bearer ${newToken}` },
+      });
+    } catch {
+      // Refresh failed — caller will receive the 401 response
+    }
+  }
+
+  return res;
+};
+
 export const login = async (data) => {
   const payload = {
     email: data.email,

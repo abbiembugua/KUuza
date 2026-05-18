@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Flag, Loader2, MapPin, Package, Star, Store, UserRound, Wrench } from 'lucide-react';
+import PageSpinner from '../Components/shared/PageSpinner';
 import ReportModal from '../Components/ReportModal';
 import DashboardNavbar from '../Components/Layout/DashboardNavbar';
 import BackButton from '../Components/shared/BackButton';
@@ -13,7 +14,7 @@ import { useAuth } from '../context/AuthContext';
 const CATEGORY_LABELS = {
   books: 'Academics', electronics: 'Electronics', fashion: 'Fashion',
   furniture: 'Furniture', food_beverages: 'Food & Beverages',
-  beauty: 'Beauty', stationery: 'Stationery & Supplies',
+  beauty: 'Beauty & Accessories', stationery: 'Stationery & Supplies',
   sports: 'Sports & Fitness', tutoring: 'Tutoring & Academics',
   printing: 'Printing & Photocopying', design: 'Design & Creative',
   tech_repair: 'Tech & Repairs', laundry: 'Laundry & Cleaning',
@@ -250,12 +251,7 @@ const SellerProfilePage = () => {
     return (
       <div className={`min-h-screen ${darkMode ? 'bg-gray-950' : 'bg-stone-50'}`}>
         <DashboardNavbar />
-        <div className="flex min-h-[60vh] items-center justify-center pt-20">
-          <div className="flex flex-col items-center gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
-            <p className={darkMode ? 'text-gray-400' : 'text-stone-500'}>Loading seller profile...</p>
-          </div>
-        </div>
+        <PageSpinner label="Loading seller profile..." className="min-h-[60vh]" />
       </div>
     );
   }

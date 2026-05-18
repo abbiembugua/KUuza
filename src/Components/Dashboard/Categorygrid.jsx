@@ -8,7 +8,7 @@ const categoryData = [
   { id: 'fashion',        name: 'Fashion'       },
   { id: 'furniture',      name: 'Furniture'     },
   { id: 'food_beverages', name: 'Food'          },
-  { id: 'beauty',         name: 'Beauty'        },
+  { id: 'beauty',         name: 'Beauty & Acc.' },
   { id: 'stationery',     name: 'Stationery'    },
   { id: 'sports',         name: 'Sports'        },
   { id: 'tutoring',       name: 'Tutoring'      },

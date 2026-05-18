@@ -27,13 +27,13 @@ const backgroundConfig = {
   ],
 };
 
-const AuthPageShell = ({ darkMode, background = 'login', children }) => {
+const AuthPageShell = ({ darkMode, background = 'login', locked = false, children }) => {
   return (
     <div
-      className={`min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 relative overflow-hidden ${
+      className={`${locked ? 'h-screen overflow-hidden' : 'min-h-screen'} flex flex-col items-center justify-center px-4 sm:px-6 py-6 relative ${
         darkMode
           ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100'
-          : 'bg-gradient-to-br from-sky-50 via-emerald-50 to-blue-50 text-gray-900'
+          : 'bg-gradient-to-br from-emerald-50 via-white to-emerald-50 text-gray-900'
       }`}
     >
       <div className="absolute inset-0 overflow-hidden">

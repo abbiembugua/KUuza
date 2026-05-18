@@ -1,4 +1,4 @@
-// components/ui/AnimatedBackground.jsx
+﻿// components/ui/AnimatedBackground.jsx
 import React from 'react';
 
 const AnimatedBackground = ({ darkMode }) => (
@@ -7,7 +7,7 @@ const AnimatedBackground = ({ darkMode }) => (
       <div
         key={i}
         className={`absolute rounded-full animate-pulse ${
-          darkMode ? 'bg-emerald-500/10' : 'bg-cyan-500/20'
+          darkMode ? 'bg-emerald-500/10' : 'bg-emerald-500/15'
         }`}
         style={{
           left: `${Math.random() * 100}%`,

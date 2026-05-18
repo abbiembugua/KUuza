@@ -109,6 +109,32 @@ export const reportSuspendUser = async (id) => {
   return handleResponse(res);
 };
 
+export const fetchAdminDisputes = async () => {
+  const res = await fetch(`${ADMIN_API}/disputes/`, { headers: adminHeaders() });
+  return handleResponse(res);
+};
+
+export const resolveDisputeBuyer = async (id) => {
+  const res = await fetch(`${ADMIN_API}/disputes/${id}/resolve_buyer/`, {
+    method: 'POST', headers: adminHeaders(),
+  });
+  return handleResponse(res);
+};
+
+export const resolveDisputeSeller = async (id) => {
+  const res = await fetch(`${ADMIN_API}/disputes/${id}/resolve_seller/`, {
+    method: 'POST', headers: adminHeaders(),
+  });
+  return handleResponse(res);
+};
+
+export const closeDispute = async (id) => {
+  const res = await fetch(`${ADMIN_API}/disputes/${id}/dismiss/`, {
+    method: 'POST', headers: adminHeaders(),
+  });
+  return handleResponse(res);
+};
+
 export const fetchAdminSellers = async () => {
   const res = await fetch(`${ADMIN_API}/sellers/`, { headers: adminHeaders() });
   return handleResponse(res);

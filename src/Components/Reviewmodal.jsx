@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { X, Star, Loader2, CheckCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -226,8 +226,8 @@ const ReviewModal = ({
                   placeholder="Tell others about your experience..."
                   className={`w-full p-3 rounded-xl border-2 text-sm resize-none transition-all focus:outline-none ${
                     darkMode
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:border-blue-500'
-                      : 'bg-white border-gray-200 placeholder-gray-400 focus:border-blue-500'
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:border-emerald-600'
+                      : 'bg-white border-gray-200 placeholder-gray-400 focus:border-emerald-600'
                   }`}
                 />
                 <p className={`text-xs mt-1 text-right ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
@@ -256,7 +256,7 @@ const ReviewModal = ({
                 className={`flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all ${
                   score === 0 || submitting
                     ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700'
+                    : 'bg-emerald-600 hover:bg-emerald-700'
                 }`}
               >
                 {submitting ? (

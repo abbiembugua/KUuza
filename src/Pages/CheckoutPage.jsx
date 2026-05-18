@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import PageSpinner from '../Components/shared/PageSpinner';
 import { toast, Toaster } from 'react-hot-toast';
 
 import DashboardNavbar  from '../Components/Layout/DashboardNavbar';
@@ -53,7 +54,7 @@ async function fetchContactDetails(listingId, token) {
 function validateStep2({ scheduledDate, scheduledTime, paymentMethod, mpesaPhone, isGood }) {
   const e = {};
   if (!scheduledDate) e.scheduledDate = 'Please select a date';
-  if (isGood && !scheduledTime) e.scheduledTime = 'Please select a time';
+  if (!scheduledTime) e.scheduledTime = 'Please select a time';
   if (!paymentMethod) e.paymentMethod = 'Please select a payment method';
   if (paymentMethod === 'mpesa') {
     if (!mpesaPhone.trim()) {
@@ -168,8 +169,8 @@ const CheckoutPage = () => {
       quantity:         singleQuantity,
       payment_method:   paymentMethod,
       scheduled_date:   scheduledDate,
-      ...(isGood && scheduledTime && { scheduled_time: scheduledTime }),
-      ...(isGood && inquiryNote && { inquiry_note: inquiryNote }),
+      ...(scheduledTime  && { scheduled_time: scheduledTime }),
+      ...(inquiryNote    && { inquiry_note: inquiryNote }),
       ...(paymentMethod === 'mpesa' && { mpesa_phone: mpesaPhone }),
     };
 
@@ -329,9 +330,7 @@ const CheckoutPage = () => {
   if (loading) return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <DashboardNavbar />
-      <div className="pt-24 flex items-center justify-center">
-        <Loader2 size={32} className="animate-spin text-emerald-500" />
-      </div>
+      <PageSpinner />
     </div>
   );
 
@@ -343,7 +342,7 @@ const CheckoutPage = () => {
       <Toaster toastOptions={{ style: { borderRadius: '10px', padding: '14px' } }} />
       <DashboardNavbar />
 
-      <div className="pt-20 pb-12">
+      <div className="pt-20 pb-8">
         <div className="max-w-2xl mx-auto px-4">
 
           <BackButton

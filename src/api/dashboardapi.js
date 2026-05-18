@@ -1,4 +1,4 @@
-﻿// src/api/dashboardapi.js
+// src/api/dashboardapi.js
 // Fixed version — correct token key, differentiated trending/recent, working filters
 
 const BASE_URL = 'http://127.0.0.1:8000/api';
@@ -171,7 +171,7 @@ export const getCategories = async () => [
   { id: 'fashion',        name: 'Fashion'                 },
   { id: 'furniture',      name: 'Furniture'               },
   { id: 'food_beverages', name: 'Food & Beverages'        },
-  { id: 'beauty',         name: 'Beauty'                  },
+  { id: 'beauty',         name: 'Beauty & Accessories'    },
   { id: 'stationery',     name: 'Stationery & Supplies'   },
   { id: 'sports',         name: 'Sports & Fitness'        },
   { id: 'tutoring',       name: 'Tutoring & Academics'    },

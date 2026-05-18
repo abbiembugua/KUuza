@@ -5,6 +5,7 @@ import {
   Wrench, ShoppingCart, Zap, ChevronLeft, ChevronRight,
   Shield, Tag, AlertCircle, CheckCircle, Loader2, Minus, Plus, Flag
 } from 'lucide-react';
+import PageSpinner from '../Components/shared/PageSpinner';
 import ReportModal from '../Components/ReportModal';
 import QASection   from '../Components/Listings/QASection';
 import DashboardNavbar from '../Components/Layout/DashboardNavbar';
@@ -61,11 +62,16 @@ async function addToCartAPI(listingId, token, quantity = 1) {
 const CATEGORY_LABELS = {
   books: 'Academics', electronics: 'Electronics', fashion: 'Fashion',
   furniture: 'Furniture', food_beverages: 'Food & Beverages',
-  beauty: 'Beauty', stationery: 'Stationery & Supplies',
+  beauty: 'Beauty & Accessories', stationery: 'Stationery & Supplies',
   sports: 'Sports & Fitness', tutoring: 'Tutoring & Academics',
   printing: 'Printing & Photocopying', design: 'Design & Creative',
   tech_repair: 'Tech & Repairs', laundry: 'Laundry & Cleaning',
   photography: 'Photography & Video', other: 'Other',
+};
+
+const getCategoryLabel = (category, listingType) => {
+  if (category === 'beauty' && listingType === 'service') return 'Beauty';
+  return CATEGORY_LABELS[category] || category;
 };
 
 const CONDITION_LABELS = { new: 'New', like_new: 'Like New', used: 'Used', fair: 'Fair' };
@@ -84,18 +90,15 @@ function ImageGallery({ images, title, darkMode }) {
 
   if (!images || images.length === 0) {
     return (
-      <div className={`w-full aspect-square rounded-2xl flex items-center justify-center shadow-lg ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border-2 border-gray-300'}`}>
-        <div className="text-center space-y-3">
-          <Package size={56} className={`mx-auto ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
-          <p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>No photos uploaded</p>
-        </div>
+      <div className={`w-full h-52 sm:h-64 rounded-2xl flex items-center justify-center shadow-sm ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-100 border border-gray-200'}`}>
+        <Package size={40} className={darkMode ? 'text-gray-600' : 'text-gray-300'} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      <div className={`relative w-full aspect-square rounded-2xl overflow-hidden shadow-lg group ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+    <div className="space-y-2">
+      <div className={`relative w-full h-52 sm:h-64 lg:h-72 rounded-2xl overflow-hidden shadow-sm group ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
         <img
           src={toAbsoluteImageUrl(images[active].image)}
           alt={`${title} image ${active + 1}`}
@@ -118,9 +121,9 @@ function ImageGallery({ images, title, darkMode }) {
         )}
       </div>
       {images.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
           {images.map((img, i) => (
-            <button key={i} onClick={() => setActive(i)} className={`flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${i === active ? 'border-emerald-500 scale-105' : darkMode ? 'border-gray-600 opacity-60 hover:opacity-100' : 'border-gray-300 opacity-60 hover:opacity-100'}`}>
+            <button key={i} onClick={() => setActive(i)} className={`flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all ${i === active ? 'border-emerald-500' : darkMode ? 'border-gray-600 opacity-50 hover:opacity-100' : 'border-gray-200 opacity-50 hover:opacity-100'}`}>
               <img src={toAbsoluteImageUrl(img.image)} alt={`Thumb ${i + 1}`} className="w-full h-full object-cover" />
             </button>
           ))}
@@ -168,6 +171,8 @@ const ListingDetailPage = () => {
   }, [id, token]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => { window.scrollTo(0, 0); }, [id]);
 
   useEffect(() => {
     if (!listing || listing.listing_type !== 'good') {
@@ -242,24 +247,19 @@ const ListingDetailPage = () => {
   if (loading) return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <DashboardNavbar />
-      <div className="pt-24 flex items-center justify-center min-h-[60vh]">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 size={36} className="animate-spin text-emerald-500" />
-          <p className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading listing...</p>
-        </div>
-      </div>
+      <PageSpinner label="Loading listing..." className="min-h-[60vh]" />
     </div>
   );
 
   if (error || !listing) return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <DashboardNavbar />
-      <div className="pt-24 flex items-center justify-center min-h-[60vh]">
+      <div className="pt-20 flex items-center justify-center min-h-[60vh]">
         <div className={`text-center space-y-4 p-8 rounded-2xl shadow-lg max-w-sm w-full ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
           <AlertCircle size={48} className="mx-auto text-red-400" />
           <p className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Listing not found</p>
           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>This listing may have been removed or does not exist.</p>
-          <button onClick={() => navigate('/dashboard')} className="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white transition-all">
+          <button onClick={() => navigate('/dashboard')} className="w-full py-3 rounded-xl font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-all">
             Back to Browse
           </button>
         </div>
@@ -272,31 +272,31 @@ const ListingDetailPage = () => {
       <Toaster toastOptions={{ className: '', style: { borderRadius: '10px', padding: '16px', fontSize: '14px', fontWeight: '500' } }} />
       <DashboardNavbar />
 
-      <div className="pt-20 pb-16">
-        <div className="max-w-7xl mx-auto px-4 pt-4">
+      <div className="pt-16 pb-8">
+        <div className="max-w-6xl mx-auto px-4 pt-3">
 
           {/* Back */}
-          <div className="mb-4 flex items-center gap-2">
+          <div className="mb-3 flex items-center gap-2">
             <BackButton darkMode={darkMode} onClick={() => navigate(-1)} />
             <span className={darkMode ? 'text-gray-600' : 'text-gray-300'}>/</span>
-            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{CATEGORY_LABELS[listing.category] || listing.category}</span>
+            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{getCategoryLabel(listing.category, listing.listing_type)}</span>
             <span className={darkMode ? 'text-gray-600' : 'text-gray-300'}>/</span>
             <span className={`text-sm truncate max-w-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{listing.title}</span>
           </div>
 
           {/* Unavailable banner */}
           {isUnavailable && (
-            <div className={`mb-6 px-4 py-3 rounded-xl flex items-center gap-3 ${isSold ? 'bg-red-100 border border-red-200 text-red-700' : darkMode ? 'bg-gray-800 border border-gray-700 text-gray-400' : 'bg-gray-100 border border-gray-200 text-gray-600'}`}>
+            <div className={`mb-3 px-4 py-3 rounded-xl flex items-center gap-3 ${isSold ? 'bg-red-100 border border-red-200 text-red-700' : darkMode ? 'bg-gray-800 border border-gray-700 text-gray-400' : 'bg-gray-100 border border-gray-200 text-gray-600'}`}>
               <AlertCircle size={18} className="flex-shrink-0" />
               <p className="text-sm font-medium">{isSold ? isService ? 'This service is no longer available.' : 'This item is out of stock and is no longer available.' : 'This listing has been temporarily deactivated by the seller.'}</p>
             </div>
           )}
 
-          {/* Grid: 1/3 gallery + 2/3 details — mirrors SellPage split */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {/* Grid: 1/3 gallery + 2/3 details */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-            {/* Gallery */}
-            <div className="lg:col-span-1">
+            {/* Gallery — sticky on desktop so it stays visible while scrolling details */}
+            <div className="lg:col-span-1 lg:sticky lg:top-20 lg:self-start">
               <ImageGallery images={listing.images} title={listing.title} darkMode={darkMode} />
             </div>
 
@@ -312,7 +312,7 @@ const ListingDetailPage = () => {
                     {isService ? 'Service' : 'Good'}
                   </span>
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
-                    <Tag size={11} />{CATEGORY_LABELS[listing.category] || listing.category}
+                    <Tag size={11} />{getCategoryLabel(listing.category, listing.listing_type)}
                   </span>
                   {isService && listing.usage_count > 0 && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
@@ -436,7 +436,7 @@ const ListingDetailPage = () => {
                     darkMode ? 'hover:bg-gray-700/60' : 'hover:bg-gray-50'
                   }`}
                 >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-600 to-cyan-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                     {listing.seller_name ? listing.seller_name.charAt(0).toUpperCase() : 'K'}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -473,7 +473,7 @@ const ListingDetailPage = () => {
                     </p>
                     <Link
                       to="/my-listings"
-                      className="mt-3 inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 px-4 py-3 text-sm font-semibold text-white transition-all hover:from-emerald-700 hover:to-cyan-700"
+                      className="mt-3 inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-all hover:from-emerald-700 hover:to-cyan-700"
                     >
                       Manage in My Listings
                     </Link>
@@ -491,19 +491,19 @@ const ListingDetailPage = () => {
                         {cartLoading ? <Loader2 className="animate-spin" size={20} /> : <ShoppingCart size={20} />}
                         {cartLoading ? 'Adding...' : 'Add to Cart'}
                       </button>
-                      <button onClick={handleBuyNow} className="py-2.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+                      <button onClick={handleBuyNow} className="py-2.5 rounded-xl font-semibold text-sm bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
                         <Zap size={20} />Buy Now
                       </button>
                     </div>
-                    <p className={`text-sm text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>💡 Seller contact details will be shared after purchase</p>
+                    <p className={`text-sm text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Seller contact details will be shared after purchase</p>
                   </div>
 
                 ) : (
                   <div className="space-y-4">
-                    <button onClick={handleBookNow} className="w-full py-2.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+                    <button onClick={handleBookNow} className="w-full py-2.5 rounded-xl font-semibold text-sm bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
                       <CheckCircle size={22} />Book Now
                     </button>
-                    <p className={`text-sm text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>💡 Seller contact details will be shared after booking</p>
+                    <p className={`text-sm text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Seller contact details will be shared after booking</p>
                   </div>
                 )}
 

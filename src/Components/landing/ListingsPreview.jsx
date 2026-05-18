@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+﻿import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTheme } from '../../context/Themecontext';
@@ -20,7 +20,7 @@ const Bubbles = ({ darkMode }) => {
         <div
           key={i}
           className={`absolute rounded-full animate-pulse ${
-            darkMode ? 'bg-emerald-400/10' : 'bg-cyan-400/20'
+            darkMode ? 'bg-emerald-400/10' : 'bg-emerald-400/15'
           }`}
           style={{ left: b.left, top: b.top, width: b.size, height: b.size, animationDelay: b.delay }}
         />
@@ -33,13 +33,13 @@ const API_BASE   = 'http://127.0.0.1:8000/api';
 const MEDIA_BASE = 'http://127.0.0.1:8000';
 
 const categoryStyle = {
-  books:          { bg: 'linear-gradient(135deg,#d1fae5,#6ee7b7)', emoji: '📗' },
-  electronics:    { bg: 'linear-gradient(135deg,#dbeafe,#93c5fd)', emoji: '💻' },
-  fashion:        { bg: 'linear-gradient(135deg,#fce7f3,#f9a8d4)', emoji: '👕' },
-  food_beverages: { bg: 'linear-gradient(135deg,#ffedd5,#fdba74)', emoji: '🍱' },
-  furniture:      { bg: 'linear-gradient(135deg,#fef3c7,#fcd34d)', emoji: '🪑' },
-  beauty:         { bg: 'linear-gradient(135deg,#ede9fe,#c4b5fd)', emoji: '💄' },
-  other:          { bg: 'linear-gradient(135deg,#f3f4f6,#e5e7eb)', emoji: '📦' },
+  books:          { bg: 'linear-gradient(135deg,#d1fae5,#6ee7b7)' },
+  electronics:    { bg: 'linear-gradient(135deg,#dbeafe,#93c5fd)' },
+  fashion:        { bg: 'linear-gradient(135deg,#fce7f3,#f9a8d4)' },
+  food_beverages: { bg: 'linear-gradient(135deg,#ffedd5,#fdba74)' },
+  furniture:      { bg: 'linear-gradient(135deg,#fef3c7,#fcd34d)' },
+  beauty:         { bg: 'linear-gradient(135deg,#ede9fe,#c4b5fd)' },
+  other:          { bg: 'linear-gradient(135deg,#f3f4f6,#e5e7eb)' },
 };
 
 const mockFallback = [
@@ -94,13 +94,9 @@ const ListingCard = ({ listing, darkMode, onClick }) => {
           />
         ) : (
           <div
-            className="w-full h-full flex items-center justify-center"
+            className="w-full h-full"
             style={{ background: style.bg }}
-          >
-            <span className="text-5xl select-none group-hover:scale-110 transition-transform duration-300">
-              {style.emoji}
-            </span>
-          </div>
+          />
         )}
       </div>
 

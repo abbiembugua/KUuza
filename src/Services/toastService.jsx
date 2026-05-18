@@ -1,174 +1,94 @@
-// src/Services/toastService.jsx
-// Centralized toast notification service using react-hot-toast
-
-import React from 'react';
 import toast from 'react-hot-toast';
 
-/**
- * Toast Service
- * Provides consistent toast notifications across the app
- *
- * Usage:
- *   toastService.success('Item created!')
- *   toastService.error('Failed to save')
- *   toastService.loading('Processing...')
- *   toastService.promise(apiCall, messages)
- */
+// Neutral card base — works in both light and dark mode
+const base = {
+  borderRadius: '10px',
+  fontSize: '14px',
+  fontWeight: '500',
+  padding: '12px 16px',
+  boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+  background: '#ffffff',
+  color: '#111827',
+  border: '1px solid #e5e7eb',
+};
 
 const toastService = {
-  // ✅ SUCCESS TOAST
-  success: (message, options = {}) => {
-    return toast.success(message, {
+  // Uses react-hot-toast's built-in checkmark icon (clean SVG, no emoji)
+  success: (message, options = {}) =>
+    toast.success(message, {
       duration: 3000,
       position: 'top-right',
-      style: {
-        background: '#10B981',
-        color: '#fff',
-        padding: '16px 24px',
-        borderRadius: '8px',
-        fontSize: '14px',
-        fontWeight: '500',
-        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
-      },
+      style: { ...base, borderLeft: '4px solid #059669' },
+      iconTheme: { primary: '#059669', secondary: '#ffffff' },
       ...options,
-    });
-  },
+    }),
 
-  // ❌ ERROR TOAST
-  error: (message, options = {}) => {
-    return toast.error(message, {
+  error: (message, options = {}) =>
+    toast.error(message, {
       duration: 5000,
       position: 'top-right',
-      style: {
-        background: '#EF4444',
-        color: '#fff',
-        padding: '16px 24px',
-        borderRadius: '8px',
-        fontSize: '14px',
-        fontWeight: '500',
-        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
-      },
+      style: { ...base, borderLeft: '4px solid #dc2626' },
+      iconTheme: { primary: '#dc2626', secondary: '#ffffff' },
       ...options,
-    });
-  },
+    }),
 
-  // ⓘ INFO TOAST
-  info: (message, options = {}) => {
-    return toast((t) => (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <span style={{ fontSize: '18px' }}>ℹ️</span>
-        <span>{message}</span>
-      </div>
-    ), {
-      duration: Infinity,
-      position: 'top-right',
-      style: {
-        background: '#3B82F6',
-        color: '#fff',
-        padding: '16px 24px',
-        borderRadius: '8px',
-        fontSize: '14px',
-        fontWeight: '500',
-        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
-      },
-      ...options,
-    });
-  },
-
-  // ⚠️ WARNING TOAST
-  warning: (message, options = {}) => {
-    return toast((t) => (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <span style={{ fontSize: '18px' }}>⚠️</span>
-        <span>{message}</span>
-      </div>
-    ), {
+  warning: (message, options = {}) =>
+    toast(message, {
       duration: 5000,
       position: 'top-right',
-      style: {
-        background: '#F59E0B',
-        color: '#fff',
-        padding: '16px 24px',
-        borderRadius: '8px',
-        fontSize: '14px',
-        fontWeight: '500',
-        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
-      },
+      style: { ...base, borderLeft: '4px solid #d97706' },
+      icon: null,
       ...options,
-    });
-  },
+    }),
 
-  // 🔄 LOADING TOAST
-  loading: (message, options = {}) => {
-    return toast.loading(message, {
+  info: (message, options = {}) =>
+    toast(message, {
+      duration: 4000,
       position: 'top-right',
-      style: {
-        background: '#6366F1',
-        color: '#fff',
-        padding: '16px 24px',
-        borderRadius: '8px',
-        fontSize: '14px',
-        fontWeight: '500',
-        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
-      },
+      style: { ...base, borderLeft: '4px solid #6b7280' },
+      icon: null,
       ...options,
-    });
-  },
+    }),
 
-  // 🔄 PROMISE TOAST
-  promise: (promise, messages) => {
-    return toast.promise(
+  loading: (message, options = {}) =>
+    toast.loading(message, {
+      position: 'top-right',
+      style: { ...base, borderLeft: '4px solid #059669' },
+      ...options,
+    }),
+
+  promise: (promise, messages, options = {}) =>
+    toast.promise(
       promise,
       {
-        loading: { render: messages.loading, icon: '🔄' },
-        success: { render: messages.success, icon: '✅' },
-        error: { render: messages.error, icon: '❌' },
+        loading: messages.loading,
+        success: messages.success,
+        error:   messages.error,
       },
       {
         position: 'top-right',
-        style: {
-          padding: '16px 24px',
-          borderRadius: '8px',
-          fontSize: '14px',
-          fontWeight: '500',
-          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
-        },
+        style: base,
+        success: { iconTheme: { primary: '#059669', secondary: '#ffffff' } },
+        error:   { iconTheme: { primary: '#dc2626', secondary: '#ffffff' } },
+        ...options,
       }
-    );
-  },
+    ),
 
-  // 📋 CUSTOM TOAST
-  custom: (component, options = {}) => {
-    return toast.custom(component, { position: 'top-right', ...options });
-  },
+  custom: (component, options = {}) =>
+    toast.custom(component, { position: 'top-right', ...options }),
 
-  // ❌ DISMISS ALL
-  dismissAll: () => {
-    toast.remove();
-  },
+  dismissAll: () => toast.remove(),
 
-  // ❌ DISMISS SPECIFIC
-  dismiss: (toastId) => {
-    if (toastId) {
-      toast.dismiss(toastId);
-    }
-  },
+  dismiss: (toastId) => { if (toastId) toast.dismiss(toastId); },
 };
-// Named export for backward compatibility
+
 export const showToast = (message, type = 'info', options = {}) => {
   switch (type) {
-    case 'success':
-      return toastService.success(message, options);
-    case 'error':
-      return toastService.error(message, options);
-    case 'warning':
-      return toastService.warning(message, options);
-    case 'info':
-      return toastService.info(message, options);
-    default:
-      return toastService.info(message, options);
+    case 'success': return toastService.success(message, options);
+    case 'error':   return toastService.error(message, options);
+    case 'warning': return toastService.warning(message, options);
+    default:        return toastService.info(message, options);
   }
 };
 
 export default toastService;
-

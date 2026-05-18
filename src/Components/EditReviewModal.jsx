@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { X, Star, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { updateReview } from '../api/reviewsapi';
@@ -110,7 +110,7 @@ const EditReviewModal = ({ review, onClose, onSaved, darkMode }) => {
 
           {/* Context */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center text-white font-bold flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold flex-shrink-0">
               {revieweeName.charAt(0).toUpperCase()}
             </div>
             <div>
@@ -177,7 +177,7 @@ const EditReviewModal = ({ review, onClose, onSaved, darkMode }) => {
               className={`flex-1 rounded-xl py-3 font-semibold text-white transition-all ${
                 loading || score === 0
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700'
+                  : 'bg-emerald-600 hover:bg-emerald-700'
               }`}
             >
               <span className="flex items-center justify-center gap-2">

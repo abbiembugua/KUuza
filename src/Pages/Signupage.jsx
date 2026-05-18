@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Eye, EyeOff, UserPlus, User, Mail, Lock, Check } from 'lucide-react';
+﻿import React, { useState, useEffect, useRef } from 'react';
+import { Eye, EyeOff, UserPlus, User, Mail, Lock, Check, CheckCircle, MailOpen } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { resendVerification, signup, verifyEmailOTP } from '../api/authapi';
 import { Toaster, toast } from 'react-hot-toast';
@@ -214,7 +214,7 @@ const SignUpPage = () => {
 
   const inputClass = (field, extraFocus = 'emerald') => {
     const hasError = !!fieldErrors[field];
-    const base = 'w-full px-4 py-3.5 rounded-xl border focus:outline-none transition-all duration-200';
+    const base = 'w-full px-4 py-2.5 rounded-xl border focus:outline-none transition-all duration-200';
     if (hasError) {
       return `${base} ${darkMode
         ? 'bg-gray-800/50 border-red-500 text-gray-100 placeholder-gray-500 focus:border-red-400 focus:ring-2 focus:ring-red-500/30'
@@ -242,7 +242,9 @@ const SignUpPage = () => {
         }`}>
           {otpSuccess ? (
             <>
-              <div className="text-6xl mb-4">✅</div>
+              <div className="flex justify-center mb-4">
+                <CheckCircle size={56} className="text-emerald-500" />
+              </div>
               <h2 className="text-2xl font-bold mb-2">Email verified!</h2>
               <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                 Redirecting you to login…
@@ -250,7 +252,9 @@ const SignUpPage = () => {
             </>
           ) : (
             <>
-              <div className="text-6xl mb-4">📬</div>
+              <div className="flex justify-center mb-4">
+                <MailOpen size={56} className={darkMode ? 'text-emerald-400' : 'text-emerald-600'} />
+              </div>
               <h2 className="text-2xl font-bold mb-2">Check your KU email</h2>
               <p className={`mb-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                 We sent a verification link and a 6-digit code to{' '}
@@ -323,25 +327,21 @@ const SignUpPage = () => {
       />
 
       <div className="w-full max-w-lg z-20">
-        <div className="text-center mb-8">
-          <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 ${
-            darkMode
-              ? 'bg-gradient-to-br from-emerald-500 to-sky-500'
-              : 'bg-gradient-to-br from-emerald-400 to-sky-400'
-          }`}>
-            <UserPlus size={32} className="text-white" />
+        <div className="text-center mb-3">
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl mb-2 bg-emerald-600">
+            <UserPlus size={20} className="text-white" />
           </div>
-          <h1 className={`text-3xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          <h1 className={`text-xl font-bold mb-0.5 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             Join KUuza
           </h1>
-          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
             Create your account to start trading on campus
           </p>
         </div>
 
         <AuthCard darkMode={darkMode}>
           {fieldErrors.general && (
-            <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 ${
+            <div className={`mb-3 p-3 rounded-xl flex items-center gap-3 ${
               darkMode
                 ? 'bg-red-500/10 border border-red-500/30 text-red-400'
                 : 'bg-red-50 border border-red-200 text-red-600'
@@ -351,7 +351,7 @@ const SignUpPage = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="flex items-center gap-2 mb-2 font-medium">
@@ -440,7 +440,7 @@ const SignUpPage = () => {
               <FieldError field="password" />
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between text-xs">
                   <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>Password strength</span>
                   <span className="font-medium">
                     {getPasswordStrengthScore() >= 80 ? 'Strong' :
@@ -448,14 +448,14 @@ const SignUpPage = () => {
                      getPasswordStrengthScore() >= 40 ? 'Fair' : 'Weak'}
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 rounded-full h-1.5">
                   <div
                     className={`h-2 rounded-full transition-all duration-500 ${getStrengthColor()}`}
                     style={{ width: `${getPasswordStrengthScore()}%` }}
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 mt-4">
+                <div className="grid grid-cols-2 gap-1.5 mt-2">
                   {[
                     { key: 'length', label: 'At least 8 characters' },
                     { key: 'uppercase', label: 'One uppercase letter' },
@@ -524,7 +524,7 @@ const SignUpPage = () => {
               <FieldError field="confirmPassword" />
             </div>
 
-            <div className="pt-2" ref={termsRef}>
+            <div className="pt-1" ref={termsRef}>
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
@@ -601,7 +601,7 @@ const SignUpPage = () => {
           </div>
         </AuthCard>
 
-        <p className={`mt-8 text-center text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+        <p className={`mt-2 text-center text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
           By creating an account, you verify that you are a current student of Kenyatta University.
           <br />
           Access is restricted to valid KU student emails only.

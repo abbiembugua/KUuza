@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/Themecontext';
 import DashboardNavbar from '../Components/Layout/DashboardNavbar';
 import BackButton from '../Components/shared/BackButton';
-import { ShoppingCart, Trash2, Plus, Minus, Package, Shield, Loader, AlertTriangle } from 'lucide-react';
+import { ShoppingCart, Trash2, Plus, Minus, Package, Loader, AlertTriangle } from 'lucide-react';
 import { getCartItems, updateCartItem, removeFromCart } from '../api/dashboardapi';
 import { showToast } from '../Services/toastService';
 
@@ -285,12 +285,6 @@ const IntegratedCartPage = () => {
                   Checkout all ({cartItems.length} items)
                 </button>
 
-                <div className={`mt-3 p-2.5 rounded-lg flex items-center justify-center gap-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
-                  <Shield className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    Peer-to-peer marketplace — no platform fees
-                  </span>
-                </div>
               </div>
             </div>
 

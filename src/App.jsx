@@ -20,6 +20,7 @@ import VerifyEmail from './Pages/VerifyEmaiPage';
 import AdminLoginPage from './Pages/Admin/AdminLoginPage';
 import AdminDashboardPage from './Pages/Admin/AdminDashboardPage';
 import AdminManagePage from './Pages/Admin/AdminManagePage';
+import ScrollToTop from './Components/shared/ScrollToTop';
 import { AuthProvider } from './context/AuthContext';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import { ThemeProvider } from './context/Themecontext';
@@ -44,6 +45,7 @@ const App = () => {
   return (
     <ThemeProvider>
       <Router>
+        <ScrollToTop />
         <AuthProvider>
           <Routes>
             {/* Student-facing routes */}
@@ -82,6 +84,7 @@ const App = () => {
                     <Route path="listings"  element={<AdminManagePage section="listings" />} />
                     <Route path="users"     element={<AdminManagePage section="users" />} />
                     <Route path="reports"   element={<AdminManagePage section="reports" />} />
+                    <Route path="disputes"  element={<AdminManagePage section="disputes" />} />
                     <Route path="sellers"   element={<AdminManagePage section="sellers" />} />
                   </Routes>
                 </AdminAuthProvider>

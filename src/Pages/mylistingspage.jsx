@@ -3,6 +3,7 @@ import {
   Edit2, Trash2, Plus, Eye, Package, LayoutGrid, List,
   Search, X, ArrowLeft, SlidersHorizontal, Archive, ArchiveRestore,
 } from 'lucide-react';
+import PageSpinner from '../Components/shared/PageSpinner';
 import { useLocation, useNavigate } from 'react-router-dom';
 import DashboardNavbar from '../Components/Layout/DashboardNavbar';
 import { useTheme } from '../context/Themecontext';
@@ -28,7 +29,7 @@ const CATEGORIES = [
   { value: 'fashion',        label: 'Fashion' },
   { value: 'furniture',      label: 'Furniture' },
   { value: 'food_beverages', label: 'Food & Beverages' },
-  { value: 'beauty',         label: 'Beauty' },
+  { value: 'beauty',         label: 'Beauty & Accessories' },
   { value: 'stationery',     label: 'Stationery & Supplies' },
   { value: 'sports',         label: 'Sports & Fitness' },
   { value: 'tutoring',       label: 'Tutoring & Academics' },
@@ -401,14 +402,10 @@ const MyListingsPage = () => {
             {/* ── Listings ── */}
             <div className="flex-1 min-w-0">
 
-              {loading && (
-                <div className="flex items-center justify-center py-20">
-                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600" />
-                </div>
-              )}
+              {loading && <PageSpinner />}
 
               {!loading && displayListings.length === 0 && numActive === 0 && !searchInput && (
-                <div className={`rounded-2xl p-16 text-center ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-100 shadow-sm'}`}>
+                <div className={`rounded-2xl p-10 text-center ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-100 shadow-sm'}`}>
                   <Package size={40} className="mx-auto mb-4 text-gray-400" />
                   <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>No listings yet</h3>
                   <p className={`mb-5 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Create your first listing to start selling.</p>

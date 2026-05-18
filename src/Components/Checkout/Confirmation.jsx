@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   CheckCircle, XCircle, Loader2, RefreshCw,
   Shield, Phone, Mail, Download, ShoppingBag,
@@ -438,7 +438,7 @@ const Confirmation = ({
         </button>
         <button
           onClick={onNavigateDashboard}
-          className="py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white transition-all"
+          className="py-3 rounded-xl font-semibold text-sm bg-emerald-600 hover:bg-emerald-700 text-white transition-all"
         >
           Continue Browsing
         </button>

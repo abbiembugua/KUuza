@@ -3,7 +3,7 @@ import React from 'react';
 const AuthCard = ({ darkMode, className = '', children }) => {
   return (
     <div
-      className={`p-8 rounded-3xl shadow-2xl backdrop-blur-sm ${
+      className={`p-6 rounded-2xl shadow-xl backdrop-blur-sm ${
         darkMode
           ? 'bg-gray-900/80 border border-gray-800'
           : 'bg-white/90 border border-gray-200/50'

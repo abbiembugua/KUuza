@@ -203,6 +203,23 @@ export const deleteListing = async (listingId) => {
   return handleResponse(response);
 };
 
+// ==================== IMAGE OPERATIONS ====================
+
+/**
+ * Delete a single image from a listing
+ * @param {string} listingId - Listing ID
+ * @param {number} imageId   - ListingImage ID
+ */
+export const deleteListingImage = async (listingId, imageId) => {
+  const token = getToken();
+  const response = await fetch(`${BASE_URL}/listings/${listingId}/images/${imageId}/`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (response.status === 204) return { success: true };
+  return handleResponse(response);
+};
+
 // ==================== AI OPERATIONS ====================
 
 /**

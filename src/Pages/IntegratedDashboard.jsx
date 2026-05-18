@@ -115,7 +115,7 @@ const IntegratedDashboard = () => {
 
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-5">
           <HorizontalScrollSection
             title="Trending on Campus"
             listings={trendingListings}

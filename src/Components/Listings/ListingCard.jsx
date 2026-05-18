@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Edit2, Trash2, Eye, EyeOff, Archive, ArchiveRestore } from 'lucide-react';
 
 const ListingCard = ({ listing, onEdit, onDelete, onTogglePublish, onArchive, darkMode }) => {
@@ -6,10 +6,10 @@ const ListingCard = ({ listing, onEdit, onDelete, onTogglePublish, onArchive, da
   const isDeactivated = listing.status === 'deactivated';
 
   const statusBadge = isDeactivated
-    ? { text: '📦 Archived', color: darkMode ? 'bg-yellow-900 text-yellow-200' : 'bg-yellow-100 text-yellow-800' }
+    ? { text: 'Archived', color: darkMode ? 'bg-yellow-900 text-yellow-200' : 'bg-yellow-100 text-yellow-800' }
     : listing.is_draft
-      ? { text: '📝 Draft', color: darkMode ? 'bg-yellow-900 text-yellow-200' : 'bg-yellow-100 text-yellow-800' }
-      : { text: '✅ Published', color: darkMode ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800' };
+      ? { text: 'Draft', color: darkMode ? 'bg-yellow-900 text-yellow-200' : 'bg-yellow-100 text-yellow-800' }
+      : { text: 'Published', color: darkMode ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800' };
 
   return (
     <div className={`${
@@ -25,9 +25,7 @@ const ListingCard = ({ listing, onEdit, onDelete, onTogglePublish, onArchive, da
             className="w-full h-full object-cover group-hover:scale-110 transition-transform"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-400">
-            <span className="text-4xl">📦</span>
-          </div>
+          <div className={`w-full h-full ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`} />
         )}
         <div className="absolute top-3 right-3">
           <span className={`text-xs font-semibold px-3 py-1 rounded-full ${statusBadge.color}`}>
@@ -54,8 +52,8 @@ const ListingCard = ({ listing, onEdit, onDelete, onTogglePublish, onArchive, da
         </p>
 
         <div className={`text-xs mb-4 space-y-1 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-          <p>📍 {listing.area_of_operation || 'Location not specified'}</p>
-          <p>📅 {new Date(listing.created_at).toLocaleDateString()}</p>
+          <p>{listing.area_of_operation || 'Location not specified'}</p>
+          <p>{new Date(listing.created_at).toLocaleDateString()}</p>
         </div>
 
         {/* Action Buttons */}

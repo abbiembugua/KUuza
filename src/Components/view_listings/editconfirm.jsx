@@ -121,6 +121,11 @@ const EditListingModal = ({ listing, onClose, onSave, darkMode }) => {
     if (!formData.title.trim()) nextErrors.title = 'Title is required';
     if (!formData.category) nextErrors.category = 'Category is required';
 
+    const remainingExisting = existingImages.filter(img => !deletedImageIds.includes(img.id));
+    if (remainingExisting.length === 0 && newFiles.length === 0) {
+      nextErrors.images = 'A listing must have at least one image.';
+    }
+
     if (!formData.price) {
       nextErrors.price = 'A price is required';
     } else if (parseFloat(formData.price) < 1) {
@@ -377,8 +382,11 @@ const EditListingModal = ({ listing, onClose, onSave, darkMode }) => {
               onChange={handleFileChange}
             />
 
+            {errors.images && (
+              <p className="mt-1.5 text-xs text-red-500">{errors.images}</p>
+            )}
             <p className={`mt-1.5 text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-              Hover an image and click × to remove it. Up to 5 photos total.
+              Hover an image and click × to remove it. At least 1 photo required, up to 5.
             </p>
           </div>
 

@@ -2,6 +2,20 @@ import React from 'react';
 import { ArrowRight } from 'lucide-react';
 import ListingCard from './Listingcard';
 
+const SkeletonCard = ({ darkMode }) => (
+  <div className={`flex-shrink-0 w-44 rounded-2xl overflow-hidden ${
+    darkMode ? 'bg-gray-800' : 'bg-white border border-gray-100 shadow-sm'
+  }`}>
+    <div className={`h-36 animate-pulse ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`} />
+    <div className="p-3 space-y-2">
+      <div className={`h-3 rounded animate-pulse ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`} />
+      <div className={`h-3 w-2/3 rounded animate-pulse ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`} />
+      <div className={`h-4 w-1/2 rounded animate-pulse ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`} />
+      <div className={`h-7 rounded-lg animate-pulse ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`} />
+    </div>
+  </div>
+);
+
 const HorizontalScrollSection = ({
   title,
   listings,
@@ -9,6 +23,7 @@ const HorizontalScrollSection = ({
   onView,
   onViewAll,
   emptyMessage,
+  loading = false,
 }) => (
   <div>
     <div className="flex items-center justify-between mb-4">
@@ -23,7 +38,16 @@ const HorizontalScrollSection = ({
       </button>
     </div>
 
-    {listings.length === 0 ? (
+    {loading ? (
+      <div
+        className="flex gap-4 overflow-x-hidden pb-3"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {Array.from({ length: 5 }).map((_, i) => (
+          <SkeletonCard key={i} darkMode={darkMode} />
+        ))}
+      </div>
+    ) : listings.length === 0 ? (
       <div
         className={`text-center py-8 rounded-2xl border-2 border-dashed ${
           darkMode ? 'border-gray-700 text-gray-500' : 'border-gray-200 text-gray-600'

@@ -96,7 +96,7 @@ const AdminLoginPage = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@ku.ac.ke"
+                placeholder="Email"
                 required
                 className={inputClass}
               />

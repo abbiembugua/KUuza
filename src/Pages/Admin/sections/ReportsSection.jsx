@@ -7,12 +7,48 @@ import PageSpinner from '../../../Components/shared/PageSpinner';
 import { Pill, ConfirmButton, Empty, Toolbar } from '../adminShared';
 import { fmtDate } from '../adminHelpers';
 
+const REASONS = [
+  { value: '',                    label: 'All reasons'             },
+  { value: 'fake_misleading',     label: 'Fake / misleading'       },
+  { value: 'prohibited_item',     label: 'Prohibited item'         },
+  { value: 'suspected_scam',      label: 'Suspected scam'          },
+  { value: 'inappropriate_content', label: 'Inappropriate content' },
+  { value: 'other',               label: 'Other'                   },
+];
+
+const DATE_RANGES = [
+  { value: '',       label: 'Any date'   },
+  { value: 'today',  label: 'Today'      },
+  { value: 'week',   label: 'This week'  },
+  { value: 'month',  label: 'This month' },
+];
+
+const withinRange = (dateStr, range) => {
+  if (!range) return true;
+  const d = new Date(dateStr);
+  const now = new Date();
+  if (range === 'today') {
+    return d.toDateString() === now.toDateString();
+  }
+  if (range === 'week') {
+    const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7);
+    return d >= weekAgo;
+  }
+  if (range === 'month') {
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }
+  return true;
+};
+
 const ReportsSection = ({ darkMode }) => {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState({});
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('pending');
+  const [reason, setReason] = useState('');
+  const [reportType, setReportType] = useState('');
+  const [dateRange, setDateRange] = useState('');
   const [sort, setSort] = useState('newest');
 
   useEffect(() => {
@@ -21,11 +57,30 @@ const ReportsSection = ({ darkMode }) => {
 
   const filtered = useMemo(() => {
     let d = [...rows];
-    if (search) { const q = search.toLowerCase(); d = d.filter(r => r.listing_title?.toLowerCase().includes(q) || r.reporter_name.toLowerCase().includes(q) || r.reason.toLowerCase().includes(q) || r.reported_user_name?.toLowerCase().includes(q)); }
-    if (status) d = d.filter(r => r.status === status);
-    d.sort((a, b) => sort === 'newest' ? new Date(b.created_at) - new Date(a.created_at) : new Date(a.created_at) - new Date(b.created_at));
+    if (search) {
+      const q = search.toLowerCase();
+      d = d.filter(r =>
+        r.listing_title?.toLowerCase().includes(q) ||
+        r.reporter_name?.toLowerCase().includes(q) ||
+        r.reporter_email?.toLowerCase().includes(q) ||
+        r.reason?.toLowerCase().includes(q) ||
+        r.reported_user_name?.toLowerCase().includes(q) ||
+        r.reported_user_email?.toLowerCase().includes(q) ||
+        r.details?.toLowerCase().includes(q)
+      );
+    }
+    if (status)     d = d.filter(r => r.status === status);
+    if (reason)     d = d.filter(r => r.reason === reason);
+    if (reportType === 'listing') d = d.filter(r => !!r.listing_id);
+    if (reportType === 'user')    d = d.filter(r => !r.listing_id && !!r.reported_user_id);
+    if (dateRange)  d = d.filter(r => withinRange(r.created_at, dateRange));
+    d.sort((a, b) =>
+      sort === 'newest'
+        ? new Date(b.created_at) - new Date(a.created_at)
+        : new Date(a.created_at) - new Date(b.created_at)
+    );
     return d;
-  }, [rows, search, status, sort]);
+  }, [rows, search, status, reason, reportType, dateRange, sort]);
 
   const act = async (id, action, fn) => {
     setBusy(b => ({ ...b, [`${id}_${action}`]: true }));
@@ -39,29 +94,52 @@ const ReportsSection = ({ darkMode }) => {
   };
 
   const selects = [
-    { id: 'status', value: status, onChange: setStatus, options: [{ value: '', label: 'All statuses' }, { value: 'pending', label: 'Pending' }, { value: 'dismissed', label: 'Dismissed' }, { value: 'acted', label: 'Acted' }] },
-    { id: 'sort',   value: sort,   onChange: setSort,   options: [{ value: 'newest', label: 'Newest first' }, { value: 'oldest', label: 'Oldest first' }] },
+    {
+      id: 'status', value: status, onChange: setStatus,
+      options: [
+        { value: '',          label: 'All statuses' },
+        { value: 'pending',   label: 'Pending'      },
+        { value: 'dismissed', label: 'Dismissed'    },
+        { value: 'acted',     label: 'Acted'        },
+      ],
+    },
+    { id: 'reason',     value: reason,     onChange: setReason,     options: REASONS },
+    {
+      id: 'reportType', value: reportType, onChange: setReportType,
+      options: [
+        { value: '',        label: 'Listing & user reports' },
+        { value: 'listing', label: 'Listing reports only'   },
+        { value: 'user',    label: 'User reports only'      },
+      ],
+    },
+    { id: 'dateRange', value: dateRange, onChange: setDateRange, options: DATE_RANGES },
+    {
+      id: 'sort', value: sort, onChange: setSort,
+      options: [
+        { value: 'newest', label: 'Newest first' },
+        { value: 'oldest', label: 'Oldest first' },
+      ],
+    },
   ];
 
   if (loading) return <PageSpinner />;
 
   return (
     <>
-      <Toolbar darkMode={darkMode} placeholder="Search listing, reporter, reason…" search={search} onSearch={setSearch} selects={selects} count={filtered.length} />
+      <Toolbar darkMode={darkMode} placeholder="Search listing, reporter, email, details…" search={search} onSearch={setSearch} selects={selects} count={filtered.length} />
       {!filtered.length ? <Empty label="No reports match your filters." darkMode={darkMode} /> : (
         <div className="space-y-3">
           {filtered.map(r => (
-            <div key={r.id} className={`rounded-xl border p-4 ${r.status === 'pending' ? darkMode ? 'border-emerald-700/40 bg-emerald-500/5' : 'border-emerald-200 bg-emerald-50' : darkMode ? 'border-gray-800 bg-gray-900/50' : 'border-gray-200 bg-white'}`}>
+            <div key={r.id} className={`rounded-xl border p-4 ${r.status === 'pending' ? darkMode ? 'border-red-900/40 bg-red-500/5' : 'border-red-200 bg-red-50' : darkMode ? 'border-gray-800 bg-gray-900/50' : 'border-gray-200 bg-white'}`}>
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div className="space-y-1.5 flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Pill label={r.status === 'pending' ? 'Pending' : r.status === 'dismissed' ? 'Dismissed' : 'Acted'} color={r.status === 'pending' ? 'green' : r.status === 'dismissed' ? 'gray' : 'green'} />
+                    <Pill label={r.status === 'pending' ? 'Pending' : r.status === 'dismissed' ? 'Dismissed' : 'Acted'} color={r.status === 'pending' ? 'red' : r.status === 'dismissed' ? 'gray' : 'green'} />
                     {r.dispute_escalated && <Pill label="Escalated" color="red" />}
                     {r.dispute_resolved  && <Pill label="Dispute Closed" color="green" />}
                   </div>
                   <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{r.reason}</p>
 
-                  {/* What was reported */}
                   {r.listing_id ? (
                     <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                       <span className="font-medium">Listing reported:</span>{' '}
@@ -71,8 +149,8 @@ const ReportsSection = ({ darkMode }) => {
                       </Link>
                     </p>
                   ) : r.reported_user_id ? (
-                    <p className={`text-sm font-medium ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
-                      Seller reported directly — no specific listing
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      <span className="font-medium">Seller reported directly</span> — no specific listing
                     </p>
                   ) : (
                     <p className={`text-sm italic opacity-60 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
@@ -80,7 +158,6 @@ const ReportsSection = ({ darkMode }) => {
                     </p>
                   )}
 
-                  {/* Who was reported */}
                   {r.reported_user_name && (
                     <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                       <span className="font-medium">Reported user:</span> {r.reported_user_name} ({r.reported_user_email})

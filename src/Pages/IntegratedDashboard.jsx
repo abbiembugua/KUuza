@@ -30,6 +30,7 @@ const IntegratedDashboard = () => {
   const [myListings, setMyListings] = useState([]);
   const [purchases, setPurchases] = useState([]);
   const [soldItems, setSoldItems] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -64,6 +65,8 @@ const IntegratedDashboard = () => {
         setMyListings(toArray(myAllListingsData));
       } catch (error) {
         console.error('Error loading dashboard data:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -123,6 +126,7 @@ const IntegratedDashboard = () => {
             onView={handleViewListing}
             onViewAll={() => navigate('/browse?ordering=most_viewed')}
             emptyMessage="No trending listings yet"
+            loading={loading}
           />
 
           <HorizontalScrollSection
@@ -132,6 +136,7 @@ const IntegratedDashboard = () => {
             onView={handleViewListing}
             onViewAll={() => navigate('/browse?ordering=newest')}
             emptyMessage="No recent listings yet"
+            loading={loading}
           />
 
           <MyListingsPreview

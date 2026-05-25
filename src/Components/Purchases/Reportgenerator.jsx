@@ -32,6 +32,7 @@ export default function ReportGenerator({
   downloaderName,
   statusFilter = "",
   categoryLabel = "",
+  interactionTypeLabel = "",
 }) {
   const [loading, setLoading] = useState(null);
 
@@ -136,12 +137,15 @@ export default function ReportGenerator({
     auto_completed: "Completed",
     cancelled:      "Cancelled",
   };
-  const statusPrefix   = statusFilter   ? (STATUS_TITLE_LABELS[statusFilter] ?? formatStatus(statusFilter)) : "";
-  const categoryPrefix = categoryLabel  ? categoryLabel : "";
   const baseTitle =
     activeTab === "buyer"  ? "Purchases Report" :
     activeTab === "seller" ? "Sales Report"      : "Transaction Report";
-  const reportTitle = [statusPrefix, categoryPrefix, baseTitle].filter(Boolean).join(" ");
+  const filters = [
+    interactionTypeLabel || null,
+    statusFilter  ? (STATUS_TITLE_LABELS[statusFilter] ?? formatStatus(statusFilter)) : null,
+    categoryLabel || null,
+  ].filter(Boolean).join(" · ");
+  const reportTitle = filters ? `${baseTitle} — ${filters}` : baseTitle;
 
   // Omit the Status column when filtered — it's already in the title
   const showStatusCol = !statusFilter;
@@ -170,7 +174,7 @@ export default function ReportGenerator({
     const now = new Date();
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
-    const headerHeight = 30;
+    const headerHeight = 36;
 
     const logoBase64 = await fetchLogoBase64();
 
@@ -181,35 +185,42 @@ export default function ReportGenerator({
     // Logo + brand text
     const textX = drawLogo(doc, logoBase64, headerHeight);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
+    doc.setFontSize(17);
     doc.setTextColor(...WHITE);
-    doc.text("KUuza", textX, 16);
+    doc.text("KUuza", textX, 18);
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
+    doc.setFontSize(7.5);
     doc.setTextColor(200, 245, 230);
-    doc.text("Kenyatta University Official Marketplace", textX, 23);
+    doc.text("Kenyatta University Official Marketplace", textX, 26);
 
-    // Right: report title + recipient + issued date
+    // Right: report title / filters / recipient / issued — fixed two-line layout
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(13);
+    doc.setFontSize(14);
     doc.setTextColor(...WHITE);
-    doc.text(reportTitle, pageWidth - 14, 10, { align: "right" });
+    doc.text(baseTitle, pageWidth - 14, 9, { align: "right" });
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
+    doc.setFontSize(8);
     doc.setTextColor(200, 245, 230);
-    doc.text("FOR", pageWidth - 14, 16, { align: "right" });
+    if (filters) {
+      doc.text(filters, pageWidth - 14, 16, { align: "right" });
+    }
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(200, 245, 230);
+    doc.text("FOR", pageWidth - 14, 22, { align: "right" });
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.setTextColor(...WHITE);
-    doc.text(String(downloaderName || "KU Student").toUpperCase(), pageWidth - 14, 22, { align: "right" });
+    doc.text(String(downloaderName || "KU Student").toUpperCase(), pageWidth - 14, 29, { align: "right" });
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
+    doc.setFontSize(7.5);
     doc.setTextColor(200, 245, 230);
-    doc.text(`Issued on: ${fmtFull(now)}`, pageWidth - 14, 28, { align: "right" });
+    doc.text(`Issued on: ${fmtFull(now)}`, pageWidth - 14, 35, { align: "right" });
 
     // Separator line — emerald tint (matches receipt)
     doc.setDrawColor(16, 185, 129);

@@ -65,16 +65,19 @@ const TABS = [
 ];
 
 
-const CATEGORY_OPTIONS = [
-  { value: '',               label: 'All categories'          },
-  { value: 'books',          label: 'Academics'       },
+const GOODS_CATEGORIES = [
+  { value: 'books',          label: 'Academics'               },
   { value: 'electronics',    label: 'Electronics'             },
   { value: 'fashion',        label: 'Fashion'                 },
   { value: 'furniture',      label: 'Furniture'               },
   { value: 'food_beverages', label: 'Food & Beverages'        },
-  { value: 'beauty',         label: 'Beauty & Accessories'   },
+  { value: 'beauty',         label: 'Beauty & Accessories'    },
   { value: 'stationery',     label: 'Stationery & Supplies'   },
   { value: 'sports',         label: 'Sports & Fitness'        },
+  { value: 'other',          label: 'Other'                   },
+];
+
+const SERVICES_CATEGORIES = [
   { value: 'tutoring',       label: 'Tutoring & Academics'    },
   { value: 'printing',       label: 'Printing & Photocopying' },
   { value: 'design',         label: 'Design & Creative'       },
@@ -84,11 +87,29 @@ const CATEGORY_OPTIONS = [
   { value: 'other',          label: 'Other'                   },
 ];
 
+const ALL_CATEGORIES = [
+  { value: '',               label: 'All categories'          },
+  ...GOODS_CATEGORIES,
+  { value: 'tutoring',       label: 'Tutoring & Academics'    },
+  { value: 'printing',       label: 'Printing & Photocopying' },
+  { value: 'design',         label: 'Design & Creative'       },
+  { value: 'tech_repair',    label: 'Tech & Repairs'          },
+  { value: 'laundry',        label: 'Laundry & Cleaning'      },
+  { value: 'photography',    label: 'Photography & Video'     },
+];
+
 const STATUS_OPTIONS = [
   { value: '',          label: 'All statuses' },
   { value: 'pending',   label: 'Pending'      },
+  { value: 'disputed',  label: 'Disputed'     },
   { value: 'completed', label: 'Completed'    },
   { value: 'cancelled', label: 'Cancelled'    },
+];
+
+const INTERACTION_OPTIONS = [
+  { value: '',            label: 'All types'  },
+  { value: 'purchase',    label: 'Goods'      },
+  { value: 'service_use', label: 'Services'   },
 ];
 
 const selectCls = (darkMode) =>
@@ -110,9 +131,16 @@ const PurchasesPage = () => {
   const [loading,          setLoading]          = useState(true);
   const [refreshing,       setRefreshing]       = useState(false);
   const [activeTab,        setActiveTab]        = useState(searchParams.get('tab') || 'all');
-  const [statusFilter,     setStatusFilter]     = useState('');
-  const [categoryFilter,   setCategoryFilter]   = useState('');
-  const [dateRange,        setDateRange]        = useState({ from: null, to: null });
+  const [statusFilter,          setStatusFilter]          = useState('');
+  const [categoryFilter,        setCategoryFilter]        = useState('');
+  const [interactionTypeFilter, setInteractionTypeFilter] = useState('');
+  const [dateRange,             setDateRange]             = useState({ from: null, to: null });
+
+  const categoryOptions = interactionTypeFilter === 'purchase'
+    ? [{ value: '', label: 'All categories' }, ...GOODS_CATEGORIES]
+    : interactionTypeFilter === 'service_use'
+    ? [{ value: '', label: 'All categories' }, ...SERVICES_CATEGORIES]
+    : ALL_CATEGORIES;
   const [searchQuery,      setSearchQuery]      = useState('');
   const [showInsights,          setShowInsights]          = useState(false);
   const [pendingReviewFilter,   setPendingReviewFilter]   = useState(false);
@@ -130,9 +158,10 @@ const PurchasesPage = () => {
     try {
       const params = {};
       if (activeTab !== 'all')   params.role     = activeTab;
-      // 'completed' filter covers both completed and auto_completed — handled client-side
-      if (statusFilter !== '' && statusFilter !== 'completed') params.status = statusFilter;
-      if (categoryFilter !== '') params.category = categoryFilter;
+      // 'completed' and 'disputed' are handled client-side — not sent to the backend
+      if (statusFilter !== '' && statusFilter !== 'completed' && statusFilter !== 'disputed') params.status = statusFilter;
+      if (categoryFilter !== '')        params.category         = categoryFilter;
+      if (interactionTypeFilter !== '') params.interaction_type = interactionTypeFilter;
       const [txnData, pendingData] = await Promise.all([
         fetchTransactions(token, params),
         fetchPendingReviews(token),
@@ -147,9 +176,15 @@ const PurchasesPage = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token, activeTab, statusFilter, categoryFilter]);
+  }, [token, activeTab, statusFilter, categoryFilter, interactionTypeFilter]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  useEffect(() => {
+    if (categoryFilter && !categoryOptions.some(o => o.value === categoryFilter)) {
+      setCategoryFilter('');
+    }
+  }, [interactionTypeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (activeTab === 'all') { setSearchParams({}, { replace: true }); return; }
@@ -168,6 +203,8 @@ const PurchasesPage = () => {
   const filtered = transactions.filter((t) => {
     if (pendingReviewFilter && !pendingReviewIds.includes(t.id)) return false;
     if (statusFilter === 'completed' && !['completed', 'auto_completed'].includes(t.status)) return false;
+    if (statusFilter === 'disputed'  && !t.is_disputed) return false;
+    if (interactionTypeFilter !== '' && t.interaction_type !== interactionTypeFilter) return false;
     if (dateRange.from || dateRange.to) {
       const created = t.created_at ? new Date(t.created_at) : null;
       if (created) {
@@ -286,7 +323,7 @@ const PurchasesPage = () => {
                 {TABS.map((tab) => (
                   <button
                     key={tab.key}
-                    onClick={() => { setActiveTab(tab.key); setPendingReviewFilter(false); setStatusFilter(''); }}
+                    onClick={() => { setActiveTab(tab.key); setPendingReviewFilter(false); setStatusFilter(''); setInteractionTypeFilter(''); }}
                     className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
                       activeTab === tab.key
                         ? 'bg-emerald-600 text-white shadow-sm'
@@ -309,7 +346,11 @@ const PurchasesPage = () => {
                     activeTab={activeTab}
                     downloaderName={user?.full_name}
                     statusFilter={statusFilter}
-                    categoryLabel={categoryFilter ? (CATEGORY_OPTIONS.find(o => o.value === categoryFilter)?.label || '') : ''}
+                    categoryLabel={categoryFilter ? (categoryOptions.find(o => o.value === categoryFilter)?.label || '') : ''}
+                    interactionTypeLabel={
+                      interactionTypeFilter === 'purchase'    ? 'Goods'    :
+                      interactionTypeFilter === 'service_use' ? 'Services' : ''
+                    }
                   />
                 )}
               </div>
@@ -347,10 +388,13 @@ const PurchasesPage = () => {
                   <div className="flex-1">
                     <DateRangeFilter darkMode={darkMode} onRangeChange={setDateRange} />
                   </div>
-                  <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className={selectCls(darkMode)}>
-                    {CATEGORY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  <select value={interactionTypeFilter} onChange={(e) => setInteractionTypeFilter(e.target.value)} className={selectCls(darkMode)}>
+                    {INTERACTION_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
-                  <select value={statusFilter}   onChange={(e) => setStatusFilter(e.target.value)}   className={selectCls(darkMode)}>
+                  <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className={selectCls(darkMode)}>
+                    {categoryOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                  <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={selectCls(darkMode)}>
                     {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </div>

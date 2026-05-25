@@ -118,7 +118,7 @@ const IntegratedBrowsePage = () => {
     getCartItems().then(data => setCartItems(data || [])).catch(() => {});
   }, []);
 
-  const loadListings = useCallback(async () => {
+  const loadListings = useCallback(async (page) => {
     setIsLoading(true);
     try {
       const filters = {
@@ -129,7 +129,7 @@ const IntegratedBrowsePage = () => {
         min_price:    minPrice ? Number(minPrice) : undefined,
         max_price:    maxPrice ? Number(maxPrice) : undefined,
         ordering:     getSortOrderingValue(sortBy),
-        page:         currentPage,
+        page,
         page_size:    ITEMS_PER_PAGE,
       };
 
@@ -146,21 +146,21 @@ const IntegratedBrowsePage = () => {
       if (minPrice)                           params.set('min_price',    minPrice);
       if (maxPrice)                           params.set('max_price',    maxPrice);
       if (sortBy !== 'newest')                params.set('ordering',     sortBy);
-      if (currentPage > 1)                    params.set('page',         String(currentPage));
-      setSearchParams(params);
+      if (page > 1)                           params.set('page',         String(page));
+      setSearchParams(params, { replace: true });
     } catch (err) {
       console.error('Error loading listings:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [searchQuery, selectedCategory, selectedListingType, selectedCondition, minPrice, maxPrice, sortBy, currentPage, setSearchParams]);
+  }, [searchQuery, selectedCategory, selectedListingType, selectedCondition, minPrice, maxPrice, sortBy, setSearchParams]);
 
-  // Reset to page 1 whenever a filter changes (not when page itself changes)
-  useEffect(() => { setCurrentPage(1); }, [searchQuery, selectedCategory, selectedListingType, selectedCondition, minPrice, maxPrice, sortBy]);
+  // When filters change, reset to page 1 and reload
+  useEffect(() => {
+    setCurrentPage(1);
+    loadListings(1);
+  }, [searchQuery, selectedCategory, selectedListingType, selectedCondition, minPrice, maxPrice, sortBy]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // loadListings is a stable memoised function — it only recreates when its
-  // own deps change, so this effect fires exactly when it should
-  useEffect(() => { loadListings(); }, [loadListings]);
 
   const handleTypeChange = (type) => {
     setSelectedListingType(type);
@@ -597,7 +597,7 @@ const IntegratedBrowsePage = () => {
             {!isLoading && listings.length > 0 && totalPages > 1 && (
               <div className="mt-8 flex justify-center items-center gap-2">
                 <button
-                  onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                  onClick={() => { const p = Math.max(currentPage - 1, 1); setCurrentPage(p); loadListings(p); }}
                   disabled={currentPage === 1}
                   className={`p-2 rounded-lg transition-colors ${
                     currentPage === 1
@@ -613,7 +613,7 @@ const IntegratedBrowsePage = () => {
                   return (
                     <button
                       key={page}
-                      onClick={() => setCurrentPage(page)}
+                      onClick={() => { setCurrentPage(page); loadListings(page); }}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                         currentPage === page
                           ? 'bg-emerald-600 text-white'
@@ -625,7 +625,7 @@ const IntegratedBrowsePage = () => {
                   );
                 })}
                 <button
-                  onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                  onClick={() => { const p = Math.min(currentPage + 1, totalPages); setCurrentPage(p); loadListings(p); }}
                   disabled={currentPage === totalPages}
                   className={`p-2 rounded-lg transition-colors ${
                     currentPage === totalPages

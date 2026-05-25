@@ -23,8 +23,9 @@ const UsersSection = ({ darkMode }) => {
   const filtered = useMemo(() => {
     let d = [...rows];
     if (search) { const q = search.toLowerCase(); d = d.filter(u => u.full_name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)); }
-    if (status === 'active')    d = d.filter(u =>  u.is_active);
-    if (status === 'suspended') d = d.filter(u => !u.is_active);
+    if (status === 'active')     d = d.filter(u =>  u.is_active);
+    if (status === 'suspended')  d = d.filter(u => !u.is_active);
+    if (status === 'unverified') d = d.filter(u => !u.is_email_verified);
     if (seller === 'yes')       d = d.filter(u =>  u.is_verified_seller);
     if (seller === 'no')        d = d.filter(u => !u.is_verified_seller);
     d.sort((a, b) => sort === 'newest' ? new Date(b.created_at) - new Date(a.created_at) : sort === 'oldest' ? new Date(a.created_at) - new Date(b.created_at) : a.full_name.localeCompare(b.full_name));
@@ -50,9 +51,11 @@ const UsersSection = ({ darkMode }) => {
   const downloadPDF = async () => {
     setPdfLoading(true);
     try {
-      const statusLabel = { active: 'Active', suspended: 'Suspended' }[status] || '';
-      const sellerLabel = seller === 'yes' ? 'Verified Sellers' : seller === 'no' ? 'Unverified Members' : 'Members';
-      const reportTitle = [statusLabel, sellerLabel, 'Report'].filter(Boolean).join(' ');
+      const filters = [
+        status && ({ active: 'Active', suspended: 'Suspended' }[status]),
+        seller === 'yes' ? 'Verified Sellers' : seller === 'no' ? 'Unverified' : null,
+      ].filter(Boolean).join(' · ');
+      const reportTitle = filters ? `Members Report — ${filters}` : 'Members Report';
 
       const { doc, autoTable, W, Y: sy } = await buildBase(reportTitle);
       const afterBoxes = statBoxes(doc, sy, W, 'MEMBER SUMMARY', [
@@ -102,7 +105,7 @@ const UsersSection = ({ darkMode }) => {
   };
 
   const selects = [
-    { id: 'status', value: status, onChange: setStatus, options: [{ value: '', label: 'All statuses' }, { value: 'active', label: 'Active' }, { value: 'suspended', label: 'Suspended' }] },
+    { id: 'status', value: status, onChange: setStatus, options: [{ value: '', label: 'All statuses' }, { value: 'active', label: 'Active' }, { value: 'suspended', label: 'Suspended' }, { value: 'unverified', label: 'Email not verified' }] },
     { id: 'seller', value: seller, onChange: setSeller, options: [{ value: '', label: 'All members' }, { value: 'yes', label: 'Verified sellers' }, { value: 'no', label: 'Not verified' }] },
     { id: 'sort',   value: sort,   onChange: setSort,   options: [{ value: 'newest', label: 'Newest first' }, { value: 'oldest', label: 'Oldest first' }, { value: 'name_az', label: 'Name A → Z' }] },
   ];

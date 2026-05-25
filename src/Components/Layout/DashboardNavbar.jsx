@@ -50,6 +50,7 @@ const DashboardNavbar = ({ onSearch, searchQuery, setSearchQuery, cartItemsCount
   const { logout, token, user } = useAuth();
   const navigate = useNavigate();
 
+  const [internalQuery, setInternalQuery]     = useState('');
   const [searchFocused, setSearchFocused]     = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -61,11 +62,18 @@ const DashboardNavbar = ({ onSearch, searchQuery, setSearchQuery, cartItemsCount
   const seenNotificationIds  = useRef(null); // null = first load not done yet
   const pollCallbackRef      = useRef(null); // always points to latest poll fn
 
+  // Controlled from outside (browse page) or internal (all other pages)
+  const currentQuery = searchQuery !== undefined ? searchQuery : internalQuery;
+  const updateQuery  = (v) => { setInternalQuery(v); setSearchQuery?.(v); };
+
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   const handleSearch = (e) => {
-    if (e.key === 'Enter' && onSearch) {
-      onSearch(searchQuery);
+    if (e.key !== 'Enter') return;
+    if (onSearch) {
+      onSearch(currentQuery);
+    } else {
+      navigate(`/browse?search=${encodeURIComponent(currentQuery.trim())}`);
     }
   };
 
@@ -329,8 +337,8 @@ const DashboardNavbar = ({ onSearch, searchQuery, setSearchQuery, cartItemsCount
                 }`} />
                 <input
                   type="text"
-                  value={searchQuery || ''}
-                  onChange={(e) => setSearchQuery && setSearchQuery(e.target.value)}
+                  value={currentQuery}
+                  onChange={(e) => updateQuery(e.target.value)}
                   onKeyPress={handleSearch}
                   onFocus={() => setSearchFocused(true)}
                   onBlur={() => setSearchFocused(false)}

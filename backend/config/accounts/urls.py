@@ -1,0 +1,29 @@
+# accounts/urls.py
+from django.urls import path
+from .views import (
+    ForgotPasswordView,
+    LoginView,
+    MeView,
+    LogoutView,
+    ProfilePictureView,
+    RegisterView,
+    ResendVerificationView,
+    ResetPasswordView,
+    SellerOptOutView,
+    SellerVerifyView,
+    VerifyEmailOTPView,
+)
+
+urlpatterns = [
+    path('register/', RegisterView.as_view(), name='register'),
+    path('login/', LoginView.as_view(), name='login'),
+    path('me/', MeView.as_view()),
+    path('me/profile-picture/', ProfilePictureView.as_view(), name='profile-picture'),
+    path("logout/", LogoutView.as_view(), name="logout"),
+    path('verify-email-otp/', VerifyEmailOTPView.as_view(), name='verify-email-otp'),
+    path('resend-verification/', ResendVerificationView.as_view(), name='resend-verification'),
+    path('forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),
+    path('reset-password/', ResetPasswordView.as_view(), name='reset-password'),
+    path('seller/verify/', SellerVerifyView.as_view(), name='seller-verify'),
+    path('seller/opt-out/', SellerOptOutView.as_view(), name='seller-opt-out'),
+]
